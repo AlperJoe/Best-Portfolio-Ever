@@ -93,3 +93,79 @@ export function applySeamVariables(
   set("--edge-reach", `${edgeGlowReach * width}px`);
   set("--light-radius", `${lightRadius * width}px`);
 }
+
+/** Blend width at a vertical position. Narrow at the top, wide at the bottom. */
+export function seamBandWidth(
+  y: number,
+  width: number,
+  height: number,
+  top: number,
+  bottom: number,
+) {
+  const t = height <= 0 ? 0 : Math.min(1, Math.max(0, y / height));
+  return width * (top + (bottom - top) * t);
+}
+
+/** Distance to the nearest seam line, in pixels. */
+export function distanceToSeam(x: number, y: number, width: number, height: number) {
+  const half = width / 2;
+  const length = Math.hypot(half, height);
+  if (length === 0) return 0;
+  const left = Math.abs(half * y - height * x) / length;
+  const right = Math.abs(-half * y - height * (x - width)) / length;
+  return Math.min(left, right);
+}
+
+export type PhotoFrame = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+/**
+ * Place a campus photo so the anchor point in the image lands on the
+ * place point in the frame, and the triangle stays covered.
+ * `scale` zooms in past the smallest covering size.
+ */
+export function placeCampusPhoto(input: {
+  frameW: number;
+  frameH: number;
+  aspect: number;
+  anchorX: number;
+  anchorY: number;
+  placeX: number;
+  placeY: number;
+  scale: number;
+  side: "left" | "right";
+  pad: number;
+}): PhotoFrame {
+  const { frameW, frameH, aspect, anchorX, anchorY, placeX, placeY, scale, side, pad } = input;
+  const bounds: number[] = [1];
+  const leftNeed = side === "left" ? -pad : frameW / 2 - pad;
+  const rightNeed = (side === "left" ? frameW / 2 : frameW) + pad;
+
+  if (anchorX > 0.001) {
+    const coverLeft = (placeX * frameW - leftNeed) / anchorX;
+    if (coverLeft > 0) bounds.push(coverLeft);
+  }
+  if (anchorY > 0.001) {
+    bounds.push((aspect * (placeY * frameH + pad)) / anchorY);
+  }
+  if (anchorX < 0.999) {
+    const coverRight = (rightNeed - placeX * frameW) / (1 - anchorX);
+    if (coverRight > 0) bounds.push(coverRight);
+  }
+  if (anchorY < 0.999) {
+    bounds.push((aspect * (frameH + pad - placeY * frameH)) / (1 - anchorY));
+  }
+
+  const width = Math.max(...bounds) * Math.max(scale, 1);
+  const height = width / aspect;
+  return {
+    width,
+    height,
+    left: placeX * frameW - anchorX * width,
+    top: placeY * frameH - anchorY * height,
+  };
+}

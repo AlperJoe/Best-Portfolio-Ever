@@ -1,3 +1,5 @@
+import { distanceToSeam, seamBandWidth } from "./geometry";
+
 export type EffectsOptions = {
   steam: boolean;
   grain: boolean;
@@ -5,6 +7,9 @@ export type EffectsOptions = {
   cursorReaction: boolean;
   buasTone: string;
   bilkentTone: string;
+  seamTop: number;
+  seamBottom: number;
+  seamSteam: number;
 };
 
 export type EffectsFrame = {
@@ -208,8 +213,18 @@ export class FrameEffects {
         const fade = Math.sin(Math.PI * Math.min(1, Math.max(0, progress)));
         const alpha = fade * 0.34 * Math.min(1.15, 0.45 + this.options.steamAmount * 0.55);
         if (alpha <= 0.004) continue;
-        const size = puff.size + puff.growth * progress;
-        context.globalAlpha = alpha;
+        const band = seamBandWidth(
+          puff.y,
+          width,
+          height,
+          this.options.seamTop,
+          this.options.seamBottom,
+        );
+        const reach = Math.max(1, band * 0.9);
+        const proximity = Math.max(0, 1 - distanceToSeam(puff.x, puff.y, width, height) / reach);
+        const boost = 1 + (this.options.seamSteam - 1) * proximity;
+        const size = (puff.size + puff.growth * progress) * (1 + (boost - 1) * 0.85);
+        context.globalAlpha = Math.min(0.85, alpha * boost);
         context.drawImage(
           this.sprites[puff.side],
           puff.x - size / 2,

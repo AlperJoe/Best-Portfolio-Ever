@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { frame1Config } from "./config";
 import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsCanvas";
-import { applySeamVariables } from "./geometry";
+import { applySeamVariables, placeCampusPhoto } from "./geometry";
+import { buildSeamMasks } from "./seamMask";
 import "./Frame1.css";
 
 type Shown = {
@@ -116,6 +117,81 @@ function LinkedInIcon() {
   );
 }
 
+function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, height: number) {
+  const logos = frame1Config.logos;
+  const text = frame1Config.text;
+  const logoWidth = (side === "left" ? logos.buasWidth : logos.bilkentWidth) * width;
+  const logoAspect = side === "left" ? logos.buasAspect : logos.bilkentAspect;
+  const bottom = logos.insetY * height + logoWidth / logoAspect + text.gap;
+  const inset = text.seamInset * width;
+  const outer = logos.insetX * width;
+
+  const lineWidth = (worldY: number) => {
+    const along = Math.min(1, Math.max(0, worldY / height));
+    if (side === "left") {
+      return (width / 2) * along - inset - outer;
+    }
+    return width - outer - (width - (width / 2) * along + inset);
+  };
+
+  const shape = copy.querySelector<HTMLElement>(".copy-shape");
+  if (shape) shape.style.display = "none";
+  copy.style.bottom = `${bottom}px`;
+  if (side === "left") {
+    copy.style.left = `${outer}px`;
+    copy.style.right = "auto";
+  } else {
+    copy.style.right = `${outer}px`;
+    copy.style.left = "auto";
+  }
+
+  let boxHeight = 0;
+  for (let pass = 0; pass < 4; pass += 1) {
+    const worldBottom = height - bottom;
+    const bottomWidth = Math.max(48, lineWidth(worldBottom));
+    const topWidth = Math.max(32, lineWidth(worldBottom - boxHeight));
+    const used = Math.max(bottomWidth, topWidth);
+    copy.style.width = `${used}px`;
+    if (shape) {
+      const insetAmount = Math.max(0, used - topWidth);
+      shape.style.display = "block";
+      shape.style.width = `${insetAmount}px`;
+      shape.style.height = `${Math.max(boxHeight, 1)}px`;
+      shape.style.float = side === "left" ? "right" : "left";
+      shape.style.shapeOutside =
+        side === "left" ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)";
+    }
+    const next = copy.offsetHeight;
+    if (pass > 0 && Math.abs(next - boxHeight) < 1) break;
+    boxHeight = next;
+  }
+}
+
+function placePhoto(
+  element: HTMLElement,
+  prefix: "buas" | "bilkent",
+  width: number,
+  height: number,
+) {
+  const photo = frame1Config.campus[prefix];
+  const placed = placeCampusPhoto({
+    frameW: width,
+    frameH: height,
+    aspect: photo.aspect,
+    anchorX: photo.anchorX,
+    anchorY: photo.anchorY,
+    placeX: photo.placeX,
+    placeY: photo.placeY,
+    scale: photo.scale,
+    side: prefix === "buas" ? "left" : "right",
+    pad: frame1Config.campus.pad,
+  });
+  element.style.setProperty(`--${prefix}-photo-left`, `${placed.left}px`);
+  element.style.setProperty(`--${prefix}-photo-top`, `${placed.top}px`);
+  element.style.setProperty(`--${prefix}-photo-w`, `${placed.width}px`);
+  element.style.setProperty(`--${prefix}-photo-h`, `${placed.height}px`);
+}
+
 function paintMotion(
   element: HTMLElement,
   width: number,
@@ -142,6 +218,8 @@ export function Frame1() {
 
   const frameRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const leftCopyRef = useRef<HTMLDivElement>(null);
+  const rightCopyRef = useRef<HTMLDivElement>(null);
   const effectsRef = useRef<FrameEffects | null>(null);
   const startRef = useRef<() => void>(() => {});
   const redrawRef = useRef<() => void>(() => {});
@@ -201,6 +279,18 @@ export function Frame1() {
       );
       const shift = shiftRef.current;
       paintMotion(element, rect.width, rect.height, shift.x, shift.y, shift.photoX, shift.photoY);
+      placePhoto(element, "buas", rect.width, rect.height);
+      placePhoto(element, "bilkent", rect.width, rect.height);
+      const portraitCap =
+        frame1Config.portraitLayout.naturalHeight * frame1Config.portraitLayout.maxScale;
+      const portraitH = Math.min(frame1Config.portraitLayout.height * rect.height, portraitCap);
+      element.style.setProperty("--portrait-h", `${portraitH}px`);
+      const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
+      element.style.setProperty("--mask-left", `url("${masks.left}")`);
+      element.style.setProperty("--mask-right", `url("${masks.right}")`);
+      element.style.setProperty("--mask-middle", `url("${masks.middle}")`);
+      if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height);
+      if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height);
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
     };
@@ -208,7 +298,14 @@ export function Frame1() {
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(element);
-    return () => observer.disconnect();
+    let alive = true;
+    document.fonts?.ready.then(() => {
+      if (alive) apply();
+    });
+    return () => {
+      alive = false;
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -224,6 +321,9 @@ export function Frame1() {
       cursorReaction: initial.cursor,
       buasTone: initial.buasTone,
       bilkentTone: initial.bilkentTone,
+      seamTop: frame1Config.seams.top,
+      seamBottom: frame1Config.seams.bottom,
+      seamSteam: frame1Config.seams.steam,
     });
     effectsRef.current = effects;
 
@@ -252,6 +352,9 @@ export function Frame1() {
         cursorReaction: runtime.cursor,
         buasTone: runtime.buasTone,
         bilkentTone: runtime.bilkentTone,
+        seamTop: frame1Config.seams.top,
+        seamBottom: frame1Config.seams.bottom,
+        seamSteam: frame1Config.seams.steam,
       };
     };
 
@@ -442,6 +545,60 @@ export function Frame1() {
     "--edge-strength": String(frame1Config.edgeGlowStrength),
     "--overlay-opacity": String(frame1Config.colorOverlay.opacity),
     "--overlay-blend": frame1Config.colorOverlay.blendMode,
+    "--buas-highlight": `${frame1Config.duotone.buasHighlight * 100}%`,
+    "--buas-shadow": `${frame1Config.duotone.buasShadow * 100}%`,
+    "--bilkent-highlight": `${frame1Config.duotone.bilkentHighlight * 100}%`,
+    "--bilkent-shadow": `${frame1Config.duotone.bilkentShadow * 100}%`,
+    "--photo-contrast": String(frame1Config.duotone.contrast),
+    "--buas-shade": `${frame1Config.duotone.buasShade * 100}%`,
+    "--bilkent-shade": `${frame1Config.duotone.bilkentShade * 100}%`,
+    "--logo-inset-x": String(frame1Config.logos.insetX),
+    "--logo-inset-y": String(frame1Config.logos.insetY),
+    "--buas-logo-w": String(frame1Config.logos.buasWidth),
+    "--bilkent-logo-w": String(frame1Config.logos.bilkentWidth),
+    "--buas-logo-aspect": String(frame1Config.logos.buasAspect),
+    "--bilkent-logo-aspect": String(frame1Config.logos.bilkentAspect),
+    "--pool-tone": `${frame1Config.logos.poolTone * 100}%`,
+    "--pool-blur": `${frame1Config.logos.poolBlur}px`,
+    "--pool-width": String(frame1Config.logos.poolWidth),
+    "--pool-height": String(frame1Config.logos.poolHeight),
+    "--pool-opacity": String(frame1Config.logos.poolOpacity),
+    "--buas-sun-x": frame1Config.buasSun.x,
+    "--buas-sun-y": frame1Config.buasSun.y,
+    "--buas-sun-radius": `${frame1Config.buasSun.radius * 100}vw`,
+    "--buas-sun-core": String(frame1Config.buasSun.core),
+    "--buas-sun-mid": String(frame1Config.buasSun.mid),
+    "--portrait-aspect": String(
+      frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight,
+    ),
+    "--portrait-face-x": String(frame1Config.portraitLayout.faceX),
+    "--portrait-face-y": String(frame1Config.portraitLayout.faceY),
+    "--portrait-fade": `${frame1Config.portraitLayout.edgeFade * 100}%`,
+    "--portrait-blur": `${frame1Config.portraitLayout.blur}px`,
+    "--portrait-field-dark": String(frame1Config.portraitLayout.fieldDarkness),
+    "--icon-size": `${frame1Config.icons.size}px`,
+    "--icon-plate": `${frame1Config.icons.plate}px`,
+    "--icon-lift": `${frame1Config.icons.lift * 100}%`,
+    "--icon-blur": `${frame1Config.icons.blur}px`,
+    "--icon-edge": String(frame1Config.icons.edge),
+    "--icon-fill": String(frame1Config.icons.fill),
+    "--icon-hover": String(frame1Config.icons.hoverFill),
+    "--title-gap": `${frame1Config.text.titleGap}px`,
+    "--label-gap": `${frame1Config.text.labelGap}px`,
+    "--title-stretch": `${frame1Config.text.titleStretch}%`,
+    "--title-weight": String(frame1Config.text.titleWeight),
+    "--title-size": frame1Config.text.titleSize,
+    "--title-line": String(frame1Config.text.titleLine),
+    "--label-size": `${frame1Config.text.labelSize}px`,
+    "--label-weight": String(frame1Config.text.labelWeight),
+    "--buas-label": frame1Config.text.buasLabel,
+    "--bilkent-label": frame1Config.text.bilkentLabel,
+    "--body-size": `${frame1Config.text.bodySize}px`,
+    "--body-weight": String(frame1Config.text.bodyWeight),
+    "--body-line": String(frame1Config.text.bodyLine),
+    "--body-opacity": String(frame1Config.text.bodyOpacity),
+    "--text-shade": String(frame1Config.text.shade),
+    "--text-shade-blur": `${frame1Config.text.shadeBlur}px`,
   } as React.CSSProperties;
 
   return (
@@ -456,33 +613,45 @@ export function Frame1() {
       data-content={shown.content ? "1" : "0"}
     >
       <section className="region region-left mask-left fill" aria-label="Breda University of Applied Sciences">
-        <Asset
-          src={frame1Config.assets.buasCampus}
-          alt=""
-          className="campus"
-          labelAt={{ x: "calc(100% / 6)", y: "calc(200% / 3)" }}
-        />
-        <div className="tone fill" style={{ background: "var(--buas-tone)" }} />
+        <div className="duotone">
+          <Asset
+            src={frame1Config.assets.buasCampus}
+            alt=""
+            className="campus campus-buas"
+            labelAt={{ x: "calc(100% / 6)", y: "calc(200% / 3)" }}
+          />
+          <div className="tone-hue fill" />
+          <div className="tone-lift fill" />
+        </div>
         <div className="shade fill" />
+        <div className="sun sun-buas fill" />
       </section>
 
       <section className="region region-right mask-right fill" aria-label="Bilkent University">
-        <Asset
-          src={frame1Config.assets.bilkentCampus}
-          alt=""
-          className="campus"
-          labelAt={{ x: "calc(500% / 6)", y: "calc(200% / 3)" }}
-        />
-        <div className="tone fill" style={{ background: "var(--bilkent-tone)" }} />
+        <div className="duotone">
+          <Asset
+            src={frame1Config.assets.bilkentCampus}
+            alt=""
+            className="campus campus-bilkent"
+            labelAt={{ x: "calc(500% / 6)", y: "calc(200% / 3)" }}
+          />
+          <div className="tone-hue fill" />
+          <div className="tone-lift fill" />
+        </div>
         <div className="shade fill" />
       </section>
 
       <section className="region region-middle mask-middle fill" aria-label="Portrait">
         <Asset
           src={frame1Config.assets.portrait}
+          alt=""
+          className="portrait-field"
+        />
+        <div className="portrait-field-shade fill" />
+        <Asset
+          src={frame1Config.assets.portrait}
           alt="Portrait"
-          className="portrait"
-          labelAt={{ x: "50%", y: "calc(100% / 3)" }}
+          className="portrait-sharp"
         />
         <div className="shade shade-portrait fill" />
       </section>
@@ -519,27 +688,45 @@ export function Frame1() {
         <LinkedInIcon />
       </a>
 
-      <div className="stack stack-buas hud">
+      <div className="logo-anchor logo-anchor-buas hud">
+        <div className="logo-pool" />
         <Asset
           src={frame1Config.assets.buasLogo}
           alt="Breda University of Applied Sciences"
           className="logo"
         />
-        <p className="title">Master Game Technology</p>
-        <p className="body">
-          generate dungeon levels that match a designer’s selected parameter.
-        </p>
       </div>
 
-      <div className="stack stack-bilkent hud">
+      <div className="logo-anchor logo-anchor-bilkent hud">
+        <div className="logo-pool" />
         <Asset
           src={frame1Config.assets.bilkentLogo}
           alt="Bilkent University"
           className="logo"
         />
+      </div>
+
+      <div className="copy copy-left hud" ref={leftCopyRef}>
+        <div className="copy-shade" />
+        <div className="copy-shape" />
+        <p className="title">Master Game Technology</p>
+        <p className="label">Thesis</p>
+        <p className="text">
+          Generate dungeon levels that match a designer's selected parameter.
+        </p>
+      </div>
+
+      <div className="copy copy-right hud" ref={rightCopyRef}>
+        <div className="copy-shade" />
+        <div className="copy-shape" />
         <p className="title">Bachelor, Computer Engineering</p>
-        <p className="body">
-          Favorite courses: Algorithms, Automata Theory, Reinforcement Learning
+        <p className="label">Favorite courses</p>
+        <p className="text">
+          Algorithms
+          <br />
+          Automata Theory
+          <br />
+          Reinforcement Learning
         </p>
       </div>
     </main>
