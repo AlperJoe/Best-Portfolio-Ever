@@ -39,11 +39,11 @@ export const frame1Config = {
   /** Largest shift of the campus photos away from the cursor, in pixels. */
   cursorPhotoShift: 10,
   assets: {
-    buasCampus: "/assets/buas-campus.jpg",
-    buasLogo: "/assets/buas-logo.png",
-    bilkentCampus: "/assets/bilkent-campus.jpg",
-    bilkentLogo: "/assets/bilkent-logo.png",
-    portrait: "/assets/portrait.jpg",
+    buasCampus: `${import.meta.env.BASE_URL}assets/buas-campus.jpg`,
+    buasLogo: `${import.meta.env.BASE_URL}assets/buas-logo.png`,
+    bilkentCampus: `${import.meta.env.BASE_URL}assets/bilkent-campus.jpg`,
+    bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
+    portrait: `${import.meta.env.BASE_URL}assets/portrait.jpg`,
   },
   effects: {
     STEAM_ENABLED: true,
