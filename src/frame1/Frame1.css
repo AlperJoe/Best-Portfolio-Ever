@@ -1,0 +1,457 @@
+.frame {
+  --buas-tone: #ed7624;
+  --bilkent-tone: #001489;
+  --middle-tone: #f2eee6;
+  --portrait-position: 50% 30%;
+  --light-strength: 1;
+  --light-tone-mix: 34%;
+  --shade-amount: 0.46;
+  --portrait-shade: 0.2;
+  --edge-strength: 0.72;
+  --overlay-opacity: 0.75;
+  --photo-shift-x: 0px;
+  --photo-shift-y: 0px;
+  --left-light-x: 16.6667%;
+  --left-light-y: 66.6667%;
+  --right-light-x: 83.3333%;
+  --right-light-y: 66.6667%;
+  --mid-light-x: 50%;
+  --mid-light-y: 33.3333%;
+  --light-radius: 58vw;
+  --left-angle: 51.34deg;
+  --right-angle: -51.34deg;
+  --left-solid: 62%;
+  --left-fade-0: 42%;
+  --right-solid: 62%;
+  --right-fade-0: 42%;
+  --left-offset: 52%;
+  --right-offset: 52%;
+  --edge-reach: 15vw;
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: Archivo, sans-serif;
+  font-synthesis: none;
+}
+
+.frame * {
+  box-sizing: border-box;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+}
+
+.region,
+.light,
+.edge,
+.fx,
+.hud {
+  opacity: 1;
+}
+
+.region {
+  z-index: 1;
+  isolation: isolate;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.campus,
+.portrait {
+  display: block;
+}
+
+.campus {
+  position: absolute;
+  left: -16px;
+  top: -16px;
+  width: calc(100% + 32px);
+  height: calc(100% + 32px);
+  max-width: none;
+  object-fit: cover;
+  transform: translate3d(var(--photo-shift-x), var(--photo-shift-y), 0);
+}
+
+.portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--portrait-position);
+}
+
+.tone {
+  background: var(--region-tone);
+  opacity: var(--overlay-opacity);
+  mix-blend-mode: var(--overlay-blend);
+}
+
+.shade {
+  background: #000;
+  opacity: calc(var(--shade-amount) * var(--light-strength));
+}
+
+.shade-portrait {
+  opacity: calc(var(--portrait-shade) * var(--light-strength));
+}
+
+.light {
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: var(--light-strength);
+}
+
+.light-left {
+  background: radial-gradient(
+    circle var(--light-radius) at var(--left-light-x) var(--left-light-y),
+    color-mix(in srgb, var(--buas-tone) var(--light-tone-mix), white) 0%,
+    color-mix(in srgb, var(--buas-tone) var(--light-tone-mix), white) 10%,
+    transparent 68%
+  );
+}
+
+.light-right {
+  background: radial-gradient(
+    circle var(--light-radius) at var(--right-light-x) var(--right-light-y),
+    color-mix(in srgb, var(--bilkent-tone) var(--light-tone-mix), white) 0%,
+    color-mix(in srgb, var(--bilkent-tone) var(--light-tone-mix), white) 10%,
+    transparent 68%
+  );
+}
+
+.light-middle {
+  background: radial-gradient(
+    circle calc(var(--light-radius) * 0.72) at var(--mid-light-x) var(--mid-light-y),
+    var(--middle-tone) 0%,
+    color-mix(in srgb, var(--middle-tone) 55%, transparent) 28%,
+    transparent 70%
+  );
+  opacity: calc(var(--light-strength) * 0.55);
+}
+
+.edge {
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: var(--edge-strength);
+}
+
+.edge-left,
+.edge-right {
+  position: absolute;
+  inset: 0;
+}
+
+.edge-left {
+  background: linear-gradient(
+    var(--left-angle),
+    transparent calc(var(--left-offset) - var(--band) * 0.15),
+    color-mix(in srgb, var(--buas-tone) 62%, white) var(--left-offset),
+    transparent calc(var(--left-offset) + var(--edge-reach))
+  );
+}
+
+.edge-right {
+  background: linear-gradient(
+    var(--right-angle),
+    transparent calc(var(--right-offset) - var(--band) * 0.15),
+    color-mix(in srgb, var(--bilkent-tone) 55%, white) var(--right-offset),
+    transparent calc(var(--right-offset) + var(--edge-reach))
+  );
+}
+
+.fx {
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.mask-left {
+  mask-image: linear-gradient(
+    var(--left-angle),
+    #000 0px,
+    #000 var(--left-solid),
+    transparent var(--left-solid)
+  );
+  -webkit-mask-image: linear-gradient(
+    var(--left-angle),
+    #000 0px,
+    #000 var(--left-solid),
+    transparent var(--left-solid)
+  );
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.mask-right {
+  mask-image: linear-gradient(
+    var(--right-angle),
+    #000 0px,
+    #000 var(--right-solid),
+    transparent var(--right-solid)
+  );
+  -webkit-mask-image: linear-gradient(
+    var(--right-angle),
+    #000 0px,
+    #000 var(--right-solid),
+    transparent var(--right-solid)
+  );
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.mask-middle {
+  mask-image:
+    linear-gradient(
+      var(--left-angle),
+      transparent 0px,
+      transparent var(--left-fade-0),
+      #000 var(--left-solid)
+    ),
+    linear-gradient(
+      var(--right-angle),
+      transparent 0px,
+      transparent var(--right-fade-0),
+      #000 var(--right-solid)
+    );
+  -webkit-mask-image:
+    linear-gradient(
+      var(--left-angle),
+      transparent 0px,
+      transparent var(--left-fade-0),
+      #000 var(--left-solid)
+    ),
+    linear-gradient(
+      var(--right-angle),
+      transparent 0px,
+      transparent var(--right-fade-0),
+      #000 var(--right-solid)
+    );
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+  mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-repeat: no-repeat, no-repeat;
+  mask-size: 100% 100%, 100% 100%;
+  -webkit-mask-size: 100% 100%, 100% 100%;
+}
+
+.hud {
+  z-index: 5;
+}
+
+.stack {
+  position: absolute;
+  width: max-content;
+  max-width: 46vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: translate(-50%, calc(var(--logo-h) * -0.5));
+}
+
+.stack-buas {
+  --logo-h: 80px;
+  left: calc(100% / 6);
+  top: calc(200% / 3);
+}
+
+.stack-bilkent {
+  --logo-h: 58px;
+  left: calc(500% / 6);
+  top: calc(200% / 3);
+}
+
+.logo {
+  display: block;
+  height: var(--logo-h);
+  width: auto;
+  max-width: none;
+}
+
+.stack-buas .logo {
+  width: calc(var(--logo-h) * 2976 / 1028);
+  filter:
+    drop-shadow(0 0 6px rgba(0, 0, 0, 0.85))
+    drop-shadow(0 0 16px rgba(0, 0, 0, 0.75))
+    drop-shadow(0 2px 10px rgba(0, 0, 0, 0.65));
+}
+
+.stack-bilkent .logo {
+  width: calc(var(--logo-h) * 1691 / 363);
+  filter:
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.5))
+    drop-shadow(0 0 12px rgba(214, 224, 255, 0.38));
+}
+
+.title {
+  margin: 14px 0 0;
+  font-family: Archivo, sans-serif;
+  font-weight: 600;
+  font-stretch: 125%;
+  font-size: clamp(18px, 1.35vw, 25px);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-wrap: balance;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.85),
+    0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.body {
+  margin: 8px 0 0;
+  max-width: 40ch;
+  font-family: Archivo, sans-serif;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-size: clamp(13px, 0.95vw, 16px);
+  line-height: 1.4;
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.88),
+    0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.icon-link {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  display: block;
+  filter:
+    drop-shadow(0 0 2px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+
+.icon-link svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
+.icon-github {
+  top: 24px;
+  left: 24px;
+}
+
+.icon-linkedin {
+  top: 24px;
+  right: 24px;
+}
+
+.icon-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.6);
+}
+
+.icon-link:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.placeholder {
+  background: #8a8a8a;
+  color: #1c1c1c;
+  font-family: Archivo, sans-serif;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: none;
+}
+
+.placeholder.fill {
+  display: block;
+}
+
+.placeholder-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 6px 8px;
+}
+
+.placeholder.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  filter: none;
+}
+
+.frame.is-opening .region,
+.frame.is-opening .light,
+.frame.is-opening .edge,
+.frame.is-opening .fx,
+.frame.is-opening .hud {
+  opacity: 0;
+  transition: opacity 640ms ease;
+}
+
+.frame.is-opening[data-bilkent="1"] .region-right,
+.frame.is-opening[data-bilkent="1"] .light-right {
+  opacity: 1;
+}
+
+.frame.is-opening[data-bilkent="1"] .light-right {
+  opacity: var(--light-strength);
+}
+
+.frame.is-opening[data-buas="1"] .region-left,
+.frame.is-opening[data-buas="1"] .light-left {
+  opacity: 1;
+}
+
+.frame.is-opening[data-buas="1"] .light-left {
+  opacity: var(--light-strength);
+}
+
+.frame.is-opening[data-middle="1"] .region-middle,
+.frame.is-opening[data-middle="1"] .light-middle,
+.frame.is-opening[data-middle="1"] .edge {
+  opacity: 1;
+}
+
+.frame.is-opening[data-middle="1"] .light-middle {
+  opacity: calc(var(--light-strength) * 0.55);
+}
+
+.frame.is-opening[data-middle="1"] .edge {
+  opacity: var(--edge-strength);
+}
+
+.frame.is-opening[data-steam="1"] .fx {
+  opacity: 1;
+}
+
+.frame.is-opening:not([data-content="1"]) .hud {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.frame.is-opening[data-content="1"] .hud {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame.is-opening .region,
+  .frame.is-opening .light,
+  .frame.is-opening .edge,
+  .frame.is-opening .fx,
+  .frame.is-opening .hud {
+    transition: none;
+  }
+}
