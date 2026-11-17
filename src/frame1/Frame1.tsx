@@ -591,6 +591,8 @@ export function Frame1() {
     "--title-line": String(frame1Config.text.titleLine),
     "--label-size": `${frame1Config.text.labelSize}px`,
     "--label-weight": String(frame1Config.text.labelWeight),
+    "--label-opacity": String(frame1Config.text.labelOpacity),
+    "--label-shadow": frame1Config.text.labelShadow,
     "--buas-label": frame1Config.text.buasLabel,
     "--bilkent-label": frame1Config.text.bilkentLabel,
     "--body-size": `${frame1Config.text.bodySize}px`,
