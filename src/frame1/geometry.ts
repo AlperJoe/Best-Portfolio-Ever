@@ -147,8 +147,25 @@ export function placeCampusPhoto(input: {
   pad: number;
   /** When false, the photo may start below the top so a landmark can sit low. */
   coverTop?: boolean;
+  /** Caps enlargement against the source width so a landmark stays sharp. */
+  naturalWidth?: number;
+  maxZoom?: number;
 }): PhotoFrame {
-  const { frameW, frameH, aspect, anchorX, anchorY, placeX, placeY, scale, side, pad, coverTop = true } = input;
+  const {
+    frameW,
+    frameH,
+    aspect,
+    anchorX,
+    anchorY,
+    placeX,
+    placeY,
+    scale,
+    side,
+    pad,
+    coverTop = true,
+    naturalWidth,
+    maxZoom,
+  } = input;
   const bounds: number[] = [1];
   const leftNeed = side === "left" ? -pad : frameW / 2 - pad;
   const rightNeed = (side === "left" ? frameW / 2 : frameW) + pad;
@@ -168,7 +185,8 @@ export function placeCampusPhoto(input: {
     bounds.push((aspect * (frameH + pad - placeY * frameH)) / (1 - anchorY));
   }
 
-  const width = Math.max(...bounds) * Math.max(scale, 1);
+  let width = Math.max(...bounds) * Math.max(scale, 1);
+  if (naturalWidth && maxZoom) width = Math.min(width, naturalWidth * maxZoom);
   const height = width / aspect;
   return {
     width,

@@ -148,12 +148,31 @@
   pointer-events: none;
 }
 
+.crown-glow {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 0;
+  width: var(--glow-size, 90vw);
+  height: var(--glow-size, 90vw);
+  transform: translate(-50%, var(--glow-shift, -20%));
+  background: radial-gradient(
+    circle at 50% 22%,
+    rgba(var(--glow-rgb, 255, 214, 170), var(--glow-opacity, 0.3)) 0%,
+    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.3) * 0.42)) 30%,
+    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.3) * 0.1)) 54%,
+    transparent 78%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .portrait-sharp {
   position: absolute;
   width: calc(var(--portrait-h, 76dvh) * var(--portrait-aspect, 1));
   height: var(--portrait-h, 76dvh);
   left: calc(50% - var(--portrait-h, 76dvh) * var(--portrait-aspect, 1) / 2);
-  top: calc(100% - var(--portrait-h, 76dvh));
+  top: var(--portrait-top, 8%);
   object-fit: fill;
   mask-image: linear-gradient(
     to bottom,
@@ -241,32 +260,35 @@
 }
 
 .badge {
+  position: absolute;
+  z-index: 6;
   display: flex;
   align-items: center;
+  justify-content: center;
   box-sizing: border-box;
-  width: fit-content;
-  height: calc(var(--badge-slot, 56px) + var(--badge-pad-y, 8px) * 2);
-  margin: 0 0 var(--space-title, 20px);
-  padding: var(--badge-pad-y, 8px) var(--badge-pad-x, 12px);
+  width: var(--badge-w, 13vw);
+  height: var(--badge-h, 5.5vh);
+  top: var(--badge-top, 2.5vh);
+  padding: var(--badge-pad, 8px);
   background: color-mix(in srgb, var(--badge-plate, #f2eee6) calc(var(--badge-opacity, 0.92) * 100%), transparent);
   border-radius: var(--badge-radius, 8px);
 }
 
-.copy-right .badge {
-  margin-left: auto;
+.badge-buas {
+  left: var(--badge-left-x, 32%);
+}
+
+.badge-bilkent {
+  left: var(--badge-right-x, 55%);
 }
 
 .badge-logo {
   display: block;
-  width: auto;
-  max-width: 100%;
-  height: var(--badge-buas, 44px);
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
   filter: none;
-}
-
-.badge-logo-bilkent {
-  height: var(--badge-bilkent, 36px);
 }
 
 .copy {
@@ -350,6 +372,16 @@
   text-align: inherit;
 }
 
+.research-arrow {
+  display: inline-block;
+  transition: transform 180ms ease;
+}
+
+.research-open:hover .research-arrow,
+.research-open:focus-visible .research-arrow {
+  transform: translateX(var(--arrow-shift, 4px));
+}
+
 .research-open:hover,
 .research-open:focus-visible {
   text-decoration: underline;
@@ -362,17 +394,19 @@
 }
 
 .courses {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--course-gap, 8px);
+  display: inline-grid;
+  grid-template-columns: max-content max-content;
+  column-gap: 0.35em;
+  row-gap: var(--course-gap, 8px);
   margin-top: 0;
+  vertical-align: top;
 }
 
 .course {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.4em;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  column-gap: 0.35em;
   max-width: 100%;
   color: inherit;
   font-size: var(--course-size, 18px);
@@ -382,13 +416,15 @@
 }
 
 .course-code {
-  flex: none;
   font-family: var(--font-text), sans-serif;
   font-weight: var(--course-code-weight, 600);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   color: rgba(255, 255, 255, var(--course-code-opacity, 0.7));
 }
 
 .course-name {
+  position: relative;
   min-width: 0;
   font-family: var(--font-text), sans-serif;
   font-weight: var(--course-name-weight, 400);
@@ -401,7 +437,9 @@
 
 .course-name::after {
   content: "↗";
-  margin-left: 0.3em;
+  position: absolute;
+  left: calc(100% + 0.25em);
+  top: 0;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -568,7 +606,6 @@
 .icon-link:hover,
 .icon-link:focus-visible {
   transform: translateY(calc(var(--icon-lift, 2px) * -1));
-  box-shadow: 0 8px var(--icon-glow, 16px) rgba(255, 255, 255, 0.28);
 }
 
 .icon-link:focus-visible {
@@ -632,22 +669,25 @@
   opacity: var(--edge-strength);
 }
 
-.frame.is-opening:not([data-middle="1"]) .icon-link {
+.frame.is-opening:not([data-name="1"]) .icon-link {
   visibility: hidden;
   pointer-events: none;
+  opacity: 0;
 }
 
-.frame.is-opening[data-middle="1"] .icon-link {
+.frame.is-opening[data-name="1"] .icon-link {
   opacity: 1;
   visibility: visible;
 }
 
-.frame.is-opening:not([data-content="1"]) .copy {
+.frame.is-opening:not([data-content="1"]) .copy,
+.frame.is-opening:not([data-content="1"]) .badge {
   visibility: hidden;
   pointer-events: none;
 }
 
-.frame.is-opening[data-content="1"] .copy {
+.frame.is-opening[data-content="1"] .copy,
+.frame.is-opening[data-content="1"] .badge {
   opacity: 1;
   visibility: visible;
 }
