@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { frame1Config } from "./config";
 import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsCanvas";
 import { applySeamVariables, placeCampusPhoto } from "./geometry";
-import { buildSeamMasks } from "./seamMask";
+import { buildPortraitMask, buildSeamMasks } from "./seamMask";
 import "./Frame1.css";
 
 type Shown = {
@@ -130,6 +130,7 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
   const top = text.insetY * height;
   const inset = text.seamInset * width;
   const outer = text.insetX * width;
+  const frameTop = copy.closest(".frame")?.getBoundingClientRect().top ?? 0;
 
   const lineWidth = (worldY: number) => {
     const seam = seamAt(side, worldY, width, height);
@@ -141,6 +142,7 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
   if (shape) shape.style.display = "none";
   copy.style.top = `${top}px`;
   copy.style.bottom = "auto";
+  copy.style.width = `${Math.max(48, lineWidth(top))}px`;
   if (side === "left") {
     copy.style.left = `${outer}px`;
     copy.style.right = "auto";
@@ -149,84 +151,93 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
     copy.style.left = "auto";
   }
 
-  let boxHeight = 0;
+  const blocks = [...copy.children].filter(
+    (el): el is HTMLElement => el instanceof HTMLElement && !el.classList.contains("copy-shape"),
+  );
   for (let pass = 0; pass < 4; pass += 1) {
-    const topWidth = Math.max(48, lineWidth(top));
-    const bottomWidth = Math.max(32, Math.min(lineWidth(top + boxHeight), topWidth));
-    copy.style.width = `${topWidth}px`;
-    if (shape) {
-      const insetAmount = Math.max(0, topWidth - bottomWidth);
-      shape.style.display = "block";
-      shape.style.width = `${insetAmount}px`;
-      shape.style.height = `${Math.max(boxHeight, 1)}px`;
-      shape.style.float = side === "left" ? "right" : "left";
-      shape.style.shapeOutside =
-        side === "left" ? "polygon(100% 0, 100% 100%, 0 100%)" : "polygon(0 0, 0 100%, 100% 100%)";
+    for (const block of blocks) {
+      if (block.classList.contains("rule")) continue;
+      const rect = block.getBoundingClientRect();
+      const sampleY = rect.top === 0 && rect.bottom === 0 ? top : rect.bottom - frameTop;
+      const available = Math.max(48, Math.min(lineWidth(top), lineWidth(sampleY)));
+      block.style.maxWidth = `${available}px`;
+      block.style.marginLeft = side === "right" ? "auto" : "0";
     }
-    const badge = copy.querySelector<HTMLElement>(".badge");
-    if (badge) badge.style.maxWidth = `${topWidth}px`;
-    const next = copy.offsetHeight;
-    if (pass > 0 && Math.abs(next - boxHeight) < 1) break;
-    boxHeight = next;
+  }
+
+  const title = copy.querySelector<HTMLElement>(".title");
+  const rule = copy.querySelector<HTMLElement>(".rule");
+  if (title && rule) {
+    rule.style.width = `${Math.max(1, title.getBoundingClientRect().width)}px`;
+    rule.style.maxWidth = "none";
+    rule.style.marginLeft = side === "right" ? "auto" : "0";
   }
 }
 
-function fitPortrait(width: number, height: number) {
+function fitPortrait(_width: number, height: number, nameTop: number) {
   const layout = frame1Config.portraitLayout;
-  const aspect = layout.naturalWidth / layout.naturalHeight;
   const cap = layout.naturalHeight * layout.maxScale;
-  let portraitH = Math.min(layout.height * height, cap);
-  const gap = layout.crownGap * width;
+  const target = layout.crownFrame * height;
+  const shoulderLimit = nameTop - layout.shoulderGap;
+  const chinLimit = nameTop - layout.chinGap;
+
+  const topFor = (size: number) => target - layout.crownTopY * size;
+
   const fits = (size: number) => {
-    const portraitW = size * aspect;
-    const top = height - size;
-    const left = (width - portraitW) / 2;
-    return layout.crown.every((sample) => {
-      const y = top + sample.y * size;
-      const x0 = left + sample.left * portraitW;
-      const x1 = left + sample.right * portraitW;
-      const seam = (width / 2) * ((height - y) / height);
-      return x0 >= seam + gap && x1 <= width - seam - gap;
-    });
+    const top = topFor(size);
+    if (top < 0) return false;
+    const shoulders = top + layout.shoulderY * size;
+    const chin = top + layout.chinY * size;
+    return shoulders <= shoulderLimit && chin <= chinLimit;
   };
-  if (!fits(portraitH)) {
-    let low = 0;
-    let high = portraitH;
-    for (let step = 0; step < 18; step += 1) {
-      const mid = (low + high) / 2;
-      if (fits(mid)) low = mid;
-      else high = mid;
+
+  let low = 0;
+  let high = cap;
+  let size = 0;
+  for (let step = 0; step < 22; step += 1) {
+    const mid = (low + high) / 2;
+    if (fits(mid)) {
+      size = mid;
+      low = mid;
+    } else {
+      high = mid;
     }
-    portraitH = low;
   }
-  return portraitH;
+  return { size, top: topFor(size) };
 }
 
-function placeIcons(element: HTMLElement, width: number, height: number, portraitH: number) {
-  const layout = frame1Config.portraitLayout;
+function placeIcons(element: HTMLElement, width: number, height: number) {
+  const name = element.querySelector(".middle-name");
+  if (!name) return;
+  const range = document.createRange();
+  range.selectNodeContents(name);
+  const text = range.getBoundingClientRect();
+  const frame = element.getBoundingClientRect();
   const icons = frame1Config.icons;
-  const aspect = layout.naturalWidth / layout.naturalHeight;
-  const portraitW = portraitH * aspect;
-  const top = height - portraitH;
-  const eyeY = top + layout.eyeY * portraitH;
-  const photoLeft = (width - portraitW) / 2;
-  const faceLeft = photoLeft + layout.faceLeft * portraitW;
-  const faceRight = photoLeft + layout.faceRight * portraitW;
-  const seam = (width / 2) * (eyeY / height);
-  const center = width / 2;
   const size = icons.size;
-
-  let githubX = faceLeft - icons.faceGap - size;
-  const githubMin = center - seam + icons.seamGap;
-  if (githubX < githubMin) githubX = githubMin;
-
-  let linkedinX = faceRight + icons.faceGap;
-  const linkedinMax = center + seam - icons.seamGap - size;
-  if (linkedinX > linkedinMax) linkedinX = linkedinMax;
-
-  element.style.setProperty("--icon-y", `${eyeY - size / 2}px`);
+  const midY = text.top - frame.top + text.height / 2;
+  const seam = (width / 2) * (1 - midY / height);
+  let githubX = text.left - frame.left - icons.nameGap - size;
+  let linkedinX = text.right - frame.left + icons.nameGap;
+  const minX = seam + icons.seamGap;
+  const maxX = width - seam - icons.seamGap - size;
+  if (githubX < minX) githubX = minX;
+  if (linkedinX > maxX) linkedinX = maxX;
+  element.style.setProperty("--icon-y", `${midY - size / 2}px`);
   element.style.setProperty("--icon-github-x", `${githubX}px`);
   element.style.setProperty("--icon-linkedin-x", `${linkedinX}px`);
+}
+
+function placeBadges(element: HTMLElement, width: number, height: number) {
+  const badge = frame1Config.badge;
+  const plateW = badge.width * width;
+  const plateH = badge.height * height;
+  const side = badge.side * width;
+  element.style.setProperty("--badge-w", `${plateW}px`);
+  element.style.setProperty("--badge-h", `${plateH}px`);
+  element.style.setProperty("--badge-bottom", `${badge.bottom * height}px`);
+  element.style.setProperty("--badge-left-x", `${side}px`);
+  element.style.setProperty("--badge-right-x", `${width - side - plateW}px`);
 }
 
 function placePhoto(
@@ -248,6 +259,8 @@ function placePhoto(
     side: prefix === "buas" ? "left" : "right",
     pad: frame1Config.campus.pad,
     coverTop: frame1Config.campus.coverTop,
+    naturalWidth: photo.naturalWidth,
+    maxZoom: photo.maxZoom,
   });
   element.style.setProperty(`--${prefix}-photo-left`, `${placed.left}px`);
   element.style.setProperty(`--${prefix}-photo-top`, `${placed.top}px`);
@@ -345,11 +358,10 @@ export function Frame1() {
       element.style.setProperty("--campus-fade", `${frame1Config.campus.fade * rect.height}px`);
       placePhoto(element, "buas", rect.width, rect.height);
       placePhoto(element, "bilkent", rect.width, rect.height);
-      const portraitH = fitPortrait(rect.width, rect.height);
-      element.style.setProperty("--portrait-h", `${portraitH}px`);
-      placeIcons(element, rect.width, rect.height, portraitH);
+      placeBadges(element, rect.width, rect.height);
       element.style.setProperty("--middle-width", `${frame1Config.middle.maxWidth * rect.width}px`);
       element.style.setProperty("--name-bottom", `${frame1Config.middle.bottom * rect.height}px`);
+      element.style.setProperty("--glow-size", `${frame1Config.crownGlow.size * rect.width}px`);
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
@@ -358,18 +370,49 @@ export function Frame1() {
         if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height);
         if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height);
       };
+      const equalizeTitles = () => {
+        const titles = [leftCopyRef.current, rightCopyRef.current]
+          .map((copy) => copy?.querySelector<HTMLElement>(".title"))
+          .filter((node): node is HTMLElement => Boolean(node));
+        titles.forEach((title) => {
+          title.style.minHeight = "";
+        });
+        const titleSlot = Math.max(0, ...titles.map((title) => title.getBoundingClientRect().height));
+        titles.forEach((title) => {
+          title.style.minHeight = `${titleSlot}px`;
+        });
+      };
       layCopies();
-      const titles = [leftCopyRef.current, rightCopyRef.current]
-        .map((copy) => copy?.querySelector<HTMLElement>(".title"))
-        .filter((node): node is HTMLElement => Boolean(node));
-      titles.forEach((title) => {
-        title.style.minHeight = "";
-      });
-      const titleSlot = Math.max(0, ...titles.map((title) => title.getBoundingClientRect().height));
-      titles.forEach((title) => {
-        title.style.minHeight = `${titleSlot}px`;
-      });
+      equalizeTitles();
       layCopies();
+      equalizeTitles();
+      layCopies();
+      const name = element.querySelector(".middle-name");
+      const nameTop = name
+        ? name.getBoundingClientRect().top - element.getBoundingClientRect().top
+        : rect.height * 0.78;
+      const portrait = fitPortrait(rect.width, rect.height, nameTop);
+      const portraitW =
+        portrait.size *
+        (frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight);
+      element.style.setProperty("--portrait-h", `${portrait.size}px`);
+      element.style.setProperty("--portrait-top", `${portrait.top}px`);
+      const fadeEnd = nameTop + frame1Config.portraitLayout.fadeSpan * rect.height;
+      const mask = buildPortraitMask({
+        frameW: rect.width,
+        frameH: rect.height,
+        left: (rect.width - portraitW) / 2,
+        top: portrait.top,
+        width: portraitW,
+        height: portrait.size,
+        fadeStart: nameTop,
+        fadeEnd,
+        overflow: frame1Config.portraitLayout.featherOverflow,
+        reach: frame1Config.portraitLayout.featherReach,
+        soft: frame1Config.portraitLayout.featherSoft,
+      });
+      if (mask) element.style.setProperty("--portrait-mask", `url("${mask}")`);
+      placeIcons(element, rect.width, rect.height);
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
     };
@@ -625,7 +668,7 @@ export function Frame1() {
     "--light-tone-mix": `${frame1Config.lightToneMix * 100}%`,
     "--shade-amount": String(frame1Config.shadeAmount),
     "--portrait-shade": String(frame1Config.portraitShadeAmount),
-    "--edge-strength": String(frame1Config.edgeGlowStrength),
+    "--edge-strength": String(frame1Config.portraitEdgeStrength),
     "--overlay-opacity": String(frame1Config.colorOverlay.opacity),
     "--overlay-blend": frame1Config.colorOverlay.blendMode,
     "--buas-highlight": `${frame1Config.duotone.buasHighlight * 100}%`,
@@ -639,29 +682,28 @@ export function Frame1() {
     "--veil-bottom": String(frame1Config.veil.bottom),
     "--badge-plate": frame1Config.badge.plate,
     "--badge-opacity": String(frame1Config.badge.plateOpacity),
-    "--badge-pad-y": `${frame1Config.badge.padY}px`,
-    "--badge-pad-x": `${frame1Config.badge.padX}px`,
+    "--badge-pad": `${frame1Config.badge.pad}px`,
     "--badge-radius": `${frame1Config.badge.radius}px`,
-    "--badge-gap": `${frame1Config.badge.gap}px`,
-    "--badge-buas": `${frame1Config.badge.buasHeight}px`,
-    "--badge-bilkent": `${frame1Config.badge.bilkentHeight}px`,
-    "--badge-slot": `${frame1Config.badge.slot}px`,
-    "--space-title": `${frame1Config.text.spaceTitle}px`,
+    "--glow-rgb": frame1Config.crownGlow.rgb,
+    "--glow-opacity": String(frame1Config.crownGlow.opacity),
+    "--glow-shift": frame1Config.crownGlow.shift,
+    "--space-divider": `${frame1Config.text.spaceDivider}px`,
     "--space-label": `${frame1Config.text.spaceLabel}px`,
     "--space-body": `${frame1Config.text.spaceBody}px`,
     "--space-button": `${frame1Config.text.spaceButton}px`,
+    "--rule-opacity": String(frame1Config.text.ruleOpacity),
+    "--button-pad-y": `${frame1Config.text.buttonPadY}px`,
+    "--button-pad-x": `${frame1Config.text.buttonPadX}px`,
+    "--button-radius": `${frame1Config.text.buttonRadius}px`,
+    "--button-border": frame1Config.text.buttonBorder,
     "--portrait-aspect": String(
       frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight,
     ),
-    "--portrait-fade": `${frame1Config.portraitLayout.bottomFade * 100}%`,
-    "--portrait-fade-dark": `${frame1Config.portraitLayout.fadeDark * 100}%`,
     "--icon-size": `${frame1Config.icons.size}px`,
     "--icon-lift": `${frame1Config.icons.lift}px`,
     "--icon-linkedin": frame1Config.icons.linkedin,
     "--icon-radius": `${frame1Config.icons.radius}px`,
     "--icon-glow": `${frame1Config.icons.glow}px`,
-    "--title-gap": `${frame1Config.text.titleGap}px`,
-    "--label-gap": `${frame1Config.text.labelGap}px`,
     "--title-line": String(frame1Config.text.titleLine),
     "--buas-title-size": frame1Config.text.buasTitleSize,
     "--buas-title-weight": String(frame1Config.text.buasTitleWeight),
@@ -669,7 +711,6 @@ export function Frame1() {
     "--bilkent-title-weight": String(frame1Config.text.bilkentTitleWeight),
     "--label-size": `${frame1Config.text.labelSize}px`,
     "--label-weight": String(frame1Config.text.labelWeight),
-    "--label-opacity": String(frame1Config.text.labelOpacity),
     "--label-shadow": frame1Config.text.labelShadow,
     "--buas-label": frame1Config.text.buasLabel,
     "--bilkent-label": frame1Config.text.bilkentLabel,
@@ -682,6 +723,7 @@ export function Frame1() {
     "--button-size": `${frame1Config.text.buttonSize}px`,
     "--button-weight": String(frame1Config.text.buttonWeight),
     "--button-gap": `${frame1Config.text.buttonGap}px`,
+    "--arrow-shift": `${frame1Config.text.arrowShift}px`,
     "--course-size": `${frame1Config.text.courseSize}px`,
     "--course-code-weight": String(frame1Config.text.courseCodeWeight),
     "--course-code-opacity": String(frame1Config.text.courseCodeOpacity),
@@ -795,13 +837,14 @@ export function Frame1() {
         <div className="region-veil fill" />
       </section>
 
-      <section className="region region-middle mask-middle fill" aria-label="Portrait">
-        <Asset
-          src={frame1Config.assets.portrait}
-          alt="Portrait of Alper Bozkurt"
-          className="portrait-sharp"
-        />
-      </section>
+      <section className="region region-middle mask-middle fill" aria-hidden="true" />
+
+      <Asset
+        src={frame1Config.assets.portrait}
+        alt="Portrait of Alper Bozkurt"
+        className="portrait-sharp portrait-layer"
+      />
+      <div className="crown-glow portrait-layer" aria-hidden="true" />
 
       {frame1Config.effects.PORTRAIT_EDGE_LIGHT ? (
         <div className="edge mask-middle fill">
@@ -831,16 +874,25 @@ export function Frame1() {
         <LinkedInIcon />
       </a>
 
+      <div className="badge badge-buas hud">
+        <Asset
+          src={frame1Config.assets.buasLogo}
+          alt="Breda University of Applied Sciences"
+          className="badge-logo"
+        />
+      </div>
+      <div className="badge badge-bilkent hud">
+        <Asset
+          src={frame1Config.assets.bilkentLogo}
+          alt="Bilkent University"
+          className="badge-logo"
+        />
+      </div>
+
       <div className="copy copy-left hud" ref={leftCopyRef}>
         <div className="copy-shape" />
-        <div className="badge">
-          <Asset
-            src={frame1Config.assets.buasLogo}
-            alt="Breda University of Applied Sciences"
-            className="badge-logo badge-logo-buas"
-          />
-        </div>
         <p className="title title-buas">Master Game Technology</p>
+        <div className="rule" />
         <p className="label">AI & Procedural Generation</p>
         <p className="text">
           Exploring how AI agents can help generate dungeon levels that match a designer's goals.
@@ -851,20 +903,14 @@ export function Frame1() {
           className="research-open"
           onClick={() => setResearch("from")}
         >
-          Explore my research →
+          Explore my research <span className="research-arrow">→</span>
         </button>
       </div>
 
       <div className="copy copy-right hud" ref={rightCopyRef}>
         <div className="copy-shape" />
-        <div className="badge">
-          <Asset
-            src={frame1Config.assets.bilkentLogo}
-            alt="Bilkent University"
-            className="badge-logo badge-logo-bilkent"
-          />
-        </div>
         <p className="title title-bilkent">BSc Computer Engineering</p>
+        <div className="rule" />
         <p className="label">Favorite courses</p>
         <div className="courses">
           {frame1Config.courses.map((course) => (

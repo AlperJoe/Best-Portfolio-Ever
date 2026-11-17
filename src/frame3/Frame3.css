@@ -1,0 +1,344 @@
+.frame3 {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--frame3-bg);
+  color: #fff;
+}
+
+.frame3-grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.frame3-world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--floor) calc(var(--outside-mix) * 100%), var(--frame3-bg));
+  background-image:
+    linear-gradient(to right, var(--outside-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--outside-grid) 1px, transparent 1px);
+  background-size: var(--cell, 40px) var(--cell, 40px);
+  background-position: var(--grid-x, 0px) var(--grid-y, 0px);
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--band-top-fade, 8%),
+      #000 var(--band-bot-fade, 92%),
+      transparent 100%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--band-left-fade, 4%),
+      #000 var(--band-right-fade, 98%),
+      transparent 100%
+    );
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--band-top-fade, 8%),
+      #000 var(--band-bot-fade, 92%),
+      transparent 100%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--band-left-fade, 4%),
+      #000 var(--band-right-fade, 98%),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+.frame3-stage {
+  position: absolute;
+  right: var(--map-right);
+  top: 50%;
+  width: var(--map-w, min(66vw, 160dvh));
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.frame3-map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  background: var(--floor);
+}
+
+.frame3-level {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.frame3-agent {
+  position: absolute;
+  left: calc(var(--x) * 100% / var(--cols));
+  top: calc(var(--y) * 100% / var(--rows));
+  width: calc(100% / var(--cols));
+  height: calc(100% / var(--rows));
+  z-index: 2;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--agent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.frame3-agent svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.frame3-agent:focus-visible {
+  outline: 2px solid var(--warm-white);
+  outline-offset: 1px;
+}
+
+.frame3-note {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  margin: 0;
+  width: max-content;
+  max-width: min(240px, 46%);
+  padding: var(--note-pad-y, 8px) var(--note-pad-x, 10px);
+  border: 1px solid color-mix(in srgb, var(--agent, var(--agent-a)) calc(var(--note-border, 0.4) * 100%), transparent);
+  border-radius: var(--note-radius, 6px);
+  background: color-mix(in srgb, var(--note-plate, #0e1116) calc(var(--note-plate-opacity, 0.92) * 100%), transparent);
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--note-size);
+  font-weight: 400;
+  line-height: var(--note-line);
+  color: var(--note-color);
+  pointer-events: none;
+}
+
+.frame3-below {
+  position: absolute;
+  right: var(--map-right);
+  width: var(--map-w, min(66vw, 160dvh));
+  top: var(--caption-top, 72%);
+  z-index: 4;
+}
+
+.frame3-caption {
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--caption-size);
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--white-55);
+}
+
+.frame3-play {
+  margin-top: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--white-15);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-text), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white-60);
+  cursor: pointer;
+}
+
+.frame3-play:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.frame3-play:focus-visible {
+  outline: 2px solid var(--warm-white);
+  outline-offset: 2px;
+}
+
+.frame3-copy {
+  position: absolute;
+  left: var(--text-left);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--text-max);
+  max-width: var(--text-max);
+  z-index: 4;
+}
+
+.frame3-title {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-weight: var(--title-weight);
+  font-size: var(--title-size);
+  line-height: var(--title-line);
+  color: var(--warm-white);
+}
+
+.frame3-intro {
+  margin: var(--intro-gap) 0 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--intro-weight);
+  font-size: var(--intro-size);
+  line-height: var(--intro-line);
+  color: var(--white-90);
+}
+
+.frame3-label {
+  margin: var(--section-gap) 0 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--label-weight);
+  font-size: var(--label-size);
+  line-height: 1.3;
+  color: var(--agent-a);
+}
+
+.frame3-list {
+  list-style: none;
+  margin: var(--label-gap) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--item-gap);
+}
+
+.frame3-list li,
+.frame3-result {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--body-weight);
+  font-size: var(--body-size);
+  line-height: var(--body-line);
+  color: var(--white-90);
+}
+
+.frame3-list li {
+  padding-left: 16px;
+}
+
+.frame3-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.48em;
+  width: var(--bullet);
+  height: var(--bullet);
+  background: var(--agent-a);
+}
+
+.frame3-result {
+  margin-top: var(--label-gap);
+}
+
+.frame3-stack {
+  margin: var(--section-gap) 0 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--stack-weight);
+  font-size: var(--stack-size);
+  line-height: 1.4;
+  color: var(--white-60);
+}
+
+.frame3-project {
+  display: inline-block;
+  margin-top: var(--link-gap);
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--link-weight);
+  font-size: var(--link-size);
+  line-height: 1.3;
+  color: #fff;
+  text-decoration: none;
+}
+
+.frame3-project:hover,
+.frame3-project:focus-visible {
+  text-decoration: underline;
+}
+
+.frame3-project:focus-visible {
+  outline: 2px solid var(--warm-white);
+  outline-offset: 3px;
+}
+
+.frame3-refs {
+  position: absolute;
+  right: var(--refs-right);
+  bottom: var(--refs-bottom);
+  z-index: 5;
+}
+
+.frame3-refs-button {
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--refs-weight);
+  font-size: var(--refs-size);
+  line-height: 1.2;
+  color: var(--white-60);
+  cursor: pointer;
+}
+
+.frame3-refs-button:hover,
+.frame3-refs-button:focus-visible {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.frame3-refs-button:focus-visible {
+  outline: 2px solid var(--warm-white);
+  outline-offset: 3px;
+}
+
+.frame3-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: var(--panel-width);
+  max-width: min(var(--panel-width), 70vw);
+  box-sizing: border-box;
+  padding: var(--panel-pad);
+  background: var(--panel);
+  border: 1px solid var(--white-15);
+  border-radius: var(--panel-radius);
+  opacity: 0;
+  transition: opacity var(--panel-fade) linear;
+}
+
+.frame3-panel[data-open="1"] {
+  opacity: 1;
+}
+
+.frame3-panel p {
+  margin: 0 0 10px;
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--panel-text);
+  font-weight: 400;
+  line-height: var(--panel-line);
+  color: var(--white-88);
+}
+
+.frame3-panel p:last-child {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame3-panel {
+    transition: none;
+  }
+}

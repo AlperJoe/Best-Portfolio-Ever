@@ -16,6 +16,8 @@ export const fonts = {
   frame2Display: "Bricolage Grotesque",
   /** Pedro's line in Frame 2. */
   pedroLine: "Instrument Serif",
+  /** Frame 3 title. */
+  mono: "JetBrains Mono",
 } as const;
 
 function stack(name: string, fallback: string) {
@@ -31,4 +33,5 @@ export function applyFonts() {
   root.style.setProperty("--font-bilkent", stack(fonts.bilkentTitle, "sans-serif"));
   root.style.setProperty("--font-frame2", stack(fonts.frame2Display, "sans-serif"));
   root.style.setProperty("--font-pedro", stack(fonts.pedroLine, "serif"));
+  root.style.setProperty("--font-mono", stack(fonts.mono, "monospace"));
 }
