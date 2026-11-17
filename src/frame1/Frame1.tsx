@@ -9,7 +9,6 @@ type Shown = {
   bilkent: boolean;
   buas: boolean;
   middle: boolean;
-  haze: boolean;
   content: boolean;
 };
 
@@ -19,7 +18,6 @@ const ALL_SHOWN: Shown = {
   bilkent: true,
   buas: true,
   middle: true,
-  haze: true,
   content: true,
 };
 
@@ -27,7 +25,6 @@ const NONE_SHOWN: Shown = {
   bilkent: false,
   buas: false,
   middle: false,
-  haze: false,
   content: false,
 };
 
@@ -35,8 +32,7 @@ const OPENING_STEPS: Array<[number, keyof Shown]> = [
   [160, "bilkent"],
   [620, "buas"],
   [1080, "middle"],
-  [1540, "haze"],
-  [1960, "content"],
+  [1540, "content"],
 ];
 
 function usePrefersReducedMotion() {
@@ -119,14 +115,17 @@ function LinkedInIcon() {
   );
 }
 
-function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, height: number) {
-  const logos = frame1Config.logos;
+function layoutCopy(
+  copy: HTMLElement,
+  side: "left" | "right",
+  width: number,
+  height: number,
+  maxBox: number,
+) {
   const text = frame1Config.text;
-  const logoWidth = (side === "left" ? logos.buasWidth : logos.bilkentWidth) * width;
-  const logoAspect = side === "left" ? logos.buasAspect : logos.bilkentAspect;
-  const bottom = logos.insetY * height + logoWidth / logoAspect + text.gap;
+  const bottom = text.insetY * height;
   const inset = text.seamInset * width;
-  const outer = logos.insetX * width;
+  const outer = text.insetX * width;
 
   const lineWidth = (worldY: number) => {
     const along = Math.min(1, Math.max(0, worldY / height));
@@ -150,9 +149,9 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
   let boxHeight = 0;
   for (let pass = 0; pass < 4; pass += 1) {
     const worldBottom = height - bottom;
-    const bottomWidth = Math.max(48, lineWidth(worldBottom));
-    const topWidth = Math.max(32, lineWidth(worldBottom - boxHeight));
-    const used = Math.max(bottomWidth, topWidth);
+    const bottomWidth = Math.max(48, Math.min(lineWidth(worldBottom), maxBox));
+    const topWidth = Math.max(32, Math.min(lineWidth(worldBottom - boxHeight), bottomWidth));
+    const used = bottomWidth;
     copy.style.width = `${used}px`;
     if (shape) {
       const insetAmount = Math.max(0, used - topWidth);
@@ -163,6 +162,8 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
       shape.style.shapeOutside =
         side === "left" ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)";
     }
+    const badge = copy.querySelector<HTMLElement>(".badge");
+    if (badge) badge.style.maxWidth = `${topWidth}px`;
     const next = copy.offsetHeight;
     if (pass > 0 && Math.abs(next - boxHeight) < 1) break;
     boxHeight = next;
@@ -234,8 +235,6 @@ export function Frame1() {
   const cursorRef = useRef({ x: 0, y: 0, inside: false });
   const runtimeRef = useRef({
     reduced,
-    haze: false,
-    dust: false,
     grain: frame1Config.effects.FILM_GRAIN,
     cursor: false,
     buasTone: frame1Config.colors.buasTone,
@@ -244,8 +243,6 @@ export function Frame1() {
 
   runtimeRef.current = {
     reduced,
-    haze: frame1Config.effects.HAZE_ENABLED && shown.haze,
-    dust: frame1Config.effects.DUST_ENABLED && shown.haze,
     grain: frame1Config.effects.FILM_GRAIN,
     cursor: frame1Config.effects.CURSOR_REACTION && !reduced,
     buasTone: frame1Config.colors.buasTone,
@@ -293,16 +290,21 @@ export function Frame1() {
       element.style.setProperty("--portrait-h", `${portraitH}px`);
       const middleTop = frame1Config.middle.top * rect.height;
       const seamAtText = frame1Config.middle.top * (rect.width / 2);
-      const middleRoom = rect.width - seamAtText * 2 - frame1Config.middle.sideGap * 2;
-      const middleWidth = Math.max(160, Math.min(frame1Config.middle.maxWidth * rect.width, middleRoom));
+      const middleRoom = rect.width - seamAtText * 2 - frame1Config.middle.seamGap * 2;
+      const middleWidth = Math.max(
+        160,
+        Math.min(frame1Config.middle.maxWidth * rect.width, middleRoom),
+      );
       element.style.setProperty("--middle-top", `${middleTop}px`);
       element.style.setProperty("--middle-width", `${middleWidth}px`);
+      const middleLeft = (rect.width - middleWidth) / 2;
+      const sideLimit = middleLeft - frame1Config.text.insetX * rect.width - frame1Config.middle.blockGap;
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
       element.style.setProperty("--mask-middle", `url("${masks.middle}")`);
-      if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height);
-      if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height);
+      if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height, sideLimit);
+      if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height, sideLimit);
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
     };
@@ -336,14 +338,8 @@ export function Frame1() {
       seamTop: frame1Config.seams.top,
       seamBottom: frame1Config.seams.bottom,
       seamSteam: frame1Config.seams.steam,
-      haze: initial.haze,
-      dust: initial.dust,
-      hazeAmount: frame1Config.hazeAmount,
-      dustPerBeam: frame1Config.beams.dustPerBeam,
-      beamWidth: frame1Config.beams.width,
-      beamMouth: frame1Config.beams.mouth,
-      beamOvershoot: frame1Config.beams.overshoot,
-      beamPool: frame1Config.beams.pool,
+      haze: false,
+      dust: false,
     });
     effectsRef.current = effects;
 
@@ -382,14 +378,8 @@ export function Frame1() {
         seamTop: frame1Config.seams.top,
         seamBottom: frame1Config.seams.bottom,
         seamSteam: frame1Config.seams.steam,
-        haze: runtime.haze,
-        dust: runtime.dust,
-        hazeAmount: frame1Config.hazeAmount,
-        dustPerBeam: frame1Config.beams.dustPerBeam,
-        beamWidth: frame1Config.beams.width,
-        beamMouth: frame1Config.beams.mouth,
-        beamOvershoot: frame1Config.beams.overshoot,
-        beamPool: frame1Config.beams.pool,
+        haze: false,
+        dust: false,
       };
     };
 
@@ -400,8 +390,8 @@ export function Frame1() {
       effects.setOptions({
         ...options(),
         steam: false,
-        haze: runtimeRef.current.haze,
-        dust: runtimeRef.current.dust,
+        haze: false,
+        dust: false,
         cursorReaction: false,
       });
       shiftRef.current = { x: 0, y: 0, photoX: 0, photoY: 0 };
@@ -463,7 +453,7 @@ export function Frame1() {
         Math.abs(shift.y - target.y) < 0.08 &&
         Math.abs(shift.photoX - target.photoX) < 0.08 &&
         Math.abs(shift.photoY - target.photoY) < 0.08;
-      const keepGoing = runtime.haze || runtime.dust || runtime.grain || !settled;
+      const keepGoing = runtime.grain || !settled;
       if (!keepGoing) {
         frameId = 0;
         return;
@@ -506,15 +496,6 @@ export function Frame1() {
 
       const nx = cursor.x / rect.width - 0.5;
       const ny = cursor.y / rect.height - 0.5;
-      const maxLight = frame1Config.cursorLightShift * rect.width;
-      let lightX = nx * 2 * maxLight;
-      let lightY = ny * 2 * maxLight;
-      const lightDistance = Math.hypot(lightX, lightY);
-      if (lightDistance > maxLight && lightDistance > 0) {
-        lightX *= maxLight / lightDistance;
-        lightY *= maxLight / lightDistance;
-      }
-
       const maxPhoto = frame1Config.cursorPhotoShift;
       let photoX = -nx * 2 * maxPhoto;
       let photoY = -ny * 2 * maxPhoto;
@@ -524,8 +505,8 @@ export function Frame1() {
         photoY *= maxPhoto / photoDistance;
       }
 
-      target.x = lightX;
-      target.y = lightY;
+      target.x = 0;
+      target.y = 0;
       target.photoX = photoX;
       target.photoY = photoY;
       start();
@@ -568,7 +549,7 @@ export function Frame1() {
 
   useEffect(() => {
     startRef.current();
-  }, [shown.haze, shown.content, reduced]);
+  }, [shown.content, reduced]);
 
   const style = {
     "--buas-tone": frame1Config.colors.buasTone,
@@ -589,22 +570,16 @@ export function Frame1() {
     "--photo-contrast": String(frame1Config.duotone.contrast),
     "--buas-shade": `${frame1Config.duotone.buasShade * 100}%`,
     "--bilkent-shade": `${frame1Config.duotone.bilkentShade * 100}%`,
-    "--logo-inset-x": String(frame1Config.logos.insetX),
-    "--logo-inset-y": String(frame1Config.logos.insetY),
-    "--buas-logo-w": String(frame1Config.logos.buasWidth),
-    "--bilkent-logo-w": String(frame1Config.logos.bilkentWidth),
-    "--buas-logo-aspect": String(frame1Config.logos.buasAspect),
-    "--bilkent-logo-aspect": String(frame1Config.logos.bilkentAspect),
-    "--pool-tone": `${frame1Config.logos.poolTone * 100}%`,
-    "--pool-blur": `${frame1Config.logos.poolBlur}px`,
-    "--pool-width": String(frame1Config.logos.poolWidth),
-    "--pool-height": String(frame1Config.logos.poolHeight),
-    "--pool-opacity": String(frame1Config.logos.poolOpacity),
-    "--buas-sun-x": frame1Config.buasSun.x,
-    "--buas-sun-y": frame1Config.buasSun.y,
-    "--buas-sun-radius": `${frame1Config.buasSun.radius * 100}vw`,
-    "--buas-sun-core": String(frame1Config.buasSun.core),
-    "--buas-sun-mid": String(frame1Config.buasSun.mid),
+    "--veil-top": String(frame1Config.veil.top),
+    "--veil-bottom": String(frame1Config.veil.bottom),
+    "--badge-plate": frame1Config.badge.plate,
+    "--badge-opacity": String(frame1Config.badge.plateOpacity),
+    "--badge-pad-y": `${frame1Config.badge.padY}px`,
+    "--badge-pad-x": `${frame1Config.badge.padX}px`,
+    "--badge-radius": `${frame1Config.badge.radius}px`,
+    "--badge-gap": `${frame1Config.badge.gap}px`,
+    "--badge-buas": `${frame1Config.badge.buasHeight}px`,
+    "--badge-bilkent": `${frame1Config.badge.bilkentHeight}px`,
     "--portrait-aspect": String(
       frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight,
     ),
@@ -613,7 +588,7 @@ export function Frame1() {
     "--portrait-fade": `${frame1Config.portraitLayout.bottomFade * 100}%`,
     "--icon-size": `${frame1Config.icons.size}px`,
     "--icon-lift": `${frame1Config.icons.lift}px`,
-    "--icon-top": `${frame1Config.icons.top * 100}%`,
+    "--icon-offset": `${frame1Config.icons.offset * 100}%`,
     "--icon-linkedin": frame1Config.icons.linkedin,
     "--icon-radius": `${frame1Config.icons.radius}px`,
     "--icon-glow": `${frame1Config.icons.glow}px`,
@@ -654,16 +629,6 @@ export function Frame1() {
     "--middle-line-weight": String(frame1Config.middle.lineWeight),
     "--middle-line-height": String(frame1Config.middle.lineLine),
     "--middle-line-opacity": String(frame1Config.middle.lineOpacity),
-    "--seam-core": `${frame1Config.seams.core}px`,
-    "--seam-glow": `${frame1Config.seams.glow}px`,
-    "--beam-width": `${frame1Config.beams.width * 100}%`,
-    "--beam-blur": `${frame1Config.beams.blur}px`,
-    "--beam-overshoot": String(frame1Config.beams.overshoot),
-    "--beam-mouth": `${frame1Config.beams.mouth * 100}%`,
-    "--beam-pool": `${frame1Config.beams.pool * 100}%`,
-    "--beam-left": `color-mix(in srgb, var(--buas-tone) ${frame1Config.beams.leftMix * 100}%, #fff6e8)`,
-    "--beam-right": `color-mix(in srgb, var(--bilkent-tone) ${frame1Config.beams.rightMix * 100}%, #eef3ff)`,
-    "--beam-flicker": String(frame1Config.beams.flicker),
     "--research-time": `${frame1Config.research.duration}s`,
     "--research-dim": String(frame1Config.research.dim),
     "--research-blur": `${frame1Config.research.blur}px`,
@@ -730,7 +695,6 @@ export function Frame1() {
       data-bilkent={shown.bilkent ? "1" : "0"}
       data-buas={shown.buas ? "1" : "0"}
       data-middle={shown.middle ? "1" : "0"}
-      data-haze={shown.haze ? "1" : "0"}
       data-content={shown.content ? "1" : "0"}
     >
       <div className="frame-world">
@@ -745,7 +709,7 @@ export function Frame1() {
           <div className="tone-hue fill" />
           <div className="tone-lift fill" />
         </div>
-        <div className="shade fill" />
+        <div className="region-veil fill" />
       </section>
 
       <section className="region region-right mask-right fill" aria-label="Bilkent University">
@@ -759,7 +723,7 @@ export function Frame1() {
           <div className="tone-hue fill" />
           <div className="tone-lift fill" />
         </div>
-        <div className="shade fill" />
+        <div className="region-veil fill" />
       </section>
 
       <section className="region region-middle mask-middle fill" aria-label="Portrait">
@@ -769,13 +733,6 @@ export function Frame1() {
           className="portrait-sharp"
         />
       </section>
-
-      <Beam className="beam-left" />
-      <Beam className="beam-right" />
-      <Beam className="beam-middle" />
-
-      <div className="seam-line seam-line-left" />
-      <div className="seam-line seam-line-right" />
 
       {frame1Config.effects.PORTRAIT_EDGE_LIGHT ? (
         <div className="edge mask-middle fill">
@@ -805,27 +762,15 @@ export function Frame1() {
         <LinkedInIcon />
       </a>
 
-      <div className="logo-anchor logo-anchor-buas hud">
-        <div className="logo-pool" />
-        <Asset
-          src={frame1Config.assets.buasLogo}
-          alt="Breda University of Applied Sciences"
-          className="logo"
-        />
-      </div>
-
-      <div className="logo-anchor logo-anchor-bilkent hud">
-        <div className="logo-pool" />
-        <Asset
-          src={frame1Config.assets.bilkentLogo}
-          alt="Bilkent University"
-          className="logo"
-        />
-      </div>
-
       <div className="copy copy-left hud" ref={leftCopyRef}>
-        <div className="copy-shade" />
         <div className="copy-shape" />
+        <div className="badge">
+          <Asset
+            src={frame1Config.assets.buasLogo}
+            alt="Breda University of Applied Sciences"
+            className="badge-logo badge-logo-buas"
+          />
+        </div>
         <p className="title title-buas">Master Game Technology</p>
         <p className="label">AI & Procedural Generation</p>
         <p className="text">
@@ -842,8 +787,14 @@ export function Frame1() {
       </div>
 
       <div className="copy copy-right hud" ref={rightCopyRef}>
-        <div className="copy-shade" />
         <div className="copy-shape" />
+        <div className="badge">
+          <Asset
+            src={frame1Config.assets.bilkentLogo}
+            alt="Bilkent University"
+            className="badge-logo badge-logo-bilkent"
+          />
+        </div>
         <p className="title title-bilkent">BSc Computer Engineering</p>
         <p className="label">Favorite courses</p>
         <div className="courses">
@@ -854,6 +805,8 @@ export function Frame1() {
               href={course.href}
               target="_blank"
               rel="noreferrer noopener"
+              title={course.fullName}
+              aria-label={course.fullName}
             >
               <span className="course-code">{course.code}</span>
               <span className="course-name">{course.name}</span>
@@ -916,11 +869,3 @@ export function Frame1() {
   );
 }
 
-function Beam({ className }: { className: string }) {
-  return (
-    <div className={`beam ${className}`}>
-      <div className="beam-shaft" />
-      <div className="beam-pool" />
-    </div>
-  );
-}

@@ -137,38 +137,13 @@
   pointer-events: none;
 }
 
-.shade {
-  background: #000;
-  opacity: calc(var(--shade-amount) * var(--light-strength));
-  pointer-events: none;
-}
-
-.region-left > .shade {
-  background: color-mix(in srgb, var(--buas-tone) var(--buas-shade), black);
-}
-
-.region-right > .shade {
-  background: color-mix(in srgb, var(--bilkent-tone) var(--bilkent-shade), black);
-}
-
-.shade-portrait {
-  opacity: calc(var(--portrait-shade) * var(--light-strength));
-  background: #000;
-}
-
-.sun {
-  z-index: 2;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.sun-buas {
-  background: radial-gradient(
-    circle var(--buas-sun-radius) at var(--buas-sun-x) var(--buas-sun-y),
-    rgba(255, 255, 255, var(--buas-sun-core)) 0%,
-    rgba(255, 255, 255, var(--buas-sun-mid)) 36%,
-    transparent 72%
+.region-veil {
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / var(--veil-top, 0.35)),
+    rgb(0 0 0 / var(--veil-bottom, 0.75))
   );
+  pointer-events: none;
 }
 
 .portrait-sharp {
@@ -180,153 +155,6 @@
   object-fit: fill;
   mask-image: linear-gradient(to bottom, #000 0%, #000 var(--portrait-fade, 72%), transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 var(--portrait-fade, 72%), transparent 100%);
-}
-
-.beam {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.beam-left {
-  --beam-color: var(--beam-left, #fff6e8);
-  --beam-x: var(--left-light-x);
-  --beam-y: var(--left-light-y);
-}
-
-.beam-right {
-  --beam-color: var(--beam-right, #eef3ff);
-  --beam-x: var(--right-light-x);
-  --beam-y: var(--right-light-y);
-}
-
-.beam-middle {
-  --beam-color: var(--middle-tone);
-  --beam-x: var(--mid-light-x);
-  --beam-y: var(--mid-light-y);
-}
-
-.beam-shaft,
-.beam-pool {
-  position: absolute;
-  pointer-events: none;
-  animation: beam-flicker 3.6s ease-in-out infinite;
-}
-
-.beam-right .beam-shaft,
-.beam-right .beam-pool {
-  animation-duration: 4.4s;
-}
-
-.beam-middle .beam-shaft,
-.beam-middle .beam-pool {
-  animation-duration: 2.9s;
-  animation-delay: -0.8s;
-}
-
-.beam-shaft {
-  width: var(--beam-width, 20%);
-  height: calc(var(--beam-y) + var(--frame-h, 100dvh) * var(--beam-overshoot, 0.08));
-  left: calc(var(--beam-x) - var(--beam-width, 20%) / 2);
-  bottom: calc(100% - var(--beam-y));
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--beam-color) 18%, transparent) 18%,
-    color-mix(in srgb, var(--beam-color) 55%, transparent) 70%,
-    color-mix(in srgb, var(--beam-color) 70%, transparent) 100%
-  );
-  clip-path: polygon(
-    calc(50% - var(--beam-mouth, 16%) / 2) 0,
-    calc(50% + var(--beam-mouth, 16%) / 2) 0,
-    112% 108%,
-    -12% 108%
-  );
-  filter: blur(var(--beam-blur, 28px));
-  opacity: 0.72;
-}
-
-.beam-pool {
-  width: var(--beam-pool, 22%);
-  height: calc(var(--beam-pool, 22%) * 0.7);
-  left: calc(var(--beam-x) - var(--beam-pool, 22%) / 2);
-  top: calc(var(--beam-y) - var(--beam-pool, 22%) * 0.32);
-  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--beam-color) 75%, transparent) 0%, transparent 72%);
-  filter: blur(18px);
-  opacity: 0.8;
-}
-
-@keyframes beam-flicker {
-  0%,
-  100% {
-    opacity: calc(0.7 * (1 - var(--beam-flicker, 0.025)));
-  }
-  17% {
-    opacity: 0.7;
-  }
-  29% {
-    opacity: calc(0.7 * (1 - var(--beam-flicker, 0.025)));
-  }
-  46% {
-    opacity: calc(0.7 * (1 - var(--beam-flicker, 0.025) * 0.35));
-  }
-  68% {
-    opacity: 0.7;
-  }
-  84% {
-    opacity: calc(0.7 * (1 - var(--beam-flicker, 0.025) * 0.8));
-  }
-}
-
-.seam-line {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--seam-glow, 28px) * -0.5);
-  left: 0;
-  width: var(--seam-length, 100%);
-  height: var(--seam-glow, 28px);
-  transform-origin: left center;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-.seam-line::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: var(--seam-core, 1.5px);
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 6px 1px rgba(255, 255, 255, 0.4);
-}
-
-.seam-line-left {
-  transform: rotate(var(--seam-left-angle, 51deg));
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--buas-tone) 45%, transparent) 32%,
-    rgba(255, 255, 255, 0.42) 50%,
-    color-mix(in srgb, var(--middle-tone) 35%, transparent) 68%,
-    transparent 100%
-  );
-}
-
-.seam-line-right {
-  left: 100%;
-  transform: rotate(var(--seam-right-angle, 129deg));
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--middle-tone) 35%, transparent) 32%,
-    rgba(255, 255, 255, 0.42) 50%,
-    color-mix(in srgb, var(--bilkent-tone) 50%, transparent) 68%,
-    transparent 100%
-  );
 }
 
 .edge {
@@ -396,59 +224,29 @@
   z-index: 5;
 }
 
-.logo-anchor {
-  position: absolute;
-  z-index: 5;
+.badge {
+  display: table;
+  margin: 0 0 var(--badge-gap, 16px);
+  padding: var(--badge-pad-y, 8px) var(--badge-pad-x, 12px);
+  background: color-mix(in srgb, var(--badge-plate, #f2eee6) calc(var(--badge-opacity, 0.92) * 100%), transparent);
+  border-radius: var(--badge-radius, 8px);
 }
 
-.logo-anchor-buas {
-  left: calc(var(--logo-inset-x) * 100%);
-  bottom: calc(var(--logo-inset-y) * 100%);
-  width: calc(var(--buas-logo-w) * 100%);
-  aspect-ratio: var(--buas-logo-aspect);
+.copy-right .badge {
+  margin-left: auto;
 }
 
-.logo-anchor-bilkent {
-  right: calc(var(--logo-inset-x) * 100%);
-  bottom: calc(var(--logo-inset-y) * 100%);
-  width: calc(var(--bilkent-logo-w) * 100%);
-  aspect-ratio: var(--bilkent-logo-aspect);
-}
-
-.logo-pool {
-  position: absolute;
-  left: 50%;
-  top: 56%;
-  width: calc(var(--pool-width) * 100%);
-  height: calc(var(--pool-height) * 100%);
-  transform: translate(-50%, -50%);
-  background: radial-gradient(
-    ellipse at center,
-    var(--pool-color) 0%,
-    var(--pool-color) 36%,
-    transparent 70%
-  );
-  filter: blur(var(--pool-blur));
-  opacity: var(--pool-opacity);
-  pointer-events: none;
-}
-
-.logo-anchor-buas .logo-pool {
-  --pool-color: color-mix(in srgb, var(--buas-tone) var(--pool-tone), white);
-}
-
-.logo-anchor-bilkent .logo-pool {
-  --pool-color: color-mix(in srgb, var(--bilkent-tone) var(--pool-tone), white);
-}
-
-.logo {
-  position: relative;
-  z-index: 1;
+.badge-logo {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: auto;
+  max-width: 100%;
+  height: var(--badge-buas, 44px);
   object-fit: contain;
   filter: none;
+}
+
+.badge-logo-bilkent {
+  height: var(--badge-bilkent, 36px);
 }
 
 .copy {
@@ -467,23 +265,6 @@
 
 .copy-shape {
   margin: 0;
-  pointer-events: none;
-}
-
-.copy-shade {
-  position: absolute;
-  z-index: -1;
-  left: -18%;
-  right: -12%;
-  top: -40%;
-  bottom: -28%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, var(--text-shade)) 0%,
-    rgba(0, 0, 0, calc(var(--text-shade) * 0.55)) 46%,
-    transparent 74%
-  );
-  filter: blur(var(--text-shade-blur));
   pointer-events: none;
 }
 
@@ -565,7 +346,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: var(--course-gap, 8px);
-  margin-top: var(--label-gap, 6px);
+  margin-top: 0;
 }
 
 .course {
@@ -574,9 +355,10 @@
   gap: 0.4em;
   max-width: 100%;
   color: inherit;
-  font-size: var(--course-size, 17px);
+  font-size: var(--course-size, 18px);
   line-height: 1.35;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .course-code {
@@ -712,8 +494,6 @@
   outline-offset: 2px;
 }
 
-.frame.is-reduced .beam-shaft,
-.frame.is-reduced .beam-pool,
 .frame.is-reduced .research-panel {
   animation: none;
 }
@@ -747,18 +527,18 @@
 
 .icon-github,
 .icon-linkedin {
-  top: calc(var(--icon-top, 25%) - var(--icon-size, 56px) / 2);
+  top: calc(100% / 3 - var(--icon-size, 64px) / 2);
 }
 
 .icon-github {
-  left: calc(12.5% - var(--icon-size, 56px) / 2);
+  left: calc(50% - var(--icon-offset, 17%) - var(--icon-size, 64px) / 2);
   border-radius: 50%;
   background: #fff;
   color: #000;
 }
 
 .icon-linkedin {
-  left: calc(87.5% - var(--icon-size, 56px) / 2);
+  left: calc(50% + var(--icon-offset, 17%) - var(--icon-size, 64px) / 2);
   border-radius: var(--icon-radius, 8px);
   background: var(--icon-linkedin, #0a66c2);
   color: #fff;
@@ -806,8 +586,6 @@
 }
 
 .frame.is-opening .region,
-.frame.is-opening .beam,
-.frame.is-opening .seam-line,
 .frame.is-opening .edge,
 .frame.is-opening .fx,
 .frame.is-opening .hud {
@@ -816,28 +594,21 @@
 }
 
 .frame.is-opening[data-bilkent="1"] .region-right,
-.frame.is-opening[data-bilkent="1"] .beam-right {
+.frame.is-opening[data-bilkent="1"] .fx {
   opacity: 1;
 }
 
-.frame.is-opening[data-buas="1"] .region-left,
-.frame.is-opening[data-buas="1"] .beam-left {
+.frame.is-opening[data-buas="1"] .region-left {
   opacity: 1;
 }
 
 .frame.is-opening[data-middle="1"] .region-middle,
-.frame.is-opening[data-middle="1"] .beam-middle,
-.frame.is-opening[data-middle="1"] .seam-line,
 .frame.is-opening[data-middle="1"] .edge {
   opacity: 1;
 }
 
 .frame.is-opening[data-middle="1"] .edge {
   opacity: var(--edge-strength);
-}
-
-.frame.is-opening[data-haze="1"] .fx {
-  opacity: 1;
 }
 
 .frame.is-opening:not([data-content="1"]) .hud {
@@ -852,14 +623,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .frame.is-opening .region,
-  .frame.is-opening .beam,
-  .frame.is-opening .seam-line,
   .frame.is-opening .edge,
   .frame.is-opening .fx,
   .frame.is-opening .hud,
   .icon-link,
-  .beam-shaft,
-  .beam-pool,
   .research-panel,
   .frame-world {
     transition: none;

@@ -15,8 +15,6 @@ export const frame1Config = {
   lightToneMix: 0.58,
   /** Radius of each focal light as a fraction of the frame width. */
   lightRadius: 0.42,
-  /** How much haze is drawn when HAZE_ENABLED is on. */
-  hazeAmount: 1,
   links: {
     github: "https://github.com/AlperJoe",
     linkedin: "https://www.linkedin.com/in/alperbozkurt/",
@@ -38,18 +36,24 @@ export const frame1Config = {
   cursorLightShift: 0.02,
   /** Largest shift of the campus photos away from the cursor, in pixels. */
   cursorPhotoShift: 10,
-  logos: {
-    buasWidth: 0.24,
-    bilkentWidth: 0.28,
-    insetX: 0.05,
-    insetY: 0.06,
-    buasAspect: 2976 / 1028,
-    bilkentAspect: 1691 / 363,
-    poolTone: 0.16,
-    poolBlur: 36,
-    poolWidth: 1.75,
-    poolHeight: 2.15,
-    poolOpacity: 0.96,
+  /**
+   * Black veil over each campus photo. Buildings stay visible up high,
+   * and the text sits on the darker ground below.
+   */
+  veil: {
+    top: 0.35,
+    bottom: 0.75,
+  },
+  badge: {
+    plate: "#F2EEE6",
+    plateOpacity: 0.92,
+    padY: 8,
+    padX: 12,
+    radius: 8,
+    /** Space between the badge and the title. */
+    gap: 16,
+    buasHeight: 44,
+    bilkentHeight: 36,
   },
   duotone: {
     contrast: 1.35,
@@ -59,13 +63,6 @@ export const frame1Config = {
     bilkentShadow: 1,
     buasShade: 0.48,
     bilkentShade: 0.8,
-  },
-  buasSun: {
-    x: "-4%",
-    y: "-8%",
-    radius: 0.74,
-    core: 0.95,
-    mid: 0.46,
   },
   campus: {
     pad: 28,
@@ -102,9 +99,11 @@ export const frame1Config = {
     /** Top of the name block, as a fraction of the frame height. */
     top: 0.7,
     /** Widest the block may be, as a fraction of the frame width. */
-    maxWidth: 0.34,
+    maxWidth: 0.3,
     /** Clear space kept between this block and each seam. */
-    sideGap: 48,
+    seamGap: 20,
+    /** Clear space kept between this block and a side block. */
+    blockGap: 16,
     nameSize: "clamp(48px, 4.4vw, 80px)",
     nameLine: 1,
     nameColor: "#F2EEE6",
@@ -115,47 +114,50 @@ export const frame1Config = {
     lineOpacity: 0.85,
   },
   icons: {
-    size: 56,
+    size: 64,
     /** Lift on hover and keyboard focus, in pixels. */
     lift: 2,
-    /** Distance from the top of the frame, as a fraction of its height. */
-    top: 0.25,
+    /** Distance from the frame center to an icon's center, as a fraction of width. */
+    offset: 0.17,
     linkedin: "#0A66C2",
     radius: 8,
     glow: 16,
   },
   text: {
-    gap: 32,
-    titleGap: 16,
+    /** Side blocks sit this far in from the left and right edges. */
+    insetX: 0.05,
+    /** Side blocks sit this far above the bottom edge. */
+    insetY: 0.06,
+    titleGap: 12,
     labelGap: 6,
+    /** Lines stop this far before the seam, as a fraction of the frame width. */
     seamInset: 0.04,
     titleLine: 1.05,
-    buasTitleSize: "clamp(22px, 2vw, 32px)",
+    buasTitleSize: "clamp(26px, 2.4vw, 40px)",
     buasTitleWeight: 600,
-    bilkentTitleSize: "clamp(24px, 2.3vw, 38px)",
+    bilkentTitleSize: "clamp(28px, 2.6vw, 44px)",
     bilkentTitleWeight: 800,
-    labelSize: 15,
+    labelSize: 16,
     labelWeight: 600,
-    /** Thesis and Favorite courses. White, so they read on both campus tones. */
-    labelOpacity: 0.8,
+    labelOpacity: 0.85,
     /** Same soft shadow the other Frame 1 text uses. */
     labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
     buasLabel: "#FFD2B0",
     bilkentLabel: "#C9D4FF",
-    bodySize: 17,
-    buttonSize: 16,
+    bodySize: 18,
+    buttonSize: 17,
     buttonWeight: 600,
     buttonGap: 14,
-    courseSize: 17,
+    courseSize: 18,
     courseCodeWeight: 600,
     courseCodeOpacity: 0.7,
     courseNameWeight: 400,
-    courseNameOpacity: 0.92,
+    courseNameOpacity: 0.95,
     courseUnderline: 0.35,
     courseGap: 8,
     bodyWeight: 400,
     bodyLine: 1.45,
-    bodyOpacity: 0.9,
+    bodyOpacity: 0.92,
     shade: 0.35,
     shadeBlur: 26,
   },
@@ -164,10 +166,6 @@ export const frame1Config = {
     top: 0.08,
     /** Soft blend width at the bottom, as a fraction of the frame width. */
     bottom: 0.18,
-    /** Thickness of the bright core on the seam line, in pixels. */
-    core: 1.5,
-    /** Full height of the colored glow across the seam, in pixels. */
-    glow: 22,
     campusReach: 0.034,
     /**
      * Share of edgeLimit the noise may use. The seam stays on the true
@@ -179,23 +177,6 @@ export const frame1Config = {
     columns: 5,
     rows: 4,
     steam: 1,
-  },
-  beams: {
-    /** Tone mixed into the white of each side beam. The rest is white. */
-    leftMix: 0.34,
-    rightMix: 0.4,
-    /** Width of a beam at its pool, as a fraction of the frame width. */
-    width: 0.2,
-    /** Width of the beam's mouth compared with its pool. */
-    mouth: 0.16,
-    /** How far a beam starts above the frame, as a fraction of frame height. */
-    overshoot: 0.08,
-    /** Pool diameter compared with the frame width. */
-    pool: 0.22,
-    blur: 28,
-    /** Brightness flicker, as a fraction. About 2 to 3 percent. */
-    flicker: 0.025,
-    dustPerBeam: 14,
   },
   research: {
     /** How long the panel takes to grow out and shrink back, in seconds. */
@@ -217,16 +198,19 @@ export const frame1Config = {
     {
       code: "CS 473",
       name: "Algorithms I",
+      fullName: "Algorithms I",
       href: "https://www.cs.bilkent.edu.tr/~ugur/teaching/cs473/",
     },
     {
       code: "CS 476",
-      name: "Automata Theory and Formal Languages",
+      name: "Automata Theory",
+      fullName: "Automata Theory and Formal Languages",
       href: "https://www.cs.bilkent.edu.tr/~dibeklioglu/teaching/cs476/",
     },
     {
       code: "EEE 448",
-      name: "Reinforcement Learning and Dynamic Programming",
+      name: "Reinforcement Learning",
+      fullName: "Reinforcement Learning and Dynamic Programming",
       href: "https://catalog.bilkent.edu.tr/course/c14448.html",
     },
   ],
@@ -240,8 +224,6 @@ export const frame1Config = {
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
   effects: {
-    HAZE_ENABLED: true,
-    DUST_ENABLED: true,
     PORTRAIT_EDGE_LIGHT: true,
     OPENING_SEQUENCE: true,
     CURSOR_REACTION: true,
