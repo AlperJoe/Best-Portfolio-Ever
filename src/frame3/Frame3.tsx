@@ -121,9 +121,37 @@ export function Frame3() {
       frame.style.setProperty("--caption-top", `${mapRect.bottom - frameRect.top + frame3.captionOffset}px`);
     };
 
+    const placeMap = () => {
+      const rect = frame.getBoundingClientRect();
+      const mapW = Math.min(rect.width * frame3.mapWidth, rect.height * frame3.mapHeight * 2);
+      const mapH = mapW / 2;
+      const right = rect.width * frame3.mapRightRatio;
+      const x = rect.width - right - mapW;
+      const y = (rect.height - mapH) / 2;
+      const cell = mapW / level.width;
+      frame.style.setProperty("--map-w", `${mapW}px`);
+      frame.style.setProperty("--cell", `${cell}px`);
+      frame.style.setProperty("--grid-x", `${x}px`);
+      frame.style.setProperty("--grid-y", `${y}px`);
+      const fade = frame3.edgeFade;
+      const topPct = (y / rect.height) * 100;
+      const botPct = ((y + mapH) / rect.height) * 100;
+      const leftPct = (x / rect.width) * 100;
+      const rightPct = ((x + mapW) / rect.width) * 100;
+      frame.style.setProperty("--band-top", `${topPct}%`);
+      frame.style.setProperty("--band-top-fade", `${topPct * fade}%`);
+      frame.style.setProperty("--band-bot", `${botPct}%`);
+      frame.style.setProperty("--band-bot-fade", `${100 - (100 - botPct) * fade}%`);
+      frame.style.setProperty("--band-left", `${leftPct}%`);
+      frame.style.setProperty("--band-left-fade", `${leftPct * fade}%`);
+      frame.style.setProperty("--band-right", `${rightPct}%`);
+      frame.style.setProperty("--band-right-fade", `${100 - (100 - rightPct) * fade}%`);
+    };
+
     const resize = () => {
       const rect = frame.getBoundingClientRect();
       effects.resize(rect.width, rect.height);
+      placeMap();
       placeCaption();
       drewStill = false;
     };
@@ -303,7 +331,9 @@ export function Frame3() {
     "--text-left": frame3.textLeft,
     "--text-max": frame3.textMax,
     "--map-right": frame3.mapRight,
-    "--map-max": frame3.mapMax,
+    "--grid": frame3.grid,
+    "--outside-mix": String(frame3.outsideMix),
+    "--outside-grid": frame3.outsideGrid,
     "--column-gap": frame3.columnGap,
     "--refs-right": frame3.refsRight,
     "--refs-bottom": frame3.refsBottom,
@@ -332,6 +362,12 @@ export function Frame3() {
     "--note-size": frame3.noteSize,
     "--note-line": String(frame3.noteLine),
     "--note-color": frame3.noteColor,
+    "--note-plate": frame3.notePlate,
+    "--note-plate-opacity": String(frame3.notePlateOpacity),
+    "--note-border": String(frame3.noteBorder),
+    "--note-radius": frame3.noteRadius,
+    "--note-pad-y": frame3.notePadY,
+    "--note-pad-x": frame3.notePadX,
     "--refs-size": frame3.refsSize,
     "--refs-weight": String(frame3.refsWeight),
     "--panel-width": frame3.panelWidth,
@@ -359,6 +395,8 @@ export function Frame3() {
       data-vision={watch ?? ""}
       aria-label="Upgraded PressurePlate"
     >
+      <div className="frame3-world" aria-hidden="true" />
+
       <div className="frame3-stage">
         <div className="frame3-map" id="frame3-main-image" ref={mapRef}>
           <LevelMap pose={pose} watch={watch} />
@@ -393,7 +431,11 @@ export function Frame3() {
             onClick={onAgentClick}
           />
           {watchedPoint && (
-            <p className="frame3-note" id="frame3-vision-note" style={noteStyle(watchedPoint[0], watchedPoint[1])}>
+            <p
+              className="frame3-note"
+              id="frame3-vision-note"
+              style={noteStyle(watchedPoint[0], watchedPoint[1], watch === "B" ? frame3.agentB : frame3.agentA)}
+            >
               {NOTE}
             </p>
           )}

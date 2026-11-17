@@ -26,9 +26,11 @@ export const frame1Config = {
   shadeAmount: 0.16,
   /** The portrait is shaded less so the face stays clear. */
   portraitShadeAmount: 0.05,
-  /** The seam light band is off. */
+  /** The seam light band is off. The portrait keeps its own faint edge light. */
   edgeGlowReach: 0.11,
   edgeGlowStrength: 0,
+  /** Faint two-sided light on the portrait, along the seams. */
+  portraitEdgeStrength: 0.24,
   /** Largest shift of the focal lights toward the cursor, as a fraction of frame width. */
   cursorLightShift: 0,
   /** Largest shift of the campus photos away from the cursor, in pixels. */
@@ -38,8 +40,8 @@ export const frame1Config = {
    * and the buildings show through the lighter lower half.
    */
   veil: {
-    top: 0.78,
-    bottom: 0.3,
+    top: 0.9,
+    bottom: 0.28,
   },
   badge: {
     plate: "#F2EEE6",
@@ -47,13 +49,13 @@ export const frame1Config = {
     /** Same inner padding on every side, in pixels. */
     pad: 8,
     radius: 8,
-    /** Distance from the top edge, as a fraction of the frame height. */
-    top: 0.025,
-    /** Shared plate size. */
-    width: 0.13,
+    /** Distance in from each side edge, as a fraction of the frame width. */
+    side: 0.04,
+    /** Distance up from the bottom edge, as a fraction of the frame height. */
+    bottom: 0.04,
+    /** Shared plate size, as fractions of the frame. */
+    width: 0.12,
     height: 0.055,
-    /** Clear space between a plate and its seam, as a fraction of the frame width. */
-    seamGap: 0.012,
   },
   duotone: {
     contrast: 1.35,
@@ -75,9 +77,9 @@ export const frame1Config = {
       maxZoom: 2.3,
       naturalWidth: 480,
       anchorX: 0.52,
-      anchorY: 0.18,
-      placeX: 0.1,
-      placeY: 0.7,
+      anchorY: 0.2,
+      placeX: 0.11,
+      placeY: 0.72,
       aspect: 480 / 480,
     },
     bilkent: {
@@ -97,15 +99,19 @@ export const frame1Config = {
    */
   crownGlow: {
     rgb: "255, 214, 170",
-    opacity: 0.4,
-    size: 0.92,
-    shift: "-20%",
+    opacity: 0.32,
+    size: 1.08,
+    shift: "-28%",
   },
   portraitLayout: {
-    /** Ceiling on enlargement. The fit uses the largest size that still sits high. */
-    maxScale: 1.2,
+    /** Ceiling on enlargement. */
+    maxScale: 1.35,
     naturalWidth: 1024,
     naturalHeight: 1026,
+    /** Top of the crown, as a fraction of the photo. */
+    crownTopY: 0.02,
+    /** Where that crown top sits, as a fraction of the frame height. */
+    crownFrame: 0.06,
     /** Bottom of the chin and the top of the shoulders, as fractions of the photo. */
     chinY: 0.68,
     shoulderY: 0.8,
@@ -117,19 +123,15 @@ export const frame1Config = {
     /** Sides of the face at eye level, as fractions of the photo width. */
     faceLeft: 0.373,
     faceRight: 0.691,
-    /** The fade lives in about the lowest share of the frame, under the name. */
-    fadeBand: 0.22,
+    /** How far the fade runs after the top of the name, as a fraction of frame height. */
+    fadeSpan: 0.07,
     /**
-     * Crown samples, as fractions of the photo. The fit keeps each one
-     * inside the middle triangle.
+     * Near the apex the portrait may pass the seams. The extra reach is a
+     * fraction of the frame width and is gone by `featherReach` of the height.
      */
-    crown: [
-      { y: 0.03, left: 0.43, right: 0.57 },
-      { y: 0.15, left: 0.37, right: 0.63 },
-      { y: 0.26, left: 0.342, right: 0.667 },
-    ],
-    /** Clear space between the crown and each seam, as a fraction of the frame width. */
-    crownGap: 0.03,
+    featherOverflow: 0.055,
+    featherReach: 0.22,
+    featherSoft: 0.02,
   },
   middle: {
     /** Bottom of the line under the name, as a fraction of the frame height. */
@@ -164,36 +166,38 @@ export const frame1Config = {
   text: {
     /** Side blocks sit this far in from the left and right edges. */
     insetX: 0.05,
-    /** Side blocks start this far below the top edge, under the badges. */
-    insetY: 0.1,
-    /** Shared rhythm: after the badge, after the title, after the label, before the button. */
-    spaceTitle: 20,
-    spaceLabel: 14,
+    /** Both blocks start this far below the top edge. */
+    insetY: 0.07,
+    /** Shared rhythm: under the title, under the divider, under the label, above the button. */
+    spaceDivider: 12,
+    spaceLabel: 16,
     spaceBody: 8,
-    spaceButton: 16,
-    titleGap: 14,
-    labelGap: 8,
+    spaceButton: 24,
     /** Lines stop this far before the seam, as a fraction of the frame width. */
     seamInset: 0.04,
     titleLine: 1.05,
-    buasTitleSize: "clamp(30px, 2.8vw, 48px)",
+    buasTitleSize: "clamp(32px, 3vw, 56px)",
     buasTitleWeight: 600,
-    bilkentTitleSize: "clamp(32px, 3vw, 52px)",
+    bilkentTitleSize: "clamp(34px, 3.2vw, 60px)",
     bilkentTitleWeight: 800,
-    labelSize: 17,
+    labelSize: 18,
     labelWeight: 600,
-    labelOpacity: 0.88,
     /** Same soft shadow the other Frame 1 text uses. */
     labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
-    buasLabel: "#FFD2B0",
-    bilkentLabel: "#C9D4FF",
-    bodySize: 19,
-    buttonSize: 18,
+    buasLabel: "#FFC496",
+    bilkentLabel: "#BFD0FF",
+    ruleOpacity: 0.2,
+    bodySize: 20,
+    buttonSize: 17,
+    buttonPadY: 8,
+    buttonPadX: 14,
+    buttonRadius: 6,
+    buttonBorder: "rgba(255, 255, 255, 0.4)",
     buttonWeight: 600,
     buttonGap: 16,
     /** How far the research arrow travels on hover and focus, in pixels. */
     arrowShift: 4,
-    courseSize: 19,
+    courseSize: 20,
     courseCodeWeight: 600,
     courseCodeOpacity: 0.7,
     courseNameWeight: 400,
@@ -276,7 +280,7 @@ export const frame1Config = {
     name: 2020,
   },
   effects: {
-    PORTRAIT_EDGE_LIGHT: false,
+    PORTRAIT_EDGE_LIGHT: true,
     OPENING_SEQUENCE: true,
     CURSOR_REACTION: true,
     FILM_GRAIN: true,

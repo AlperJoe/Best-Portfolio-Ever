@@ -15,14 +15,56 @@
   z-index: 2;
 }
 
+.frame3-world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--floor) calc(var(--outside-mix) * 100%), var(--frame3-bg));
+  background-image:
+    linear-gradient(to right, var(--outside-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--outside-grid) 1px, transparent 1px);
+  background-size: var(--cell, 40px) var(--cell, 40px);
+  background-position: var(--grid-x, 0px) var(--grid-y, 0px);
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--band-top-fade, 8%),
+      #000 var(--band-bot-fade, 92%),
+      transparent 100%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--band-left-fade, 4%),
+      #000 var(--band-right-fade, 98%),
+      transparent 100%
+    );
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 var(--band-top-fade, 8%),
+      #000 var(--band-bot-fade, 92%),
+      transparent 100%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0%,
+      #000 var(--band-left-fade, 4%),
+      #000 var(--band-right-fade, 98%),
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
 .frame3-stage {
   position: absolute;
   right: var(--map-right);
   top: 50%;
-  width: min(
-    var(--map-max),
-    calc(100% - var(--text-left) - var(--text-max) - var(--map-right) - var(--column-gap))
-  );
+  width: var(--map-w, min(66vw, 160dvh));
   transform: translateY(-50%);
   z-index: 1;
 }
@@ -72,24 +114,26 @@
 .frame3-note {
   position: absolute;
   z-index: 3;
+  box-sizing: border-box;
   margin: 0;
+  width: max-content;
+  max-width: min(240px, 46%);
+  padding: var(--note-pad-y, 8px) var(--note-pad-x, 10px);
+  border: 1px solid color-mix(in srgb, var(--agent, var(--agent-a)) calc(var(--note-border, 0.4) * 100%), transparent);
+  border-radius: var(--note-radius, 6px);
+  background: color-mix(in srgb, var(--note-plate, #0e1116) calc(var(--note-plate-opacity, 0.92) * 100%), transparent);
   font-family: var(--font-text), sans-serif;
   font-size: var(--note-size);
   font-weight: 400;
   line-height: var(--note-line);
-  width: min(240px, 46%);
   color: var(--note-color);
   pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 .frame3-below {
   position: absolute;
   right: var(--map-right);
-  width: min(
-    var(--map-max),
-    calc(100% - var(--text-left) - var(--text-max) - var(--map-right) - var(--column-gap))
-  );
+  width: var(--map-w, min(66vw, 160dvh));
   top: var(--caption-top, 72%);
   z-index: 4;
 }

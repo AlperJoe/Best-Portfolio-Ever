@@ -153,16 +153,30 @@ export function visionOrigin(x: number, y: number, range: number) {
   return { x: x - inset, y: y - inset, size: range };
 }
 
-export function noteStyle(x: number, y: number): CSSProperties {
-  const { width, height, sensorRange } = level;
-  const box = visionOrigin(x, y, sensorRange);
-  const rightEdge = (box.x + box.size) / width;
-  const leftEdge = box.x / width;
-  const top = Math.min(0.7, Math.max(0.02, box.y / height));
-  if (rightEdge < 0.58) {
-    return { left: `${rightEdge * 100 + 1.2}%`, top: `${top * 100}%` };
+export function noteStyle(x: number, y: number, color: string): CSSProperties {
+  const { width, height } = level;
+  const gap = frame3.noteGap;
+  const inset = frame3.noteInset;
+  const cellLeft = (x / width) * 100;
+  const cellRight = ((x + 1) / width) * 100;
+  const top = (y / height) * 100;
+  const roomRight = 100 - cellRight;
+  const roomLeft = cellLeft;
+  const placeRight = roomRight >= roomLeft;
+  const room = placeRight ? roomRight : roomLeft;
+  const shared = {
+    top: `clamp(${inset}px, ${top}%, calc(100% - ${frame3.noteMaxHeight}px))`,
+    maxWidth: `min(${frame3.noteMax}px, calc(${room}% - ${gap + inset}px))`,
+    "--agent": color,
+  } as CSSProperties;
+  if (placeRight) {
+    return { ...shared, left: `calc(${cellRight}% + ${gap}px)`, right: "auto" };
   }
-  return { right: `${(1 - leftEdge) * 100 + 1.2}%`, top: `${top * 100}%` };
+  return {
+    ...shared,
+    left: "auto",
+    right: `calc(${100 - cellLeft}% + ${gap}px)`,
+  };
 }
 
 export function LevelMap({ pose, watch }: { pose: Pose; watch: AgentId | null }) {

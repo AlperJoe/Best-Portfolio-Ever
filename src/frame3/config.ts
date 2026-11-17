@@ -24,7 +24,19 @@ export const frame3 = {
   textLeft: "5%",
   textMax: "30%",
   mapRight: "5%",
-  mapMax: "62%",
+  /**
+   * Playable map width is the smaller of this share of the frame width
+   * and twice `mapHeight` of the frame height, so the map stays 2:1.
+   */
+  mapWidth: 0.66,
+  mapHeight: 0.8,
+  mapRightRatio: 0.05,
+  /** How much of the floor color shows in the tiles outside the map. */
+  outsideMix: 0.62,
+  /** Share of each outer margin that fades away. The rest stays dim. */
+  edgeFade: 0.42,
+  /** Grid line on the dim tiles outside the playable map. */
+  outsideGrid: "rgba(255, 255, 255, 0.055)",
   columnGap: "3%",
   refsRight: "5%",
   refsBottom: "4%",
@@ -54,6 +66,16 @@ export const frame3 = {
   captionOffset: 12,
   noteSize: "13px",
   noteLine: 1.4,
+  notePlate: "#0E1116",
+  notePlateOpacity: 0.92,
+  noteBorder: 0.4,
+  noteRadius: "6px",
+  notePadY: "8px",
+  notePadX: "10px",
+  noteGap: 6,
+  noteInset: 8,
+  noteMax: 220,
+  noteMaxHeight: 96,
   refsSize: "14px",
   refsWeight: 600,
   panelTextSize: "14px",
