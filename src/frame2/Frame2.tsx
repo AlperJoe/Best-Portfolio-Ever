@@ -5,7 +5,7 @@ import { createEmbers, drawEmbers, stepEmbers, type Ember } from "./embers";
 import { placeHero, type HeroPlacement } from "./placeHero";
 import "./Frame2.css";
 
-type Pose = "from" | "to" | "back";
+type Pose = "hand" | "mid" | "face" | "shut" | "home";
 type OpenCard = { id: Frame2CardId; pose: Pose };
 
 function usePrefersReducedMotion() {
@@ -44,20 +44,32 @@ function cardBox(points: CardPoint[], image: HeroPlacement): CSSProperties {
   };
 }
 
-function measureFlight(button: HTMLElement, frame: HTMLElement, cardW: number, cardH: number) {
-  const buttonRect = button.getBoundingClientRect();
-  const frameRect = frame.getBoundingClientRect();
-  const startX = buttonRect.left + buttonRect.width / 2 - frameRect.left;
-  const startY = buttonRect.top + buttonRect.height / 2 - frameRect.top;
-  const scale = Math.max(
-    0.14,
-    Math.min(buttonRect.width / cardW, buttonRect.height / cardH),
-  );
+function cardBounds(points: CardPoint[], image: HeroPlacement) {
+  const xs = points.map((point) => point[0]);
+  const ys = points.map((point) => point[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
   return {
-    dx: startX - frameRect.width / 2,
-    dy: startY - frameRect.height / 2,
-    scale,
+    left: image.left + minX * image.width,
+    top: image.top + minY * image.height,
+    width: (maxX - minX) * image.width,
+    height: (maxY - minY) * image.height,
   };
+}
+
+function backSize(height: number) {
+  const aspect = frame2Config.cardBack.width / frame2Config.cardBack.height;
+  return { width: height * aspect, height };
+}
+
+function hintWasDismissed() {
+  try {
+    return sessionStorage.getItem("frame2-hint-hidden") === "1";
+  } catch {
+    return false;
+  }
 }
 
 export function Frame2() {
@@ -88,6 +100,7 @@ export function Frame2() {
   );
   const [open, setOpen] = useState<OpenCard | null>(null);
   const [openCardHeight, setOpenCardHeight] = useState(0);
+  const [hintOn, setHintOn] = useState(() => !hintWasDismissed());
   placeRef.current = place;
 
   useLayoutEffect(() => {
@@ -267,18 +280,39 @@ export function Frame2() {
   }, [reduced]);
 
   useEffect(() => {
-    if (!open || open.pose === "back") return;
-    if (!reduced && open.pose === "from") {
+    const img = new Image();
+    img.src = frame2Config.assets.cardBack;
+  }, []);
+
+  function dismissHint() {
+    setHintOn(false);
+    try {
+      sessionStorage.setItem("frame2-hint-hidden", "1");
+    } catch {
+      /* The hint still stays hidden for this visit. */
+    }
+  }
+
+  function requestClose() {
+    setOpen((current) => {
+      if (!current || current.pose === "shut" || current.pose === "home") return current;
+      if (reduced || current.pose !== "face") return { id: current.id, pose: "home" };
+      return { id: current.id, pose: "shut" };
+    });
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    if (open.pose === "hand") {
       const id = window.requestAnimationFrame(() => {
-        setOpen((current) =>
-          current && current.id === open.id && current.pose === "from"
-            ? { id: current.id, pose: "to" }
-            : current,
-        );
+        setOpen((current) => {
+          if (!current || current.id !== open.id || current.pose !== "hand") return current;
+          return { id: current.id, pose: reduced ? "face" : "mid" };
+        });
       });
       return () => window.cancelAnimationFrame(id);
     }
-    closeRef.current?.focus();
+    if (open.pose === "face") closeRef.current?.focus();
   }, [open, reduced]);
 
   useEffect(() => {
@@ -290,7 +324,7 @@ export function Frame2() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        setOpen((current) => (current ? { id: current.id, pose: "back" } : current));
+        requestClose();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -311,19 +345,19 @@ export function Frame2() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, reduced]);
 
   useEffect(() => {
-    if (open?.pose !== "back") return;
+    if (open?.pose !== "home") return;
     const timer = window.setTimeout(
       () => setOpen(null),
-      (reduced ? 0.28 : frame2Config.open.duration + 0.08) * 1000,
+      (reduced ? 0.36 : frame2Config.open.travel + 0.12) * 1000,
     );
     return () => window.clearTimeout(timer);
   }, [open, reduced]);
 
   useLayoutEffect(() => {
-    const node = flightRef.current;
+    const node = dialogRef.current;
     if (!open || !node) {
       setOpenCardHeight((current) => (current === 0 ? current : 0));
       return;
@@ -347,16 +381,64 @@ export function Frame2() {
   const frameHeight = frameRef.current?.clientHeight || window.innerHeight;
   const openMaxHeight = frameHeight * frame2Config.open.height;
   const openWidth = openMaxHeight * frame2Config.open.aspect;
-  const flight =
-    open && frameRef.current && buttonRefs.current[open.id]
-      ? measureFlight(
-          buttonRefs.current[open.id] as HTMLButtonElement,
-          frameRef.current,
-          openWidth,
-          openCardHeight || openMaxHeight,
-        )
-      : { dx: 0, dy: 0, scale: 0.2 };
-  const atHand = !reduced && open && open.pose !== "to";
+  const boxes = frame2Config.cards.items.map((card) => cardBounds(card.points, place));
+  const middle = boxes[1];
+  const handSpan = boxes.reduce(
+    (span, box) => ({
+      left: Math.min(span.left, box.left),
+      right: Math.max(span.right, box.left + box.width),
+    }),
+    { left: Number.POSITIVE_INFINITY, right: 0 },
+  );
+  const lightSize = middle ? (handSpan.right - handSpan.left) * frame2Config.light.cover : 0;
+  const buttonRect =
+    open && buttonRefs.current[open.id]
+      ? buttonRefs.current[open.id]?.getBoundingClientRect()
+      : undefined;
+  const frameRect = frameRef.current?.getBoundingClientRect();
+  const handOffset =
+    buttonRect && frameRect
+      ? {
+          dx:
+            buttonRect.left +
+            buttonRect.width / 2 -
+            (frameRect.left + frameRect.width / 2),
+          dy:
+            buttonRect.top +
+            buttonRect.height / 2 -
+            (frameRect.top + frameRect.height / 2),
+        }
+      : { dx: 0, dy: 0 };
+  const atHand = !reduced && !!open && (open.pose === "hand" || open.pose === "home");
+  const back = backSize(
+    atHand ? buttonRect?.height || frameHeight * 0.18 : frameHeight * frame2Config.cardBack.midHeight,
+  );
+  const faceHeight = openCardHeight || openMaxHeight;
+  const faceScale = !open || reduced || open.pose === "face" ? 1 : Math.min(1, back.height / faceHeight);
+  const turned = !!open && (reduced || open.pose === "face");
+  const flightDuration = !open || reduced || open.pose === "hand"
+    ? 0
+    : open.pose === "face" || open.pose === "shut"
+      ? frame2Config.open.turn
+      : frame2Config.open.travel;
+
+  function onFlightTransition(event: TransitionEvent<HTMLDivElement>) {
+    if (reduced) return;
+    const target = event.target as HTMLElement;
+    if (target.classList.contains("frame2-back") && event.propertyName === "width") {
+      setOpen((current) => {
+        if (!current) return current;
+        if (current.pose === "mid") return { id: current.id, pose: "face" };
+        if (current.pose === "home") return null;
+        return current;
+      });
+    }
+    if (target.classList.contains("frame2-flip") && event.propertyName === "transform") {
+      setOpen((current) =>
+        current && current.pose === "shut" ? { id: current.id, pose: "home" } : current,
+      );
+    }
+  }
 
   const style = {
     "--caption-inset": `${frame2Config.caption.insetX * 100}%`,
@@ -383,7 +465,8 @@ export function Frame2() {
     "--hint-weight": String(frame2Config.hint.weight),
     "--hint-stretch": `${frame2Config.hint.stretch}%`,
     "--hint-color": frame2Config.hint.color,
-    "--glow-time": `${frame2Config.cards.glowSeconds}s`,
+    "--light": frame2Config.light.color,
+    "--light-time": `${frame2Config.light.seconds}s`,
     "--card-lift": `${frame2Config.cards.lift}px`,
     "--fill-blur": `${frame2Config.image.fillBlur}px`,
     "--fill-dark": String(frame2Config.image.fillDark),
@@ -392,7 +475,6 @@ export function Frame2() {
     "--open-height": `${openMaxHeight}px`,
     "--open-radius": `${frame2Config.open.radius}px`,
     "--open-navy": frame2Config.open.navy,
-    "--open-duration": `${frame2Config.open.duration}s`,
     "--open-title-size": `${frame2Config.open.titleSize}px`,
     "--open-title-weight": String(frame2Config.open.titleWeight),
     "--open-title-stretch": `${frame2Config.open.titleStretch}%`,
@@ -444,20 +526,44 @@ export function Frame2() {
             }}
             onClick={(event) => {
               openerRef.current = event.currentTarget;
-              setOpen({ id: card.id, pose: reduced ? "to" : "from" });
+              dismissHint();
+              setOpen({ id: card.id, pose: "hand" });
             }}
           />
         ))}
+        {middle ? (
+          <div
+            className="frame2-hand-light"
+            style={{
+              left: `${middle.left + middle.width / 2}px`,
+              top: `${middle.top + middle.height / 2}px`,
+              width: `${lightSize}px`,
+              height: `${lightSize}px`,
+            }}
+          />
+        ) : null}
         <p
-          className="frame2-hint"
-          style={{
-            left: `${place.left + frame2Config.hint.x * place.width}px`,
-            top: `${place.top + frame2Config.hint.y * place.height}px`,
-          }}
+          className={hintOn ? "frame2-hint" : "frame2-hint is-hidden"}
+          aria-hidden={hintOn ? undefined : true}
+          style={
+            middle
+              ? {
+                  left: `${middle.left + middle.width / 2}px`,
+                  top: `${middle.top - frame2Config.hint.gap}px`,
+                }
+              : undefined
+          }
         >
           {frame2Config.hint.text}
         </p>
       </div>
+
+      <img
+        className="frame2-card-back-preload"
+        src={frame2Config.assets.cardBack}
+        alt=""
+        aria-hidden="true"
+      />
 
       <canvas ref={emberRef} className="frame2-embers" aria-hidden="true" />
       <canvas ref={grainRef} className="frame2-grain" aria-hidden="true" />
@@ -481,28 +587,27 @@ export function Frame2() {
         <div
           className="frame2-open"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setOpen({ id: open.id, pose: "back" });
-            }
+            if (event.target === event.currentTarget) requestClose();
           }}
         >
           <div className="frame2-fire" />
           <OpenCardView
             card={active}
-            pose={open.pose}
-            reduced={reduced}
-            flight={flight}
-            atHand={Boolean(atHand)}
-            width={openWidth}
+            dx={atHand ? handOffset.dx : 0}
+            dy={atHand ? handOffset.dy : 0}
+            spin={turned ? 180 : 0}
+            backWidth={back.width}
+            backHeight={back.height}
+            faceScale={faceScale}
+            faceWidth={openWidth}
+            duration={flightDuration}
+            shown={!reduced || open.pose === "face"}
             flightRef={flightRef}
             dialogRef={dialogRef}
             closeRef={closeRef}
             videoRef={videoRef}
-            onClose={() => setOpen({ id: open.id, pose: "back" })}
-            onDone={(event) => {
-              if (event.target !== event.currentTarget) return;
-              if (open.pose === "back") setOpen(null);
-            }}
+            onClose={requestClose}
+            onTransition={onFlightTransition}
           />
         </div>
       ) : null}
@@ -512,57 +617,73 @@ export function Frame2() {
 
 function OpenCardView({
   card,
-  pose,
-  reduced,
-  flight,
-  atHand,
-  width,
+  dx,
+  dy,
+  spin,
+  backWidth,
+  backHeight,
+  faceScale,
+  faceWidth,
+  duration,
+  shown,
   flightRef,
   dialogRef,
   closeRef,
   videoRef,
   onClose,
-  onDone,
+  onTransition,
 }: {
   card: Frame2Card;
-  pose: Pose;
-  reduced: boolean;
-  flight: { dx: number; dy: number; scale: number };
-  atHand: boolean;
-  width: number;
+  dx: number;
+  dy: number;
+  spin: number;
+  backWidth: number;
+  backHeight: number;
+  faceScale: number;
+  faceWidth: number;
+  duration: number;
+  shown: boolean;
   flightRef: RefObject<HTMLDivElement | null>;
   dialogRef: RefObject<HTMLDivElement | null>;
   closeRef: RefObject<HTMLButtonElement | null>;
   videoRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
-  onDone: (event: TransitionEvent<HTMLDivElement>) => void;
+  onTransition: (event: TransitionEvent<HTMLDivElement>) => void;
 }) {
-  const shown = reduced ? pose !== "back" : !atHand;
   return (
     <div
       ref={flightRef}
       className={shown ? "frame2-flight is-shown" : "frame2-flight"}
       style={
         {
-          width: `${width}px`,
-          "--dx": atHand ? `${flight.dx}px` : "0px",
-          "--dy": atHand ? `${flight.dy}px` : "0px",
-          "--card-scale": atHand ? String(flight.scale) : "1",
-          "--spin": atHand ? "0deg" : "180deg",
+          "--dx": `${dx}px`,
+          "--dy": `${dy}px`,
+          "--flight-duration": `${duration}s`,
         } as CSSProperties
       }
-      onTransitionEnd={onDone}
-      onMouseDown={(event) => event.stopPropagation()}
+      onTransitionEnd={onTransition}
     >
-      <div className="frame2-back" aria-hidden="true">
-        <span className="frame2-back-mark" />
-      </div>
+      <div
+        className="frame2-flip"
+        style={{ "--spin": `${spin}deg` } as CSSProperties}
+      >
+      <img
+        className="frame2-back"
+        src={frame2Config.assets.cardBack}
+        alt=""
+        width={frame2Config.cardBack.width}
+        height={frame2Config.cardBack.height}
+        style={{ width: `${backWidth}px`, height: `${backHeight}px` }}
+        draggable={false}
+      />
       <div
         ref={dialogRef}
         className="frame2-face"
         role="dialog"
         aria-modal="true"
         aria-labelledby="frame2-card-title"
+        style={{ width: `${faceWidth}px`, "--face-scale": String(faceScale) } as CSSProperties}
+        onMouseDown={(event) => event.stopPropagation()}
       >
         <button ref={closeRef} type="button" className="frame2-close" aria-label="Close" onClick={onClose}>
           ×
@@ -595,6 +716,7 @@ function OpenCardView({
         <span className="frame2-gem frame2-gem-tr" />
         <span className="frame2-gem frame2-gem-bl" />
         <span className="frame2-gem frame2-gem-br" />
+      </div>
       </div>
     </div>
   );

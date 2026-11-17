@@ -59,17 +59,28 @@ export const frame2Config = {
     code: "https://github.com/AlperJoe/Pedro",
   },
   hint: {
-    /** Center of the hint, as a fraction of the hero image. */
-    x: 0.56,
-    y: 0.46,
-    size: 15,
-    weight: 500,
+    /** Gap between the hint and the top edge of the middle card. */
+    gap: 32,
+    size: 18,
+    weight: 600,
     stretch: 100,
     color: "#EFC785",
     text: "Pick a card",
   },
+  light: {
+    color: "#FFD9A0",
+    /** How long one brighten-and-dim cycle takes. */
+    seconds: 4,
+    /** Diameter of the light compared with the span of the three cards. */
+    cover: 1.45,
+  },
+  cardBack: {
+    width: 608,
+    height: 818,
+    /** Height of the card back when it reaches the center, before it turns. */
+    midHeight: 0.4,
+  },
   cards: {
-    glowSeconds: 3,
     lift: 6,
     gold: "#EFC785",
     items: [
@@ -142,7 +153,10 @@ export const frame2Config = {
     height: 0.78,
     /** Width divided by the height cap. */
     aspect: 5 / 7,
-    duration: 0.6,
+    /** Flight from the hand to the center, and back. */
+    travel: 0.48,
+    /** Turn at the center, while the card grows into the open face. */
+    turn: 0.52,
     radius: 14,
     navy: "#111F2C",
     gold: "#EFC785",
@@ -177,6 +191,7 @@ export const frame2Config = {
     hero: `${base}assets/frame2/pedro-hero.jpg`,
     gameplay: `${base}assets/frame2/pedro-gameplay.mp4`,
     poster: `${base}assets/frame2/pedro-gameplay-poster.jpg`,
+    cardBack: `${base}assets/frame2/card-back.webp`,
   },
 };
 

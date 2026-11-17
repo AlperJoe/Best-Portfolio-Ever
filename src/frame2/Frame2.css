@@ -54,8 +54,7 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  animation: frame2-glow var(--glow-time) ease-in-out infinite;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .frame2-card-1 {
@@ -73,23 +72,36 @@
 .frame2-card:hover,
 .frame2-card:focus-visible {
   z-index: 4;
-  animation: none;
   transform: translateY(calc(var(--card-lift) * -1));
-  filter:
-    drop-shadow(0 0 6px rgba(239, 199, 133, 0.95))
-    drop-shadow(0 0 16px rgba(239, 160, 48, 0.85));
+  filter: drop-shadow(0 0 2px rgba(255, 217, 160, 0.95));
+}
+
+.frame2-card:hover {
   outline: none;
 }
 
-@keyframes frame2-glow {
+.frame2-card:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.frame2-hand-light {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, var(--light) 0%, rgba(255, 217, 160, 0.28) 46%, transparent 70%);
+  animation: frame2-light var(--light-time) ease-in-out infinite;
+}
+
+@keyframes frame2-light {
   0%,
   100% {
-    filter: drop-shadow(0 0 0 rgba(239, 199, 133, 0));
+    opacity: 0.45;
   }
   50% {
-    filter:
-      drop-shadow(0 0 5px rgba(239, 199, 133, 0.8))
-      drop-shadow(0 0 14px rgba(232, 120, 36, 0.45));
+    opacity: 0.85;
   }
 }
 
@@ -97,14 +109,19 @@
   position: absolute;
   z-index: 5;
   margin: 0;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -100%);
   font-weight: var(--hint-weight);
   font-stretch: var(--hint-stretch);
   font-size: var(--hint-size);
   color: var(--hint-color);
   letter-spacing: 0.01em;
   pointer-events: none;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+  transition: opacity 0.45s ease;
+}
+
+.frame2-hint.is-hidden {
+  opacity: 0;
 }
 
 .frame2-embers,
@@ -228,13 +245,50 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(var(--card-scale)) rotateY(var(--spin));
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%) translate(var(--dx), var(--dy));
   transform-style: preserve-3d;
-  transition: transform var(--open-duration) cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform var(--flight-duration) cubic-bezier(0.22, 0.7, 0.2, 1);
 }
 
-.frame2-back,
+.frame2-flip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(var(--spin));
+  transition: transform var(--flight-duration) cubic-bezier(0.22, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+
+.frame2-back {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+  backface-visibility: hidden;
+  pointer-events: none;
+  transition:
+    width var(--flight-duration) cubic-bezier(0.22, 0.7, 0.2, 1),
+    height var(--flight-duration) cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+.frame2-card-back-preload {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .frame2-face {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  max-height: var(--open-height);
   border-radius: var(--open-radius);
   backface-visibility: hidden;
   background: var(--open-navy);
@@ -242,31 +296,10 @@
   box-shadow:
     inset 0 0 0 5px var(--open-navy),
     inset 0 0 0 6.5px var(--gold);
-}
-
-.frame2-back {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background-image:
-    radial-gradient(circle at 50% 45%, rgba(239, 199, 133, 0.16), transparent 42%),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 7px);
-}
-
-.frame2-back-mark {
-  width: 18%;
-  aspect-ratio: 1;
-  background: var(--gold);
-  transform: rotate(45deg);
-  opacity: 0.9;
-}
-
-.frame2-face {
-  position: relative;
-  box-sizing: border-box;
-  max-height: var(--open-height);
-  transform: rotateY(180deg);
+  transform: translate(-50%, -50%) rotateY(180deg) scale(var(--face-scale));
+  transform-origin: center center;
+  transition: transform var(--flight-duration) cubic-bezier(0.22, 0.7, 0.2, 1);
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -376,13 +409,12 @@
   bottom: 14px;
 }
 
-.frame2.is-reduced .frame2-card {
+.frame2.is-reduced .frame2-hand-light {
   animation: none;
 }
 
 .frame2.is-reduced .frame2-flight {
   transition: opacity 0.28s ease;
-  transform: translate(-50%, -50%) rotateY(180deg);
   opacity: 0;
 }
 
@@ -390,13 +422,23 @@
   opacity: 1;
 }
 
+.frame2.is-reduced .frame2-flip,
+.frame2.is-reduced .frame2-back,
+.frame2.is-reduced .frame2-face,
+.frame2.is-reduced .frame2-hint {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .frame2-card {
+  .frame2-hand-light {
     animation: none;
   }
 
   .frame2-scene,
-  .frame2-flight {
+  .frame2-flight,
+  .frame2-flip,
+  .frame2-back,
+  .frame2-face {
     transition: none;
   }
 }
