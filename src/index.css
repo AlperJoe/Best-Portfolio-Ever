@@ -13,5 +13,5 @@ body {
 }
 
 body {
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-text), sans-serif;
 }

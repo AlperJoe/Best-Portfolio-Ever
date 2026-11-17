@@ -15,14 +15,14 @@ export const frame1Config = {
   lightToneMix: 0.58,
   /** Radius of each focal light as a fraction of the frame width. */
   lightRadius: 0.42,
-  /** How much steam is drawn when STEAM_ENABLED is on. */
-  steamAmount: 1,
+  /** How much haze is drawn when HAZE_ENABLED is on. */
+  hazeAmount: 1,
   links: {
     github: "https://github.com/AlperJoe",
     linkedin: "https://www.linkedin.com/in/alperbozkurt/",
   },
-  /** object-position so the face can sit on the middle focal point. */
-  portraitPosition: "50% 30%",
+  /** object-position kept for the portrait asset. The face is placed in layout. */
+  portraitPosition: "50% 46%",
   colorOverlay: {
     opacity: 0.84,
     blendMode: "multiply" as const,
@@ -87,34 +87,53 @@ export const frame1Config = {
     },
   },
   portraitLayout: {
-    height: 0.7,
+    /** Height of the portrait as a fraction of the frame height. */
+    height: 0.66,
     maxScale: 1.2,
-    naturalWidth: 723,
-    naturalHeight: 641,
+    naturalWidth: 1024,
+    naturalHeight: 1026,
+    /** Point in the photo that lands on the middle focal point. */
     faceX: 0.5,
     faceY: 0.46,
-    edgeFade: 0.24,
-    blur: 40,
-    fieldDarkness: 0.46,
+    /** Where the bottom fade into black begins, as a fraction of the photo height. */
+    bottomFade: 0.72,
+  },
+  middle: {
+    /** Top of the name block, as a fraction of the frame height. */
+    top: 0.7,
+    /** Widest the block may be, as a fraction of the frame width. */
+    maxWidth: 0.34,
+    /** Clear space kept between this block and each seam. */
+    sideGap: 48,
+    nameSize: "clamp(48px, 4.4vw, 80px)",
+    nameLine: 1,
+    nameColor: "#F2EEE6",
+    nameGap: 10,
+    lineSize: 17,
+    lineWeight: 400,
+    lineLine: 1.45,
+    lineOpacity: 0.85,
   },
   icons: {
-    size: 44,
-    plate: 72,
-    lift: 0.04,
-    blur: 16,
-    edge: 0.3,
-    fill: 0.16,
-    hoverFill: 0.34,
+    size: 56,
+    /** Lift on hover and keyboard focus, in pixels. */
+    lift: 2,
+    /** Distance from the top of the frame, as a fraction of its height. */
+    top: 0.25,
+    linkedin: "#0A66C2",
+    radius: 8,
+    glow: 16,
   },
   text: {
     gap: 32,
     titleGap: 16,
     labelGap: 6,
     seamInset: 0.04,
-    titleStretch: 112,
-    titleWeight: 600,
-    titleSize: "clamp(22px, 1.9vw, 36px)",
     titleLine: 1.05,
+    buasTitleSize: "clamp(22px, 2vw, 32px)",
+    buasTitleWeight: 600,
+    bilkentTitleSize: "clamp(24px, 2.3vw, 38px)",
+    bilkentTitleWeight: 800,
     labelSize: 15,
     labelWeight: 600,
     /** Thesis and Favorite courses. White, so they read on both campus tones. */
@@ -123,7 +142,17 @@ export const frame1Config = {
     labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
     buasLabel: "#FFD2B0",
     bilkentLabel: "#C9D4FF",
-    bodySize: 16,
+    bodySize: 17,
+    buttonSize: 16,
+    buttonWeight: 600,
+    buttonGap: 14,
+    courseSize: 17,
+    courseCodeWeight: 600,
+    courseCodeOpacity: 0.7,
+    courseNameWeight: 400,
+    courseNameOpacity: 0.92,
+    courseUnderline: 0.35,
+    courseGap: 8,
     bodyWeight: 400,
     bodyLine: 1.45,
     bodyOpacity: 0.9,
@@ -131,31 +160,88 @@ export const frame1Config = {
     shadeBlur: 26,
   },
   seams: {
-    /** Blend width at the top, as a fraction of the frame width. */
-    top: 0.02,
-    /** Blend width at the bottom, as a fraction of the frame width. */
-    bottom: 0.05,
+    /** Soft blend width at the top, as a fraction of the frame width. */
+    top: 0.08,
+    /** Soft blend width at the bottom, as a fraction of the frame width. */
+    bottom: 0.18,
+    /** Thickness of the bright core on the seam line, in pixels. */
+    core: 1.5,
+    /** Full height of the colored glow across the seam, in pixels. */
+    glow: 22,
     campusReach: 0.034,
     /**
      * Share of edgeLimit the noise may use. The seam stays on the true
      * line, with only a little roughness so it is not a ruler line.
      */
-    noise: 0.85,
+    noise: 0,
     /** Largest shift of either seam from its true line, as a fraction of frame width. */
-    edgeLimit: 0.01,
+    edgeLimit: 0,
     columns: 5,
     rows: 4,
-    steam: 1.38,
+    steam: 1,
   },
+  beams: {
+    /** Tone mixed into the white of each side beam. The rest is white. */
+    leftMix: 0.34,
+    rightMix: 0.4,
+    /** Width of a beam at its pool, as a fraction of the frame width. */
+    width: 0.2,
+    /** Width of the beam's mouth compared with its pool. */
+    mouth: 0.16,
+    /** How far a beam starts above the frame, as a fraction of frame height. */
+    overshoot: 0.08,
+    /** Pool diameter compared with the frame width. */
+    pool: 0.22,
+    blur: 28,
+    /** Brightness flicker, as a fraction. About 2 to 3 percent. */
+    flicker: 0.025,
+    dustPerBeam: 14,
+  },
+  research: {
+    /** How long the panel takes to grow out and shrink back, in seconds. */
+    duration: 0.45,
+    /** Brightness of the frame behind the open panel. */
+    dim: 0.3,
+    blur: 3,
+    maxWidth: 900,
+    /** Tallest the panel may be, as a fraction of the frame height. */
+    maxHeight: 0.88,
+    navy: "#1B2030",
+    border: "rgba(255, 255, 255, 0.15)",
+    radius: 12,
+    close: 48,
+    /** Scale of the panel when it is still at the button. */
+    fromScale: 0.08,
+  },
+  courses: [
+    {
+      code: "CS 473",
+      name: "Algorithms I",
+      href: "https://www.cs.bilkent.edu.tr/~ugur/teaching/cs473/",
+    },
+    {
+      code: "CS 476",
+      name: "Automata Theory and Formal Languages",
+      href: "https://www.cs.bilkent.edu.tr/~dibeklioglu/teaching/cs476/",
+    },
+    {
+      code: "EEE 448",
+      name: "Reinforcement Learning and Dynamic Programming",
+      href: "https://catalog.bilkent.edu.tr/course/c14448.html",
+    },
+  ],
   assets: {
     buasCampus: `${import.meta.env.BASE_URL}assets/buas-campus.jpg`,
     buasLogo: `${import.meta.env.BASE_URL}assets/buas-logo.png`,
     bilkentCampus: `${import.meta.env.BASE_URL}assets/bilkent-campus.jpg`,
     bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
-    portrait: `${import.meta.env.BASE_URL}assets/portrait.jpg`,
+    portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
+    research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
+    research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
   effects: {
-    STEAM_ENABLED: true,
+    HAZE_ENABLED: true,
+    DUST_ENABLED: true,
     PORTRAIT_EDGE_LIGHT: true,
     OPENING_SEQUENCE: true,
     CURSOR_REACTION: true,

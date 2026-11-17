@@ -5,7 +5,7 @@
   overflow: hidden;
   background: #1a0806;
   color: #fff;
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-text), sans-serif;
   font-synthesis: none;
 }
 
@@ -176,6 +176,8 @@
 .frame2-caption-text {
   margin: 0;
   max-width: var(--caption-max);
+  font-family: var(--font-pedro), serif;
+  font-style: italic;
   font-weight: var(--caption-weight);
   font-stretch: var(--caption-stretch);
   font-size: var(--caption-size);
@@ -200,7 +202,7 @@
   color: var(--gold);
   border: 1px solid var(--gold);
   text-decoration: none;
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-text), sans-serif;
   font-weight: var(--button-weight);
   font-stretch: 100%;
   font-size: var(--button-size);
@@ -314,6 +316,7 @@
 .frame2-face h2 {
   margin: 0;
   padding-right: 52px;
+  font-family: var(--font-frame2), sans-serif;
   font-weight: var(--open-title-weight);
   font-stretch: var(--open-title-stretch);
   font-size: var(--open-title-size);

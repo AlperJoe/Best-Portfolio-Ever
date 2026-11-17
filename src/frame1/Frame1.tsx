@@ -9,15 +9,17 @@ type Shown = {
   bilkent: boolean;
   buas: boolean;
   middle: boolean;
-  steam: boolean;
+  haze: boolean;
   content: boolean;
 };
+
+type ResearchPose = "from" | "open" | "back";
 
 const ALL_SHOWN: Shown = {
   bilkent: true,
   buas: true,
   middle: true,
-  steam: true,
+  haze: true,
   content: true,
 };
 
@@ -25,7 +27,7 @@ const NONE_SHOWN: Shown = {
   bilkent: false,
   buas: false,
   middle: false,
-  steam: false,
+  haze: false,
   content: false,
 };
 
@@ -33,7 +35,7 @@ const OPENING_STEPS: Array<[number, keyof Shown]> = [
   [160, "bilkent"],
   [620, "buas"],
   [1080, "middle"],
-  [1540, "steam"],
+  [1540, "haze"],
   [1960, "content"],
 ];
 
@@ -220,7 +222,11 @@ export function Frame1() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const leftCopyRef = useRef<HTMLDivElement>(null);
   const rightCopyRef = useRef<HTMLDivElement>(null);
+  const researchButtonRef = useRef<HTMLButtonElement>(null);
+  const researchCloseRef = useRef<HTMLButtonElement>(null);
   const effectsRef = useRef<FrameEffects | null>(null);
+  const [research, setResearch] = useState<ResearchPose | null>(null);
+  const researchWasOpen = useRef(false);
   const startRef = useRef<() => void>(() => {});
   const redrawRef = useRef<() => void>(() => {});
   const layoutRef = useRef({ w: 0, h: 0 });
@@ -228,20 +234,20 @@ export function Frame1() {
   const cursorRef = useRef({ x: 0, y: 0, inside: false });
   const runtimeRef = useRef({
     reduced,
-    steam: false,
+    haze: false,
+    dust: false,
     grain: frame1Config.effects.FILM_GRAIN,
     cursor: false,
-    steamAmount: frame1Config.steamAmount,
     buasTone: frame1Config.colors.buasTone,
     bilkentTone: frame1Config.colors.bilkentTone,
   });
 
   runtimeRef.current = {
     reduced,
-    steam: frame1Config.effects.STEAM_ENABLED && shown.steam,
+    haze: frame1Config.effects.HAZE_ENABLED && shown.haze,
+    dust: frame1Config.effects.DUST_ENABLED && shown.haze,
     grain: frame1Config.effects.FILM_GRAIN,
     cursor: frame1Config.effects.CURSOR_REACTION && !reduced,
-    steamAmount: frame1Config.steamAmount,
     buasTone: frame1Config.colors.buasTone,
     bilkentTone: frame1Config.colors.bilkentTone,
   };
@@ -285,6 +291,12 @@ export function Frame1() {
         frame1Config.portraitLayout.naturalHeight * frame1Config.portraitLayout.maxScale;
       const portraitH = Math.min(frame1Config.portraitLayout.height * rect.height, portraitCap);
       element.style.setProperty("--portrait-h", `${portraitH}px`);
+      const middleTop = frame1Config.middle.top * rect.height;
+      const seamAtText = frame1Config.middle.top * (rect.width / 2);
+      const middleRoom = rect.width - seamAtText * 2 - frame1Config.middle.sideGap * 2;
+      const middleWidth = Math.max(160, Math.min(frame1Config.middle.maxWidth * rect.width, middleRoom));
+      element.style.setProperty("--middle-top", `${middleTop}px`);
+      element.style.setProperty("--middle-width", `${middleWidth}px`);
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
@@ -315,15 +327,23 @@ export function Frame1() {
 
     const initial = runtimeRef.current;
     const effects = new FrameEffects(canvas, {
-      steam: initial.steam,
+      steam: false,
       grain: initial.grain,
-      steamAmount: initial.steamAmount,
+      steamAmount: 0,
       cursorReaction: initial.cursor,
       buasTone: initial.buasTone,
       bilkentTone: initial.bilkentTone,
       seamTop: frame1Config.seams.top,
       seamBottom: frame1Config.seams.bottom,
       seamSteam: frame1Config.seams.steam,
+      haze: initial.haze,
+      dust: initial.dust,
+      hazeAmount: frame1Config.hazeAmount,
+      dustPerBeam: frame1Config.beams.dustPerBeam,
+      beamWidth: frame1Config.beams.width,
+      beamMouth: frame1Config.beams.mouth,
+      beamOvershoot: frame1Config.beams.overshoot,
+      beamPool: frame1Config.beams.pool,
     });
     effectsRef.current = effects;
 
@@ -334,27 +354,42 @@ export function Frame1() {
 
     const snapshot = (): EffectsFrame => {
       const cursor = cursorRef.current;
+      const { w, h } = layoutRef.current;
+      const shift = shiftRef.current;
       return {
-        width: layoutRef.current.w,
-        height: layoutRef.current.h,
+        width: w,
+        height: h,
         cursorX: cursor.x,
         cursorY: cursor.y,
         cursorInside: cursor.inside,
+        lights: {
+          left: [w / 6 + shift.x, (2 * h) / 3 + shift.y],
+          right: [(5 * w) / 6 + shift.x, (2 * h) / 3 + shift.y],
+          mid: [w / 2 + shift.x, h / 3 + shift.y],
+        },
       };
     };
 
     const options = (): EffectsOptions => {
       const runtime = runtimeRef.current;
       return {
-        steam: runtime.steam && !runtime.reduced,
+        steam: false,
         grain: runtime.grain,
-        steamAmount: runtime.steamAmount,
+        steamAmount: 0,
         cursorReaction: runtime.cursor,
         buasTone: runtime.buasTone,
         bilkentTone: runtime.bilkentTone,
         seamTop: frame1Config.seams.top,
         seamBottom: frame1Config.seams.bottom,
         seamSteam: frame1Config.seams.steam,
+        haze: runtime.haze,
+        dust: runtime.dust,
+        hazeAmount: frame1Config.hazeAmount,
+        dustPerBeam: frame1Config.beams.dustPerBeam,
+        beamWidth: frame1Config.beams.width,
+        beamMouth: frame1Config.beams.mouth,
+        beamOvershoot: frame1Config.beams.overshoot,
+        beamPool: frame1Config.beams.pool,
       };
     };
 
@@ -364,7 +399,9 @@ export function Frame1() {
       effects.resize(w, h);
       effects.setOptions({
         ...options(),
-        steam: runtimeRef.current.steam,
+        steam: false,
+        haze: runtimeRef.current.haze,
+        dust: runtimeRef.current.dust,
         cursorReaction: false,
       });
       shiftRef.current = { x: 0, y: 0, photoX: 0, photoY: 0 };
@@ -426,7 +463,7 @@ export function Frame1() {
         Math.abs(shift.y - target.y) < 0.08 &&
         Math.abs(shift.photoX - target.photoX) < 0.08 &&
         Math.abs(shift.photoY - target.photoY) < 0.08;
-      const keepGoing = runtime.steam || runtime.grain || !settled;
+      const keepGoing = runtime.haze || runtime.dust || runtime.grain || !settled;
       if (!keepGoing) {
         frameId = 0;
         return;
@@ -531,7 +568,7 @@ export function Frame1() {
 
   useEffect(() => {
     startRef.current();
-  }, [shown.steam, shown.content, reduced]);
+  }, [shown.haze, shown.content, reduced]);
 
   const style = {
     "--buas-tone": frame1Config.colors.buasTone,
@@ -573,22 +610,20 @@ export function Frame1() {
     ),
     "--portrait-face-x": String(frame1Config.portraitLayout.faceX),
     "--portrait-face-y": String(frame1Config.portraitLayout.faceY),
-    "--portrait-fade": `${frame1Config.portraitLayout.edgeFade * 100}%`,
-    "--portrait-blur": `${frame1Config.portraitLayout.blur}px`,
-    "--portrait-field-dark": String(frame1Config.portraitLayout.fieldDarkness),
+    "--portrait-fade": `${frame1Config.portraitLayout.bottomFade * 100}%`,
     "--icon-size": `${frame1Config.icons.size}px`,
-    "--icon-plate": `${frame1Config.icons.plate}px`,
-    "--icon-lift": `${frame1Config.icons.lift * 100}%`,
-    "--icon-blur": `${frame1Config.icons.blur}px`,
-    "--icon-edge": String(frame1Config.icons.edge),
-    "--icon-fill": String(frame1Config.icons.fill),
-    "--icon-hover": String(frame1Config.icons.hoverFill),
+    "--icon-lift": `${frame1Config.icons.lift}px`,
+    "--icon-top": `${frame1Config.icons.top * 100}%`,
+    "--icon-linkedin": frame1Config.icons.linkedin,
+    "--icon-radius": `${frame1Config.icons.radius}px`,
+    "--icon-glow": `${frame1Config.icons.glow}px`,
     "--title-gap": `${frame1Config.text.titleGap}px`,
     "--label-gap": `${frame1Config.text.labelGap}px`,
-    "--title-stretch": `${frame1Config.text.titleStretch}%`,
-    "--title-weight": String(frame1Config.text.titleWeight),
-    "--title-size": frame1Config.text.titleSize,
     "--title-line": String(frame1Config.text.titleLine),
+    "--buas-title-size": frame1Config.text.buasTitleSize,
+    "--buas-title-weight": String(frame1Config.text.buasTitleWeight),
+    "--bilkent-title-size": frame1Config.text.bilkentTitleSize,
+    "--bilkent-title-weight": String(frame1Config.text.bilkentTitleWeight),
     "--label-size": `${frame1Config.text.labelSize}px`,
     "--label-weight": String(frame1Config.text.labelWeight),
     "--label-opacity": String(frame1Config.text.labelOpacity),
@@ -601,19 +636,104 @@ export function Frame1() {
     "--body-opacity": String(frame1Config.text.bodyOpacity),
     "--text-shade": String(frame1Config.text.shade),
     "--text-shade-blur": `${frame1Config.text.shadeBlur}px`,
+    "--button-size": `${frame1Config.text.buttonSize}px`,
+    "--button-weight": String(frame1Config.text.buttonWeight),
+    "--button-gap": `${frame1Config.text.buttonGap}px`,
+    "--course-size": `${frame1Config.text.courseSize}px`,
+    "--course-code-weight": String(frame1Config.text.courseCodeWeight),
+    "--course-code-opacity": String(frame1Config.text.courseCodeOpacity),
+    "--course-name-weight": String(frame1Config.text.courseNameWeight),
+    "--course-name-opacity": String(frame1Config.text.courseNameOpacity),
+    "--course-underline": String(frame1Config.text.courseUnderline),
+    "--course-gap": `${frame1Config.text.courseGap}px`,
+    "--name-size": frame1Config.middle.nameSize,
+    "--name-line": String(frame1Config.middle.nameLine),
+    "--name-color": frame1Config.middle.nameColor,
+    "--name-gap": `${frame1Config.middle.nameGap}px`,
+    "--middle-line-size": `${frame1Config.middle.lineSize}px`,
+    "--middle-line-weight": String(frame1Config.middle.lineWeight),
+    "--middle-line-height": String(frame1Config.middle.lineLine),
+    "--middle-line-opacity": String(frame1Config.middle.lineOpacity),
+    "--seam-core": `${frame1Config.seams.core}px`,
+    "--seam-glow": `${frame1Config.seams.glow}px`,
+    "--beam-width": `${frame1Config.beams.width * 100}%`,
+    "--beam-blur": `${frame1Config.beams.blur}px`,
+    "--beam-overshoot": String(frame1Config.beams.overshoot),
+    "--beam-mouth": `${frame1Config.beams.mouth * 100}%`,
+    "--beam-pool": `${frame1Config.beams.pool * 100}%`,
+    "--beam-left": `color-mix(in srgb, var(--buas-tone) ${frame1Config.beams.leftMix * 100}%, #fff6e8)`,
+    "--beam-right": `color-mix(in srgb, var(--bilkent-tone) ${frame1Config.beams.rightMix * 100}%, #eef3ff)`,
+    "--beam-flicker": String(frame1Config.beams.flicker),
+    "--research-time": `${frame1Config.research.duration}s`,
+    "--research-dim": String(frame1Config.research.dim),
+    "--research-blur": `${frame1Config.research.blur}px`,
+    "--research-max": `${frame1Config.research.maxWidth}px`,
+    "--research-height": `${frame1Config.research.maxHeight * 100}%`,
+    "--research-navy": frame1Config.research.navy,
+    "--research-border": frame1Config.research.border,
+    "--research-radius": `${frame1Config.research.radius}px`,
+    "--research-close": `${frame1Config.research.close}px`,
   } as React.CSSProperties;
+
+  useEffect(() => {
+    if (!research) {
+      if (researchWasOpen.current) researchButtonRef.current?.focus();
+      return;
+    }
+    researchWasOpen.current = true;
+    if (research === "from") {
+      const id = window.requestAnimationFrame(() => {
+        setResearch((current) => (current === "from" ? "open" : current));
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+    if (research === "open") researchCloseRef.current?.focus();
+    if (research !== "back") return;
+    const timer = window.setTimeout(
+      () => setResearch(null),
+      (reduced ? 0.32 : frame1Config.research.duration + 0.08) * 1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [research, reduced]);
+
+  useEffect(() => {
+    if (!research) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setResearch((current) => (current && current !== "back" ? "back" : current));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [research]);
+
+  const researchShift = (() => {
+    const button = researchButtonRef.current?.getBoundingClientRect();
+    const frame = frameRef.current?.getBoundingClientRect();
+    if (!button || !frame) return { x: 0, y: 0 };
+    return {
+      x: button.left + button.width / 2 - (frame.left + frame.width / 2),
+      y: button.top + button.height / 2 - (frame.top + frame.height / 2),
+    };
+  })();
 
   return (
     <main
       ref={frameRef}
-      className={playOpening ? "frame is-opening" : "frame"}
+      className={[
+        "frame",
+        playOpening ? "is-opening" : "",
+        reduced ? "is-reduced" : "",
+        research ? "is-research" : "",
+      ].filter(Boolean).join(" ")}
       style={style}
       data-bilkent={shown.bilkent ? "1" : "0"}
       data-buas={shown.buas ? "1" : "0"}
       data-middle={shown.middle ? "1" : "0"}
-      data-steam={shown.steam ? "1" : "0"}
+      data-haze={shown.haze ? "1" : "0"}
       data-content={shown.content ? "1" : "0"}
     >
+      <div className="frame-world">
       <section className="region region-left mask-left fill" aria-label="Breda University of Applied Sciences">
         <div className="duotone">
           <Asset
@@ -626,7 +746,6 @@ export function Frame1() {
           <div className="tone-lift fill" />
         </div>
         <div className="shade fill" />
-        <div className="sun sun-buas fill" />
       </section>
 
       <section className="region region-right mask-right fill" aria-label="Bilkent University">
@@ -646,21 +765,17 @@ export function Frame1() {
       <section className="region region-middle mask-middle fill" aria-label="Portrait">
         <Asset
           src={frame1Config.assets.portrait}
-          alt=""
-          className="portrait-field"
-        />
-        <div className="portrait-field-shade fill" />
-        <Asset
-          src={frame1Config.assets.portrait}
-          alt="Portrait"
+          alt="Portrait of Alper Bozkurt"
           className="portrait-sharp"
         />
-        <div className="shade shade-portrait fill" />
       </section>
 
-      <div className="light light-left mask-left fill" />
-      <div className="light light-right mask-right fill" />
-      <div className="light light-middle mask-middle fill" />
+      <Beam className="beam-left" />
+      <Beam className="beam-right" />
+      <Beam className="beam-middle" />
+
+      <div className="seam-line seam-line-left" />
+      <div className="seam-line seam-line-right" />
 
       {frame1Config.effects.PORTRAIT_EDGE_LIGHT ? (
         <div className="edge mask-middle fill">
@@ -711,26 +826,101 @@ export function Frame1() {
       <div className="copy copy-left hud" ref={leftCopyRef}>
         <div className="copy-shade" />
         <div className="copy-shape" />
-        <p className="title">Master Game Technology</p>
-        <p className="label">Thesis</p>
+        <p className="title title-buas">Master Game Technology</p>
+        <p className="label">AI & Procedural Generation</p>
         <p className="text">
-          Generate dungeon levels that match a designer's selected parameter.
+          Exploring how AI agents can help generate dungeon levels that match a designer's goals.
         </p>
+        <button
+          ref={researchButtonRef}
+          type="button"
+          className="research-open"
+          onClick={() => setResearch("from")}
+        >
+          Explore my research →
+        </button>
       </div>
 
       <div className="copy copy-right hud" ref={rightCopyRef}>
         <div className="copy-shade" />
         <div className="copy-shape" />
-        <p className="title">Bachelor, Computer Engineering</p>
+        <p className="title title-bilkent">BSc Computer Engineering</p>
         <p className="label">Favorite courses</p>
-        <p className="text">
-          Algorithms
-          <br />
-          Automata Theory
-          <br />
-          Reinforcement Learning
+        <div className="courses">
+          {frame1Config.courses.map((course) => (
+            <a
+              key={course.href}
+              className="course"
+              href={course.href}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <span className="course-code">{course.code}</span>
+              <span className="course-name">{course.name}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div className="middle-copy hud">
+        <p className="middle-name">Alper Bozkurt</p>
+        <p className="middle-line">
+          Game programmer building gameplay systems, game AI and multiplayer servers.
         </p>
       </div>
+      </div>
+
+      {research ? (
+        <div
+          className="research-layer"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setResearch((current) => (current && current !== "back" ? "back" : current));
+            }
+          }}
+        >
+          <div
+            className={reduced ? (research === "open" ? "research-panel is-shown" : "research-panel") : "research-panel"}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Research plan"
+            style={
+              reduced
+                ? undefined
+                : {
+                    transform:
+                      research === "open"
+                        ? "translate(-50%, -50%)"
+                        : `translate(-50%, -50%) translate(${researchShift.x}px, ${researchShift.y}px) scale(${frame1Config.research.fromScale})`,
+                  }
+            }
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              ref={researchCloseRef}
+              type="button"
+              className="research-close"
+              aria-label="Close"
+              onClick={() => setResearch("back")}
+            >
+              ×
+            </button>
+            <div className="research-scroll">
+              <img src={frame1Config.assets.research1} alt="Page 1 of the research plan" />
+              <img src={frame1Config.assets.research2} alt="Page 2 of the research plan" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
+  );
+}
+
+function Beam({ className }: { className: string }) {
+  return (
+    <div className={`beam ${className}`}>
+      <div className="beam-shaft" />
+      <div className="beam-pool" />
+    </div>
   );
 }

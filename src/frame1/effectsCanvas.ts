@@ -10,6 +10,16 @@ export type EffectsOptions = {
   seamTop: number;
   seamBottom: number;
   seamSteam: number;
+  /** Slow haze inside the beams and along the seams. */
+  haze?: boolean;
+  /** Dust motes inside the projector beams. */
+  dust?: boolean;
+  hazeAmount?: number;
+  dustPerBeam?: number;
+  beamWidth?: number;
+  beamMouth?: number;
+  beamOvershoot?: number;
+  beamPool?: number;
 };
 
 export type EffectsFrame = {
@@ -18,6 +28,12 @@ export type EffectsFrame = {
   cursorX: number;
   cursorY: number;
   cursorInside: boolean;
+  /** Beam pools, after the cursor has shifted them. */
+  lights?: {
+    left: [number, number];
+    right: [number, number];
+    mid: [number, number];
+  };
 };
 
 type Puff = {
@@ -71,6 +87,9 @@ export class FrameEffects {
   private width = 0;
   private height = 0;
   private pixelRatio = 1;
+  private wisps: Wisp[] = [];
+  private motes: Mote[] = [];
+  private atmosphereKey = "";
 
   constructor(canvas: HTMLCanvasElement, options: EffectsOptions) {
     this.canvas = canvas;
@@ -114,6 +133,7 @@ export class FrameEffects {
 
   render(dt: number, frame: EffectsFrame) {
     this.stepSteam(dt, frame);
+    this.stepAtmosphere(dt, frame);
     this.draw(frame, false);
   }
 
@@ -206,6 +226,7 @@ export class FrameEffects {
     if (width <= 0 || height <= 0) return;
     const context = this.context;
     context.clearRect(0, 0, width, height);
+    this.drawAtmosphere(frame);
 
     if (this.options.steam && this.puffs.length > 0) {
       for (const puff of this.puffs) {
@@ -315,4 +336,251 @@ export class FrameEffects {
     }
     context.restore();
   }
+
+  private beamSettings() {
+    return {
+      width: this.options.beamWidth ?? 0.2,
+      mouth: this.options.beamMouth ?? 0.16,
+      overshoot: this.options.beamOvershoot ?? 0.08,
+      pool: this.options.beamPool ?? 0.22,
+      dust: this.options.dustPerBeam ?? 14,
+    };
+  }
+
+  private lightsOf(frame: EffectsFrame): Array<[number, number]> {
+    if (frame.lights) {
+      return [frame.lights.left, frame.lights.right, frame.lights.mid];
+    }
+    return [
+      [frame.width / 6, (2 * frame.height) / 3],
+      [(5 * frame.width) / 6, (2 * frame.height) / 3],
+      [frame.width / 2, frame.height / 3],
+    ];
+  }
+
+  private ensureAtmosphere(frame: EffectsFrame) {
+    const key = `${Math.round(frame.width)}x${Math.round(frame.height)}:${this.beamSettings().dust}`;
+    if (this.atmosphereKey === key) return;
+    this.atmosphereKey = key;
+    const random = hash32(20261117 + Math.round(frame.width) * 17);
+    this.wisps = Array.from({ length: 7 }, () => ({
+      x: random() * frame.width,
+      y: random() * frame.height,
+      vx: 10 + random() * 16,
+      rx: 70 + random() * 90,
+      ry: 18 + random() * 22,
+      alpha: 0.07 + random() * 0.05,
+    }));
+    const dust = this.beamSettings().dust;
+    this.motes = [];
+    for (let beam = 0; beam < 3; beam += 1) {
+      for (let index = 0; index < dust; index += 1) {
+        this.motes.push({
+          beam,
+          u: random(),
+          across: random() * 2 - 1,
+          speed: 0.015 + random() * 0.03,
+          size: 1.1 + random() * 1.6,
+          alpha: 0.28 + random() * 0.4,
+        });
+      }
+    }
+  }
+
+  private stepAtmosphere(dt: number, frame: EffectsFrame) {
+    if (!this.options.haze && !this.options.dust) return;
+    this.ensureAtmosphere(frame);
+    if (this.options.haze) {
+      for (const wisp of this.wisps) {
+        wisp.x += wisp.vx * dt;
+        if (wisp.x - wisp.rx > frame.width) wisp.x = -wisp.rx;
+      }
+    }
+    if (this.options.dust) {
+      for (const mote of this.motes) {
+        mote.u += mote.speed * dt;
+        if (mote.u > 1) mote.u -= 1;
+      }
+    }
+  }
+
+  private drawAtmosphere(frame: EffectsFrame) {
+    const { width, height } = frame;
+    if (width <= 0 || height <= 0) return;
+    if (!this.options.haze && !this.options.dust) return;
+    this.ensureAtmosphere(frame);
+    const context = this.context;
+    const lights = this.lightsOf(frame);
+    const beams = this.beamSettings();
+    const amount = this.options.hazeAmount ?? 1;
+
+    if (this.options.haze && amount > 0) {
+      context.save();
+      context.beginPath();
+      for (const [fx, fy] of lights) addBeam(context, fx, fy, width, height, beams);
+      addSeamRibbon(context, 0, 0, width / 2, height, width, height, this.options.seamTop, this.options.seamBottom);
+      addSeamRibbon(context, width, 0, width / 2, height, width, height, this.options.seamTop, this.options.seamBottom);
+      context.clip();
+      for (const wisp of this.wisps) {
+        context.save();
+        context.translate(wisp.x, wisp.y);
+        context.scale(wisp.rx, wisp.ry);
+        const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+        gradient.addColorStop(0, `rgba(255,255,255,${wisp.alpha * amount})`);
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(0, 0, 1, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+      context.restore();
+
+      context.save();
+      context.lineCap = "round";
+      for (const wisp of this.wisps) {
+        const near = nearestSeamPoint(wisp.x, wisp.y, width, height);
+        if (near.distance > wisp.rx * 0.65) continue;
+        const glow = (1 - near.distance / (wisp.rx * 0.65)) * wisp.alpha * amount * 3.2;
+        context.strokeStyle = `rgba(255,255,255,${Math.min(0.55, glow)})`;
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(near.x - near.tx * 22, near.y - near.ty * 22);
+        context.lineTo(near.x + near.tx * 22, near.y + near.ty * 22);
+        context.stroke();
+      }
+      context.restore();
+    }
+
+    if (this.options.dust) {
+      for (const mote of this.motes) {
+        const [fx, fy] = lights[mote.beam];
+        const shaft = fy + beams.overshoot * height;
+        const sourceY = fy - shaft;
+        const y = sourceY + mote.u * (fy - sourceY);
+        const bottomW = beams.width * width;
+        const topW = bottomW * beams.mouth;
+        const half = (topW + (bottomW - topW) * mote.u) / 2;
+        const x = fx + mote.across * half * 0.72;
+        const gradient = context.createRadialGradient(x, y, 0, x, y, mote.size * 3.2);
+        gradient.addColorStop(0, `rgba(255,255,255,${mote.alpha})`);
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(x, y, mote.size * 3.2, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+  }
+}
+
+type Wisp = {
+  x: number;
+  y: number;
+  vx: number;
+  rx: number;
+  ry: number;
+  alpha: number;
+};
+
+type Mote = {
+  beam: number;
+  u: number;
+  across: number;
+  speed: number;
+  size: number;
+  alpha: number;
+};
+
+function hash32(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function addBeam(
+  context: CanvasRenderingContext2D,
+  fx: number,
+  fy: number,
+  width: number,
+  height: number,
+  beams: { width: number; mouth: number; overshoot: number; pool: number },
+) {
+  const shaft = fy + beams.overshoot * height;
+  const sourceY = fy - shaft;
+  const bottomW = beams.width * width;
+  const topW = bottomW * beams.mouth;
+  context.moveTo(fx - topW / 2, sourceY);
+  context.lineTo(fx + topW / 2, sourceY);
+  context.lineTo(fx + bottomW / 2, fy);
+  context.lineTo(fx - bottomW / 2, fy);
+  context.closePath();
+  const poolR = (beams.pool * width) / 2;
+  context.moveTo(fx + poolR, fy);
+  context.ellipse(fx, fy, poolR, poolR * 0.62, 0, 0, Math.PI * 2);
+}
+
+function addSeamRibbon(
+  context: CanvasRenderingContext2D,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  width: number,
+  height: number,
+  top: number,
+  bottom: number,
+) {
+  const left: Array<[number, number]> = [];
+  const right: Array<[number, number]> = [];
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const length = Math.hypot(dx, dy) || 1;
+  const px = -dy / length;
+  const py = dx / length;
+  for (let step = 0; step <= 10; step += 1) {
+    const t = step / 10;
+    const x = x0 + dx * t;
+    const y = y0 + dy * t;
+    const band = seamBandWidth(y, width, height, top, bottom) * 0.5;
+    left.push([x + px * band, y + py * band]);
+    right.push([x - px * band, y - py * band]);
+  }
+  context.moveTo(left[0][0], left[0][1]);
+  for (const point of left) context.lineTo(point[0], point[1]);
+  for (let index = right.length - 1; index >= 0; index -= 1) {
+    context.lineTo(right[index][0], right[index][1]);
+  }
+  context.closePath();
+}
+
+function nearestSeamPoint(x: number, y: number, width: number, height: number) {
+  const left = closestPoint(x, y, 0, 0, width / 2, height);
+  const right = closestPoint(x, y, width, 0, width / 2, height);
+  return left.distance < right.distance ? left : right;
+}
+
+function closestPoint(
+  x: number,
+  y: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+) {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const length = Math.hypot(dx, dy) || 1;
+  const t = Math.min(1, Math.max(0, ((x - x0) * dx + (y - y0) * dy) / (length * length)));
+  const px = x0 + dx * t;
+  const py = y0 + dy * t;
+  return {
+    x: px,
+    y: py,
+    distance: Math.hypot(x - px, y - py),
+    tx: dx / length,
+    ty: dy / length,
+  };
 }
