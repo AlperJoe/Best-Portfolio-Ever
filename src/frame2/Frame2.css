@@ -235,8 +235,6 @@
 
 .frame2-back,
 .frame2-face {
-  position: absolute;
-  inset: 0;
   border-radius: var(--open-radius);
   backface-visibility: hidden;
   background: var(--open-navy);
@@ -247,6 +245,8 @@
 }
 
 .frame2-back {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
   background-image:
@@ -263,6 +263,9 @@
 }
 
 .frame2-face {
+  position: relative;
+  box-sizing: border-box;
+  max-height: var(--open-height);
   transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
@@ -294,12 +297,13 @@
   color: rgba(255, 255, 255, var(--open-body-opacity));
 }
 
-.frame2-video {
+.frame2-picture {
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--gold);
   background: #000;
   display: block;
+  object-fit: cover;
 }
 
 .frame2-card-links {

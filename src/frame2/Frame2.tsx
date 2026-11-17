@@ -69,6 +69,7 @@ export function Frame2() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const flightRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
   const buttonRefs = useRef<Partial<Record<Frame2CardId, HTMLButtonElement>>>({});
   const placeRef = useRef<HeroPlacement | null>(null);
@@ -86,6 +87,7 @@ export function Frame2() {
     }),
   );
   const [open, setOpen] = useState<OpenCard | null>(null);
+  const [openCardHeight, setOpenCardHeight] = useState(0);
   placeRef.current = place;
 
   useLayoutEffect(() => {
@@ -320,6 +322,16 @@ export function Frame2() {
     return () => window.clearTimeout(timer);
   }, [open, reduced]);
 
+  useLayoutEffect(() => {
+    const node = flightRef.current;
+    if (!open || !node) {
+      setOpenCardHeight((current) => (current === 0 ? current : 0));
+      return;
+    }
+    const next = node.offsetHeight;
+    setOpenCardHeight((current) => (Math.abs(current - next) < 0.5 ? current : next));
+  }, [open]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -332,11 +344,17 @@ export function Frame2() {
   }, [open?.id]);
 
   const active = open ? frame2Config.cards.items.find((card) => card.id === open.id) : undefined;
-  const openHeight = (frameRef.current?.clientHeight || window.innerHeight) * frame2Config.open.height;
-  const openWidth = openHeight * frame2Config.open.aspect;
+  const frameHeight = frameRef.current?.clientHeight || window.innerHeight;
+  const openMaxHeight = frameHeight * frame2Config.open.height;
+  const openWidth = openMaxHeight * frame2Config.open.aspect;
   const flight =
     open && frameRef.current && buttonRefs.current[open.id]
-      ? measureFlight(buttonRefs.current[open.id] as HTMLButtonElement, frameRef.current, openWidth, openHeight)
+      ? measureFlight(
+          buttonRefs.current[open.id] as HTMLButtonElement,
+          frameRef.current,
+          openWidth,
+          openCardHeight || openMaxHeight,
+        )
       : { dx: 0, dy: 0, scale: 0.2 };
   const atHand = !reduced && open && open.pose !== "to";
 
@@ -371,7 +389,7 @@ export function Frame2() {
     "--fill-dark": String(frame2Config.image.fillDark),
     "--open-blur": `${frame2Config.image.openBlur}px`,
     "--open-brightness": String(frame2Config.image.openBrightness),
-    "--open-height": `${frame2Config.open.height * 100}%`,
+    "--open-height": `${openMaxHeight}px`,
     "--open-radius": `${frame2Config.open.radius}px`,
     "--open-navy": frame2Config.open.navy,
     "--open-duration": `${frame2Config.open.duration}s`,
@@ -476,7 +494,7 @@ export function Frame2() {
             flight={flight}
             atHand={Boolean(atHand)}
             width={openWidth}
-            height={openHeight}
+            flightRef={flightRef}
             dialogRef={dialogRef}
             closeRef={closeRef}
             videoRef={videoRef}
@@ -499,7 +517,7 @@ function OpenCardView({
   flight,
   atHand,
   width,
-  height,
+  flightRef,
   dialogRef,
   closeRef,
   videoRef,
@@ -512,7 +530,7 @@ function OpenCardView({
   flight: { dx: number; dy: number; scale: number };
   atHand: boolean;
   width: number;
-  height: number;
+  flightRef: RefObject<HTMLDivElement | null>;
   dialogRef: RefObject<HTMLDivElement | null>;
   closeRef: RefObject<HTMLButtonElement | null>;
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -522,11 +540,11 @@ function OpenCardView({
   const shown = reduced ? pose !== "back" : !atHand;
   return (
     <div
+      ref={flightRef}
       className={shown ? "frame2-flight is-shown" : "frame2-flight"}
       style={
         {
           width: `${width}px`,
-          height: `${height}px`,
           "--dx": atHand ? `${flight.dx}px` : "0px",
           "--dy": atHand ? `${flight.dy}px` : "0px",
           "--card-scale": atHand ? String(flight.scale) : "1",
@@ -553,13 +571,15 @@ function OpenCardView({
         {card.video ? (
           <video
             ref={videoRef}
-            className="frame2-video"
+            className="frame2-picture"
             src={frame2Config.assets.gameplay}
             poster={frame2Config.assets.poster}
             preload="none"
             playsInline
             controls
           />
+        ) : card.image ? (
+          <img className="frame2-picture" src={card.image.src} alt={card.image.alt} />
         ) : null}
         <p>{card.body}</p>
         {card.links.length > 0 ? (
