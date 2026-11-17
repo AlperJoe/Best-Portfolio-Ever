@@ -59,11 +59,13 @@ function fileName(src: string) {
 }
 
 function Asset({
+  id,
   src,
   alt,
   className,
   labelAt,
 }: {
+  id?: string;
   src: string;
   alt: string;
   className?: string;
@@ -74,7 +76,7 @@ function Asset({
 
   if (missing) {
     return (
-      <div className={`placeholder ${className ?? ""}`} role="img" aria-label={name}>
+      <div id={id} className={`placeholder ${className ?? ""}`} role="img" aria-label={name}>
         {labelAt ? (
           <span className="placeholder-label" style={{ left: labelAt.x, top: labelAt.y }}>
             {name}
@@ -88,6 +90,7 @@ function Asset({
 
   return (
     <img
+      id={id}
       src={src}
       alt={alt}
       className={className}
@@ -860,6 +863,7 @@ export function Frame1() {
       <section className="region region-middle mask-middle fill" aria-hidden="true" />
 
       <Asset
+        id="frame1-main-image"
         src={frame1Config.assets.portrait}
         alt="Portrait of Alper Bozkurt"
         className="portrait-sharp portrait-layer"
