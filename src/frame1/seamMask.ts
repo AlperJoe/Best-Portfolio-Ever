@@ -94,17 +94,16 @@ export function createSeamSampler(width: number, height: number, settings: SeamM
     const dist = distanceToMiddle(x, y, width, height);
     const leftShifted = dist.left + noiseLeft(u, v) * maxPerp;
     const rightShifted = dist.right + noiseRight(u, v) * maxPerp;
-    const leftMiddle = smoothstep(-half, half, leftShifted);
-    const rightMiddle = smoothstep(-half, half, rightShifted);
-    const feather = Math.max(0.75, half * 0.12);
-    let left = 1 - smoothstep(half, half + feather, leftShifted);
-    let right = 1 - smoothstep(half, half + feather, rightShifted);
-    if (x > width / 2) left = 0;
-    if (x < width / 2) right = 0;
+    const intoMiddleL = smoothstep(-half, half, leftShifted);
+    const intoMiddleR = smoothstep(-half, half, rightShifted);
+    let left = 1 - intoMiddleL;
+    let right = 1 - intoMiddleR;
+    if (rightShifted < -half) left = 0;
+    if (leftShifted < -half) right = 0;
     return {
       left,
       right,
-      middle: leftMiddle * rightMiddle,
+      middle: intoMiddleL * intoMiddleR,
     };
   };
 }

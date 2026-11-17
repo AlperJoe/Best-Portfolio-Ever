@@ -92,6 +92,12 @@ export function applySeamVariables(
   set("--right-fade-0", `${seams.rightFade0}px`);
   set("--edge-reach", `${edgeGlowReach * width}px`);
   set("--light-radius", `${lightRadius * width}px`);
+  const seamLength = Math.hypot(width / 2, height);
+  const leftAngle = (Math.atan2(height, width / 2) * 180) / Math.PI;
+  const rightAngle = (Math.atan2(height, -width / 2) * 180) / Math.PI;
+  set("--seam-length", `${seamLength}px`);
+  set("--seam-left-angle", `${leftAngle}deg`);
+  set("--seam-right-angle", `${rightAngle}deg`);
 }
 
 /** Blend width at a vertical position. Narrow at the top, wide at the bottom. */
