@@ -19,7 +19,7 @@ const LevelStatic = memo(function LevelStatic() {
 
   return (
     <g>
-      <rect width={width} height={height} fill={frame3.floor} />
+      <rect width={width} height={height} fill={frame3.mapFloor} />
       {level.goalZone.cells.map((cell) => (
         <rect
           key={cellKey(cell)}
@@ -114,19 +114,20 @@ function DoorShape({ door, open }: { door: Door; open: number }) {
 
   const ratio = Math.max(0, Math.min(1, open / level.doorOpenSteps));
   const horizontal = w >= h;
+  const thickness = frame3.doorOpenBar;
   const bar = horizontal ? (
     <rect
       x={innerX}
-      y={y + h / 2 - 0.05}
+      y={y + h / 2 - thickness / 2}
       width={innerW * ratio}
-      height={0.1}
+      height={thickness}
       fill={color}
     />
   ) : (
     <rect
-      x={x + w / 2 - 0.05}
+      x={x + w / 2 - thickness / 2}
       y={innerY}
-      width={0.1}
+      width={thickness}
       height={innerH * ratio}
       fill={color}
     />

@@ -20,6 +20,8 @@ export type EffectsOptions = {
   beamMouth?: number;
   beamOvershoot?: number;
   beamPool?: number;
+  /** Opacity of the film grain. Covers the whole frame, including the portrait. */
+  grainAlpha?: number;
 };
 
 export type EffectsFrame = {
@@ -288,7 +290,7 @@ export class FrameEffects {
     noiseContext.putImageData(image, 0, 0);
 
     context.save();
-    context.globalAlpha = 0.05;
+    context.globalAlpha = this.options.grainAlpha ?? 0.05;
     const offsetX = still ? 0 : next() % 160;
     const offsetY = still ? 0 : next() % 160;
     context.translate(offsetX, offsetY);

@@ -69,14 +69,6 @@ function cardBounds(points: CardPoint[], image: HeroPlacement) {
   };
 }
 
-function lineWasDismissed() {
-  try {
-    return sessionStorage.getItem("frame2-line-hidden") === "1";
-  } catch {
-    return false;
-  }
-}
-
 export function Frame2() {
   const reduced = usePrefersReducedMotion();
   const frameRef = useRef<HTMLElement>(null);
@@ -98,7 +90,9 @@ export function Frame2() {
   );
   const [open, setOpen] = useState<OpenCard | null>(null);
   const [openCardHeight, setOpenCardHeight] = useState(0);
-  const [lineOn, setLineOn] = useState(() => !lineWasDismissed());
+  const [inView, setInView] = useState(false);
+  const [lineHeld, setLineHeld] = useState(false);
+  const lineOn = inView && !lineHeld;
   const [introFit, setIntroFit] = useState(1);
   const [lineBox, setLineBox] = useState<{ left: number; top: number } | null>(null);
   placeRef.current = place;
@@ -335,13 +329,23 @@ export function Frame2() {
     img.src = frame2Config.assets.cardBack;
   }, []);
 
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = Boolean(entry?.isIntersecting);
+        setInView(visible);
+        if (!visible) setLineHeld(false);
+      },
+      { threshold: frame2Config.line.viewShare },
+    );
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, []);
+
   function dismissLine() {
-    setLineOn(false);
-    try {
-      sessionStorage.setItem("frame2-line-hidden", "1");
-    } catch {
-      /* The line still stays hidden for this visit. */
-    }
+    setLineHeld(true);
   }
 
   function requestClose() {

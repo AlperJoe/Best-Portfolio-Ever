@@ -82,7 +82,9 @@ export const frame2Config = {
     line: 1.1,
     color: "#EFC785",
     shadow: "drop-shadow(0 2px 12px rgba(0, 0, 0, 0.82))",
-    /** How often the shine travels across the line. */
+    /** Share of Frame 2 that must be visible before the line appears. */
+    viewShare: 0.5,
+    /** How often the shine travels across the line. The first pass starts as the line fades in. */
     shine: 6,
     /** How long that shine itself takes, inside each cycle. */
     shineTravel: 2.2,
