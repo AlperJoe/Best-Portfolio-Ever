@@ -434,14 +434,13 @@
   line-height: 1.2;
   text-transform: none;
   letter-spacing: 0;
+  color: rgba(255, 255, 255, var(--label-opacity));
+  text-shadow: var(--label-shadow);
 }
 
-.copy-left .label {
-  color: var(--buas-label);
-}
-
+.copy-left .label,
 .copy-right .label {
-  color: var(--bilkent-label);
+  color: rgba(255, 255, 255, var(--label-opacity));
 }
 
 .copy .text {

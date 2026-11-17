@@ -115,8 +115,12 @@ export const frame1Config = {
     titleWeight: 600,
     titleSize: "clamp(22px, 1.9vw, 36px)",
     titleLine: 1.05,
-    labelSize: 13,
-    labelWeight: 500,
+    labelSize: 15,
+    labelWeight: 600,
+    /** Thesis and Favorite courses. White, so they read on both campus tones. */
+    labelOpacity: 0.8,
+    /** Same soft shadow the other Frame 1 text uses. */
+    labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
     buasLabel: "#FFD2B0",
     bilkentLabel: "#C9D4FF",
     bodySize: 16,
@@ -127,10 +131,18 @@ export const frame1Config = {
     shadeBlur: 26,
   },
   seams: {
-    top: 0.04,
-    bottom: 0.14,
+    /** Blend width at the top, as a fraction of the frame width. */
+    top: 0.02,
+    /** Blend width at the bottom, as a fraction of the frame width. */
+    bottom: 0.05,
     campusReach: 0.034,
-    noise: 0.72,
+    /**
+     * Share of edgeLimit the noise may use. The seam stays on the true
+     * line, with only a little roughness so it is not a ruler line.
+     */
+    noise: 0.85,
+    /** Largest shift of either seam from its true line, as a fraction of frame width. */
+    edgeLimit: 0.01,
     columns: 5,
     rows: 4,
     steam: 1.38,

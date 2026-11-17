@@ -3,10 +3,10 @@ import { seamBandWidth } from "./geometry";
 export type SeamMaskSettings = {
   top: number;
   bottom: number;
-  /** Largest share of the frame width the blend may reach into a campus side. */
-  campusReach: number;
-  /** How far large-scale noise pushes the edge, as a share of the local band. */
+  /** Share of `edgeLimit` the noise may use. Clamped to 1. */
   noise: number;
+  /** Largest horizontal shift from the true seam, as a fraction of frame width. */
+  edgeLimit: number;
   columns: number;
   rows: number;
 };
@@ -15,6 +15,12 @@ export type SeamMasks = {
   left: string;
   right: string;
   middle: string;
+};
+
+export type SeamSample = {
+  left: number;
+  right: number;
+  middle: number;
 };
 
 function smoothstep(edge0: number, edge1: number, value: number) {
@@ -61,7 +67,46 @@ function distanceToMiddle(x: number, y: number, width: number, height: number) {
   const length = Math.hypot(half, height) || 1;
   const left = -(half * y - height * x) / length;
   const right = (-half * y - height * (x - width)) / length;
-  return { left, right };
+  return { left, right, length };
+}
+
+/**
+ * Sample the three region masks.
+ * The blend is centered on the straight seam. Noise may slide that edge,
+ * but only within `edgeLimit` of the frame width, measured horizontally.
+ * Left stays on x <= width/2 and right stays on x >= width/2, so the
+ * three regions meet at the middle of the bottom edge.
+ */
+export function createSeamSampler(width: number, height: number, settings: SeamMaskSettings) {
+  const seed = (20261116 + Math.round(width) * 13 + Math.round(height)) >>> 0;
+  const noiseLeft = makeNoise(settings.columns, settings.rows, seed);
+  const noiseRight = makeNoise(settings.columns, settings.rows, seed ^ 0x9e3779b9);
+  const { length } = distanceToMiddle(0, 0, width, height);
+  const across = height / length;
+  const strength = Math.min(1, Math.max(0, settings.noise));
+  const maxPerp = width * settings.edgeLimit * strength * across;
+
+  return (x: number, y: number): SeamSample => {
+    const band = seamBandWidth(y, width, height, settings.top, settings.bottom);
+    const half = band * 0.5;
+    const u = width <= 0 ? 0 : x / width;
+    const v = height <= 0 ? 0 : y / height;
+    const dist = distanceToMiddle(x, y, width, height);
+    const leftShifted = dist.left + noiseLeft(u, v) * maxPerp;
+    const rightShifted = dist.right + noiseRight(u, v) * maxPerp;
+    const leftMiddle = smoothstep(-half, half, leftShifted);
+    const rightMiddle = smoothstep(-half, half, rightShifted);
+    const feather = Math.max(0.75, half * 0.12);
+    let left = 1 - smoothstep(half, half + feather, leftShifted);
+    let right = 1 - smoothstep(half, half + feather, rightShifted);
+    if (x > width / 2) left = 0;
+    if (x < width / 2) right = 0;
+    return {
+      left,
+      right,
+      middle: leftMiddle * rightMiddle,
+    };
+  };
 }
 
 function canvasUrl(width: number, height: number, paint: (data: Uint8ClampedArray) => void) {
@@ -77,48 +122,25 @@ function canvasUrl(width: number, height: number, paint: (data: Uint8ClampedArra
 }
 
 /**
- * Organic seam masks. Noise is built once per size and painted into a
- * low-resolution canvas, then used as the CSS mask.
+ * Seam masks at the frame's own pixel size, so a narrow blend is not
+ * stretched into a curve.
  */
 export function buildSeamMasks(
   width: number,
   height: number,
   settings: SeamMaskSettings,
 ): SeamMasks {
-  const maskW = Math.max(2, Math.round(width / 3));
-  const maskH = Math.max(2, Math.round(height / 3));
-  const noise = makeNoise(
-    settings.columns,
-    settings.rows,
-    (20261116 + Math.round(width) * 13 + Math.round(height)) >>> 0,
-  );
+  const maskW = Math.max(2, Math.round(width));
+  const maskH = Math.max(2, Math.round(height));
+  const sample = createSeamSampler(width, height, settings);
 
-  const sample = (px: number, py: number) => {
-    const x = ((px + 0.5) / maskW) * width;
-    const y = ((py + 0.5) / maskH) * height;
-    const band = seamBandWidth(y, width, height, settings.top, settings.bottom);
-    const campusSide = Math.min(band * 0.5, width * settings.campusReach);
-    const middleSide = Math.max(0, band - campusSide);
-    const wobble = noise(x / width, y / height) * band * settings.noise;
-    const dist = distanceToMiddle(x, y, width, height);
-    const leftShifted = dist.left + wobble;
-    const rightShifted = dist.right - wobble * 0.85;
-    const leftMiddle = smoothstep(-campusSide, middleSide, leftShifted);
-    const rightMiddle = smoothstep(-campusSide, middleSide, rightShifted);
-    const leftSide = 1 - smoothstep(middleSide + band * 0.03, middleSide + band * 0.14, leftShifted);
-    const rightSide = 1 - smoothstep(middleSide + band * 0.03, middleSide + band * 0.14, rightShifted);
-    return {
-      left: leftSide,
-      right: rightSide,
-      middle: leftMiddle * rightMiddle,
-    };
-  };
-
-  const paint = (key: "left" | "right" | "middle") =>
+  const paint = (key: keyof SeamSample) =>
     canvasUrl(maskW, maskH, (data) => {
       for (let py = 0; py < maskH; py += 1) {
+        const y = ((py + 0.5) / maskH) * height;
         for (let px = 0; px < maskW; px += 1) {
-          const alpha = Math.round(sample(px, py)[key] * 255);
+          const x = ((px + 0.5) / maskW) * width;
+          const alpha = Math.round(sample(x, y)[key] * 255);
           const index = (py * maskW + px) * 4;
           data[index] = 0;
           data[index + 1] = 0;
