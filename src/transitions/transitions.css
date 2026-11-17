@@ -1,0 +1,89 @@
+.tx-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.tx-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  outline: none;
+}
+
+.tx-slot.is-parked {
+  visibility: hidden;
+  transform: translate3d(0, 300vh, 0);
+}
+
+.tx-slot.is-leaving {
+  will-change: transform, filter;
+}
+
+.tx-slot.is-revealing,
+.tx-slot.is-fading {
+  z-index: 30;
+  will-change: opacity;
+}
+
+.tx-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.tx-layer.is-on {
+  visibility: visible;
+}
+
+.tx-field {
+  position: absolute;
+  inset: -6%;
+  will-change: opacity;
+}
+
+.tx-field-from,
+.tx-field-to {
+  position: absolute;
+  inset: 0;
+}
+
+.tx-field-to {
+  will-change: opacity;
+}
+
+.tx-plane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+}
+
+.tx-paper {
+  position: absolute;
+}
+
+.tx-print {
+  position: absolute;
+  inset: 0;
+}
+
+.tx-clone {
+  position: absolute;
+  display: block;
+  max-width: none;
+  margin: 0;
+}
+
+.tx-shade {
+  position: absolute;
+  inset: -6%;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.9) 100%);
+}
