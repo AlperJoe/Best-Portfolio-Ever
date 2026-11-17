@@ -154,15 +154,32 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
   const blocks = [...copy.children].filter(
     (el): el is HTMLElement => el instanceof HTMLElement && !el.classList.contains("copy-shape"),
   );
-  for (let pass = 0; pass < 4; pass += 1) {
-    for (const block of blocks) {
-      if (block.classList.contains("rule")) continue;
-      const rect = block.getBoundingClientRect();
-      const sampleY = rect.top === 0 && rect.bottom === 0 ? top : rect.bottom - frameTop;
-      const available = Math.max(48, Math.min(lineWidth(top), lineWidth(sampleY)));
-      block.style.maxWidth = `${available}px`;
-      block.style.marginLeft = side === "right" ? "auto" : "0";
+  for (const block of blocks) {
+    if (block.classList.contains("rule") || block.classList.contains("badge")) {
+      block.style.maxWidth = "none";
+      continue;
     }
+    block.style.maxWidth = "none";
+  }
+
+  for (const block of blocks) {
+    if (block.classList.contains("rule") || block.classList.contains("badge")) {
+      block.style.marginLeft = side === "right" ? "auto" : "0";
+      continue;
+    }
+    const rect = block.getBoundingClientRect();
+    const sampleY = rect.top === 0 && rect.bottom === 0 ? top : rect.top - frameTop;
+    const available = Math.max(48, Math.min(lineWidth(top), lineWidth(sampleY)));
+    block.style.maxWidth = `${available}px`;
+    block.style.marginLeft = side === "right" ? "auto" : "0";
+  }
+
+  for (const course of copy.querySelectorAll<HTMLElement>(".course")) {
+    const rect = course.getBoundingClientRect();
+    const sampleY = rect.top === 0 && rect.bottom === 0 ? top : rect.top - frameTop;
+    const available = Math.max(48, Math.min(lineWidth(top), lineWidth(sampleY)));
+    course.style.maxWidth = `${available}px`;
+    course.style.marginLeft = side === "right" ? "auto" : "0";
   }
 
   const title = copy.querySelector<HTMLElement>(".title");
@@ -230,14 +247,9 @@ function placeIcons(element: HTMLElement, width: number, height: number) {
 
 function placeBadges(element: HTMLElement, width: number, height: number) {
   const badge = frame1Config.badge;
-  const plateW = badge.width * width;
-  const plateH = badge.height * height;
-  const side = badge.side * width;
-  element.style.setProperty("--badge-w", `${plateW}px`);
-  element.style.setProperty("--badge-h", `${plateH}px`);
-  element.style.setProperty("--badge-bottom", `${badge.bottom * height}px`);
-  element.style.setProperty("--badge-left-x", `${side}px`);
-  element.style.setProperty("--badge-right-x", `${width - side - plateW}px`);
+  element.style.setProperty("--badge-w", `${badge.width * width}px`);
+  element.style.setProperty("--badge-h", `${badge.height * height}px`);
+  element.style.setProperty("--badge-gap", `${badge.gap}px`);
 }
 
 function placePhoto(
@@ -361,7 +373,7 @@ export function Frame1() {
       placeBadges(element, rect.width, rect.height);
       element.style.setProperty("--middle-width", `${frame1Config.middle.maxWidth * rect.width}px`);
       element.style.setProperty("--name-bottom", `${frame1Config.middle.bottom * rect.height}px`);
-      element.style.setProperty("--glow-size", `${frame1Config.crownGlow.size * rect.width}px`);
+      element.style.setProperty("--glow-size", `${frame1Config.crownGlow.reach * 2 * rect.height}px`);
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
@@ -392,24 +404,24 @@ export function Frame1() {
         ? name.getBoundingClientRect().top - element.getBoundingClientRect().top
         : rect.height * 0.78;
       const portrait = fitPortrait(rect.width, rect.height, nameTop);
-      const portraitW =
-        portrait.size *
-        (frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight);
       element.style.setProperty("--portrait-h", `${portrait.size}px`);
       element.style.setProperty("--portrait-top", `${portrait.top}px`);
       const fadeEnd = nameTop + frame1Config.portraitLayout.fadeSpan * rect.height;
+      const maskShape = frame1Config.portraitLayout.mask;
       const mask = buildPortraitMask({
-        frameW: rect.width,
-        frameH: rect.height,
-        left: (rect.width - portraitW) / 2,
         top: portrait.top,
-        width: portraitW,
         height: portrait.size,
         fadeStart: nameTop,
         fadeEnd,
-        overflow: frame1Config.portraitLayout.featherOverflow,
-        reach: frame1Config.portraitLayout.featherReach,
-        soft: frame1Config.portraitLayout.featherSoft,
+        cx: maskShape.cx,
+        cy: maskShape.cy,
+        rx: maskShape.rx,
+        ry: maskShape.ry,
+        solid: maskShape.solid,
+        sideClear: maskShape.sideClear,
+        sideSoft: maskShape.sideSoft,
+        topClear: maskShape.topClear,
+        topSoft: maskShape.topSoft,
       });
       if (mask) element.style.setProperty("--portrait-mask", `url("${mask}")`);
       placeIcons(element, rect.width, rect.height);
@@ -448,6 +460,7 @@ export function Frame1() {
       seamSteam: frame1Config.seams.steam,
       haze: false,
       dust: false,
+      grainAlpha: frame1Config.grainAlpha,
     });
     effectsRef.current = effects;
 
@@ -488,6 +501,7 @@ export function Frame1() {
         seamSteam: frame1Config.seams.steam,
         haze: false,
         dust: false,
+        grainAlpha: frame1Config.grainAlpha,
       };
     };
 
@@ -684,6 +698,12 @@ export function Frame1() {
     "--badge-opacity": String(frame1Config.badge.plateOpacity),
     "--badge-pad": `${frame1Config.badge.pad}px`,
     "--badge-radius": `${frame1Config.badge.radius}px`,
+    "--badge-lift": `${frame1Config.badge.lift}px`,
+    "--badge-tint-mix": String(frame1Config.badge.tint),
+    "--badge-buas": frame1Config.badge.buasTint,
+    "--badge-bilkent": frame1Config.badge.bilkentTint,
+    "--portrait-grade": frame1Config.portraitGrade,
+    "--focus": frame1Config.focus,
     "--glow-rgb": frame1Config.crownGlow.rgb,
     "--glow-opacity": String(frame1Config.crownGlow.opacity),
     "--glow-shift": frame1Config.crownGlow.shift,
@@ -874,21 +894,6 @@ export function Frame1() {
         <LinkedInIcon />
       </a>
 
-      <div className="badge badge-buas hud">
-        <Asset
-          src={frame1Config.assets.buasLogo}
-          alt="Breda University of Applied Sciences"
-          className="badge-logo"
-        />
-      </div>
-      <div className="badge badge-bilkent hud">
-        <Asset
-          src={frame1Config.assets.bilkentLogo}
-          alt="Bilkent University"
-          className="badge-logo"
-        />
-      </div>
-
       <div className="copy copy-left hud" ref={leftCopyRef}>
         <div className="copy-shape" />
         <p className="title title-buas">Master Game Technology</p>
@@ -905,6 +910,15 @@ export function Frame1() {
         >
           Explore my research <span className="research-arrow">→</span>
         </button>
+        <a
+          className="badge badge-buas"
+          href={frame1Config.links.buas}
+          target="_blank"
+          rel="noreferrer noopener"
+          aria-label="Breda University of Applied Sciences website"
+        >
+          <Asset src={frame1Config.assets.buasLogo} alt="" className="badge-logo" />
+        </a>
       </div>
 
       <div className="copy copy-right hud" ref={rightCopyRef}>
@@ -920,14 +934,21 @@ export function Frame1() {
               href={course.href}
               target="_blank"
               rel="noreferrer noopener"
-              title={course.fullName}
-              aria-label={course.fullName}
             >
-              <span className="course-code">{course.code}</span>
+              <span className="course-code">{course.code}</span>{" "}
               <span className="course-name">{course.name}</span>
             </a>
           ))}
         </div>
+        <a
+          className="badge badge-bilkent"
+          href={frame1Config.links.bilkent}
+          target="_blank"
+          rel="noreferrer noopener"
+          aria-label="Bilkent University website"
+        >
+          <Asset src={frame1Config.assets.bilkentLogo} alt="" className="badge-logo" />
+        </a>
       </div>
 
       <div className="middle-copy hud">

@@ -13,6 +13,11 @@
   box-sizing: border-box;
 }
 
+.frame2 a,
+.frame2 button {
+  cursor: pointer;
+}
+
 .frame2-scene {
   position: absolute;
   inset: 0;

@@ -1,7 +1,6 @@
 /**
  * Every tunable for Frame 3. Layout, color, type, and playback live here.
- * The map is kept a little under 62% so the 30% text block, the two 5%
- * insets, and a small gap can sit beside it without touching.
+ * The text column ends at 31% and the map column starts at 34%.
  */
 export const frame3 = {
   background: "#12151A",
@@ -21,16 +20,19 @@ export const frame3 = {
   warmWhite: "#F2EEE6",
   panel: "#1B2030",
 
-  textLeft: "5%",
-  textMax: "30%",
-  mapRight: "5%",
+  /** Text column, as fractions of the frame width. */
+  textStart: 0.05,
+  textEnd: 0.31,
+  /** Map column. The map sits on the column's right edge. */
+  mapStart: 0.34,
+  mapEnd: 0.95,
   /**
-   * Playable map width is the smaller of this share of the frame width
-   * and twice `mapHeight` of the frame height, so the map stays 2:1.
+   * Map width is the smaller of the column and twice this share of the
+   * frame height, so the map stays 2:1.
    */
-  mapWidth: 0.66,
-  mapHeight: 0.8,
-  mapRightRatio: 0.05,
+  mapHeight: 0.78,
+  mapFloor: "#222833",
+  mapBorder: "rgba(255, 255, 255, 0.08)",
   /** How much of the floor color shows in the tiles outside the map. */
   outsideMix: 0.62,
   /** Share of each outer margin that fades away. The rest stays dim. */
@@ -39,6 +41,15 @@ export const frame3 = {
   outsideGrid: "rgba(255, 255, 255, 0.055)",
   columnGap: "3%",
   refsRight: "5%",
+  /** Focus ring for keyboard controls. */
+  focus: "#3CC8B4",
+  buttonSize: "17px",
+  buttonWeight: 600,
+  buttonPadY: "8px",
+  buttonPadX: "14px",
+  buttonRadius: "6px",
+  buttonBorder: "rgba(255, 255, 255, 0.4)",
+  arrowShift: "4px",
   refsBottom: "4%",
 
   titleSize: "clamp(28px, 2.6vw, 44px)",
@@ -92,6 +103,8 @@ export const frame3 = {
   visionStroke: 0.065,
   doorPad: 0.08,
   doorBar: 0.07,
+  /** Thickness of the single bar that shows an open door's remaining time. */
+  doorOpenBar: 0.045,
 
   white90: "rgba(255, 255, 255, 0.9)",
   white60: "rgba(255, 255, 255, 0.6)",

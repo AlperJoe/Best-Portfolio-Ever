@@ -153,15 +153,14 @@
   z-index: 3;
   left: 50%;
   top: 0;
-  width: var(--glow-size, 90vw);
-  height: var(--glow-size, 90vw);
-  transform: translate(-50%, var(--glow-shift, -28%));
+  width: var(--glow-size, 20vw);
+  height: var(--glow-size, 20vw);
+  transform: translate(-50%, var(--glow-shift, -50%));
   background: radial-gradient(
-    circle at 50% 42%,
-    rgba(var(--glow-rgb, 255, 214, 170), var(--glow-opacity, 0.32)) 0%,
-    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.32) * 0.55)) 22%,
-    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.32) * 0.16)) 48%,
-    transparent 78%
+    circle closest-side at 50% 50%,
+    rgba(var(--glow-rgb, 255, 214, 170), var(--glow-opacity, 0.16)) 0%,
+    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.16) * 0.28)) 36%,
+    transparent 100%
   );
   mix-blend-mode: screen;
   pointer-events: none;
@@ -175,6 +174,7 @@
   left: calc(50% - var(--portrait-h, 76dvh) * var(--portrait-aspect, 1) / 2);
   top: var(--portrait-top, 8%);
   object-fit: fill;
+  filter: var(--portrait-grade, contrast(0.9) saturate(0.8) brightness(1.04));
   mask-image: var(--portrait-mask);
   -webkit-mask-image: var(--portrait-mask);
   mask-size: 100% 100%;
@@ -200,8 +200,8 @@
 .edge-left {
   background: linear-gradient(
     var(--left-angle),
-    transparent calc(var(--left-offset) - var(--band) * 0.15),
-    color-mix(in srgb, var(--buas-tone) 62%, white) var(--left-offset),
+    transparent calc(var(--left-offset) - var(--edge-reach)),
+    color-mix(in srgb, var(--buas-tone) 28%, white) var(--left-offset),
     transparent calc(var(--left-offset) + var(--edge-reach))
   );
 }
@@ -209,8 +209,8 @@
 .edge-right {
   background: linear-gradient(
     var(--right-angle),
-    transparent calc(var(--right-offset) - var(--band) * 0.15),
-    color-mix(in srgb, var(--bilkent-tone) 55%, white) var(--right-offset),
+    transparent calc(var(--right-offset) - var(--edge-reach)),
+    color-mix(in srgb, var(--bilkent-tone) 24%, white) var(--right-offset),
     transparent calc(var(--right-offset) + var(--edge-reach))
   );
 }
@@ -252,7 +252,7 @@
 }
 
 .badge {
-  position: absolute;
+  position: relative;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -260,18 +260,37 @@
   box-sizing: border-box;
   width: var(--badge-w, 12vw);
   height: var(--badge-h, 5.5vh);
-  bottom: var(--badge-bottom, 4vh);
+  margin-top: var(--badge-gap, 24px);
   padding: var(--badge-pad, 8px);
+  border: 1px solid transparent;
   background: color-mix(in srgb, var(--badge-plate, #f2eee6) calc(var(--badge-opacity, 0.92) * 100%), transparent);
   border-radius: var(--badge-radius, 8px);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.copy-right .badge {
+  margin-left: auto;
 }
 
 .badge-buas {
-  left: var(--badge-left-x, 32%);
+  --badge-tint: var(--badge-buas, #ed7624);
 }
 
 .badge-bilkent {
-  left: var(--badge-right-x, 55%);
+  --badge-tint: var(--badge-bilkent, #0053a0);
+}
+
+.badge:hover,
+.badge:focus-visible {
+  transform: translateY(calc(var(--badge-lift, 2px) * -1));
+  border-color: var(--badge-tint);
+  background: color-mix(
+    in srgb,
+    var(--badge-tint) calc(var(--badge-tint-mix, 0.18) * 100%),
+    color-mix(in srgb, var(--badge-plate, #f2eee6) calc(var(--badge-opacity, 0.92) * 100%), transparent)
+  );
 }
 
 .badge-logo {
@@ -395,47 +414,45 @@
   border-color: #fff;
 }
 
-.research-open:focus-visible {
-  outline: none;
+.research-open:focus-visible,
+.badge:focus-visible,
+.course:focus-visible,
+.icon-link:focus-visible,
+.research-close:focus-visible {
+  outline: 2px solid var(--focus, #f2eee6);
+  outline-offset: 3px;
 }
 
 .courses {
-  display: grid;
-  width: max-content;
-  max-width: 100%;
-  grid-template-columns: max-content max-content;
-  column-gap: 0.45em;
-  row-gap: var(--course-gap, 8px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--course-gap, 8px);
+  width: 100%;
   margin-top: 0;
 }
 
 .course {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
-  column-gap: 0.35em;
+  display: block;
   max-width: 100%;
   color: inherit;
-  font-size: var(--course-size, 18px);
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--course-size, 20px);
   line-height: 1.35;
+  text-align: right;
   text-decoration: none;
-  white-space: nowrap;
+  cursor: pointer;
 }
 
 .course-code {
-  font-family: var(--font-text), sans-serif;
   font-weight: var(--course-code-weight, 600);
   font-variant-numeric: tabular-nums;
-  text-align: right;
   color: rgba(255, 255, 255, var(--course-code-opacity, 0.7));
 }
 
 .course-name {
-  position: relative;
-  min-width: 0;
-  font-family: var(--font-text), sans-serif;
   font-weight: var(--course-name-weight, 400);
-  color: rgba(255, 255, 255, var(--course-name-opacity, 0.92));
+  color: rgba(255, 255, 255, var(--course-name-opacity, 0.95));
   text-decoration: underline dotted;
   text-decoration-thickness: 1px;
   text-decoration-color: rgba(255, 255, 255, var(--course-underline, 0.35));
@@ -443,10 +460,7 @@
 }
 
 .course-name::after {
-  content: "↗";
-  position: absolute;
-  left: calc(100% + 0.25em);
-  top: 0;
+  content: " ↗";
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -469,14 +483,10 @@
   opacity: 1;
 }
 
-.course:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-}
-
 .middle-copy {
   position: absolute;
   z-index: 5;
+  pointer-events: none;
   bottom: var(--name-bottom, 6%);
   left: 50%;
   width: var(--middle-width, 40%);
@@ -576,12 +586,14 @@
 
 .icon-link {
   position: absolute;
+  z-index: 7;
   width: var(--icon-size, 56px);
   height: var(--icon-size, 56px);
   display: grid;
   place-items: center;
   border: 0;
   text-decoration: none;
+  cursor: pointer;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -616,7 +628,7 @@
 }
 
 .icon-link:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus, #f2eee6);
   outline-offset: 4px;
 }
 

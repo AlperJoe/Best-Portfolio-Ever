@@ -156,45 +156,46 @@ export function buildSeamMasks(
 }
 
 /**
- * Soft portrait mask. Near the apex the portrait may pass the seams,
- * then it feathers back onto the triangle. The fade starts at the name.
+ * Organic portrait mask. An oval holds the crown, face and shoulders.
+ * The photo's black field is fully transparent before any straight edge,
+ * and the fade into the name starts at `fadeStart`.
  */
 export function buildPortraitMask(input: {
-  frameW: number;
-  frameH: number;
-  left: number;
   top: number;
-  width: number;
   height: number;
   fadeStart: number;
   fadeEnd: number;
-  overflow: number;
-  reach: number;
-  soft: number;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  solid: number;
+  sideClear: number;
+  sideSoft: number;
+  topClear: number;
+  topSoft: number;
 }) {
-  const { frameW, frameH, left, top, width, height, fadeStart, fadeEnd, overflow, reach, soft } = input;
-  if (width < 2 || height < 2 || frameW < 2 || frameH < 2) return "";
-  const maskH = Math.max(2, Math.min(420, Math.round(height)));
-  const maskW = Math.max(2, Math.round(maskH * (width / height)));
-  const overflowPx = overflow * frameW;
-  const reachPx = reach * frameH;
-  const softPx = Math.max(1, soft * frameW);
-  const center = frameW / 2;
+  const { top, height, fadeStart, fadeEnd, cx, cy, rx, ry, solid, sideClear, sideSoft, topClear, topSoft } =
+    input;
+  if (height < 2 || rx <= 0 || ry <= 0) return "";
+  const maskH = Math.max(2, Math.min(480, Math.round(height)));
+  const maskW = maskH;
 
   return canvasUrl(maskW, maskH, (data) => {
     for (let py = 0; py < maskH; py += 1) {
-      const y = top + ((py + 0.5) / maskH) * height;
-      const along = Math.min(1, Math.max(0, y / frameH));
-      const half = center * along;
-      const t = reachPx <= 0 ? 1 : Math.min(1, Math.max(0, y / reachPx));
-      const extra = overflowPx * (1 - t) * (1 - t);
-      const edge = half + extra;
-      const fade =
-        y <= fadeStart ? 1 : y >= fadeEnd ? 0 : 1 - smoothstep(fadeStart, fadeEnd, y);
+      const ny = (py + 0.5) / maskH;
+      const y = top + ny * height;
+      const fade = y <= fadeStart ? 1 : y >= fadeEnd ? 0 : 1 - smoothstep(fadeStart, fadeEnd, y);
+      const ey = Math.abs(ny - cy) / ry;
       for (let px = 0; px < maskW; px += 1) {
-        const x = left + ((px + 0.5) / maskW) * width;
-        const across = 1 - smoothstep(edge, edge + softPx, Math.abs(x - center));
-        const alpha = Math.round(Math.min(1, Math.max(0, across * fade)) * 255);
+        const nx = (px + 0.5) / maskW;
+        const er = Math.hypot(Math.abs(nx - cx) / rx, ey);
+        const blob = 1 - smoothstep(solid, 1, er);
+        const side =
+          smoothstep(sideClear, sideClear + sideSoft, nx) *
+          smoothstep(sideClear, sideClear + sideSoft, 1 - nx);
+        const crown = smoothstep(topClear, topClear + topSoft, ny);
+        const alpha = Math.round(Math.min(1, Math.max(0, blob * side * crown * fade)) * 255);
         const index = (py * maskW + px) * 4;
         data[index] = 255;
         data[index + 1] = 255;

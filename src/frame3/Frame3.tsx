@@ -50,6 +50,7 @@ export function Frame3() {
   const frameRef = useRef<HTMLElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const refsButtonRef = useRef<HTMLButtonElement>(null);
   const elapsedRef = useRef(0);
@@ -123,12 +124,19 @@ export function Frame3() {
 
     const placeMap = () => {
       const rect = frame.getBoundingClientRect();
-      const mapW = Math.min(rect.width * frame3.mapWidth, rect.height * frame3.mapHeight * 2);
+      const columnW = rect.width * (frame3.mapEnd - frame3.mapStart);
+      const mapW = Math.min(columnW, rect.height * frame3.mapHeight * 2);
       const mapH = mapW / 2;
-      const right = rect.width * frame3.mapRightRatio;
+      const right = rect.width * (1 - frame3.mapEnd);
       const x = rect.width - right - mapW;
-      const y = (rect.height - mapH) / 2;
+      frame.style.setProperty("--text-width", `${rect.width * (frame3.textEnd - frame3.textStart)}px`);
+      frame.style.setProperty("--map-w", `${mapW}px`);
+      const textH = textRef.current?.offsetHeight ?? mapH;
+      const top = Math.max(0, (rect.height - Math.max(textH, mapH)) / 2);
+      const y = top;
       const cell = mapW / level.width;
+      frame.style.setProperty("--group-top", `${top}px`);
+      frame.style.setProperty("--caption-top", `${top + mapH + frame3.captionOffset}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
       frame.style.setProperty("--cell", `${cell}px`);
       frame.style.setProperty("--grid-x", `${x}px`);
@@ -328,9 +336,18 @@ export function Frame3() {
     "--floor": frame3.floor,
     "--warm-white": frame3.warmWhite,
     "--agent-a": frame3.agentA,
-    "--text-left": frame3.textLeft,
-    "--text-max": frame3.textMax,
-    "--map-right": frame3.mapRight,
+    "--text-left": `${frame3.textStart * 100}%`,
+    "--map-right": `${(1 - frame3.mapEnd) * 100}%`,
+    "--map-floor": frame3.mapFloor,
+    "--map-border": frame3.mapBorder,
+    "--focus": frame3.focus,
+    "--button-size": frame3.buttonSize,
+    "--button-weight": String(frame3.buttonWeight),
+    "--button-pad-y": frame3.buttonPadY,
+    "--button-pad-x": frame3.buttonPadX,
+    "--button-radius": frame3.buttonRadius,
+    "--button-border": frame3.buttonBorder,
+    "--arrow-shift": frame3.arrowShift,
     "--grid": frame3.grid,
     "--outside-mix": String(frame3.outsideMix),
     "--outside-grid": frame3.outsideGrid,
@@ -455,7 +472,7 @@ export function Frame3() {
         )}
       </div>
 
-      <div className="frame3-copy">
+      <div className="frame3-copy" ref={textRef}>
         <h2 className="frame3-title">Upgraded PressurePlate</h2>
         <p className="frame3-intro">
           A cooperative puzzle where AI agents must open doors for each other to reach the treasure.
@@ -475,7 +492,7 @@ export function Frame3() {
         </p>
         <p className="frame3-stack">Python, PyTorch, MADDPG</p>
         <a className="frame3-project" href={frame3.projectUrl} target="_blank" rel="noreferrer">
-          View the project →
+          View the project <span className="frame3-arrow">→</span>
         </a>
       </div>
 

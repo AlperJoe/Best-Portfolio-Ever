@@ -5,7 +5,7 @@ export const frame1Config = {
     middleTone: "#F2EEE6",
   },
   /** Seam blend band as a fraction of the frame width. */
-  blendWidth: 0.08,
+  blendWidth: 0.2,
   /** Side focal lights stay off. The crown glow is the only added light. */
   lightStrength: 0,
   /** Share of the region tone in each side light. The rest is white. */
@@ -15,7 +15,13 @@ export const frame1Config = {
   links: {
     github: "https://github.com/AlperJoe",
     linkedin: "https://www.linkedin.com/in/alperbozkurt/",
+    buas: "https://www.buas.nl/en",
+    bilkent: "https://www.bilkent.edu.tr",
   },
+  /** Matte grade so the portrait matches the campus photos. */
+  portraitGrade: "contrast(0.9) saturate(0.8) brightness(1.04)",
+  /** Focus ring used by every keyboard-focusable control. */
+  focus: "#F2EEE6",
   /** object-position kept for the portrait asset. The face is placed in layout. */
   portraitPosition: "50% 46%",
   colorOverlay: {
@@ -26,11 +32,11 @@ export const frame1Config = {
   shadeAmount: 0.16,
   /** The portrait is shaded less so the face stays clear. */
   portraitShadeAmount: 0.05,
-  /** The seam light band is off. The portrait keeps its own faint edge light. */
-  edgeGlowReach: 0.11,
+  /** The seam light band is off. The portrait keeps a wide, faint edge wash. */
+  edgeGlowReach: 0.22,
   edgeGlowStrength: 0,
-  /** Faint two-sided light on the portrait, along the seams. */
-  portraitEdgeStrength: 0.24,
+  /** Faint two-sided wash on the portrait. Wide enough that it is not a line. */
+  portraitEdgeStrength: 0.07,
   /** Largest shift of the focal lights toward the cursor, as a fraction of frame width. */
   cursorLightShift: 0,
   /** Largest shift of the campus photos away from the cursor, in pixels. */
@@ -49,13 +55,17 @@ export const frame1Config = {
     /** Same inner padding on every side, in pixels. */
     pad: 8,
     radius: 8,
-    /** Distance in from each side edge, as a fraction of the frame width. */
-    side: 0.04,
-    /** Distance up from the bottom edge, as a fraction of the frame height. */
-    bottom: 0.04,
     /** Shared plate size, as fractions of the frame. */
     width: 0.12,
     height: 0.055,
+    /** Space between a text block and its badge, in pixels. */
+    gap: 24,
+    /** Lift on hover and keyboard focus, in pixels. */
+    lift: 2,
+    /** School color mixed into the plate on hover and focus. */
+    tint: 0.18,
+    buasTint: "#ED7624",
+    bilkentTint: "#0053A0",
   },
   duotone: {
     contrast: 1.35,
@@ -94,14 +104,15 @@ export const frame1Config = {
     },
   },
   /**
-   * One warm spotlight at the apex, falling onto the crown.
-   * Opacity is the center of the falloff. Size is a fraction of the frame width.
+   * A small glow centered on the apex, above the crown.
+   * Opacity is the center. Reach is how far it travels down the frame,
+   * as a fraction of the frame height, and it ends before the crown.
    */
   crownGlow: {
     rgb: "255, 214, 170",
-    opacity: 0.32,
-    size: 1.08,
-    shift: "-28%",
+    opacity: 0.16,
+    reach: 0.04,
+    shift: "-50%",
   },
   portraitLayout: {
     /** Ceiling on enlargement. */
@@ -126,12 +137,24 @@ export const frame1Config = {
     /** How far the fade runs after the top of the name, as a fraction of frame height. */
     fadeSpan: 0.07,
     /**
-     * Near the apex the portrait may pass the seams. The extra reach is a
-     * fraction of the frame width and is gone by `featherReach` of the height.
+     * Soft oval that holds the crown, face and shoulders, and is fully
+     * transparent before the photo's straight edges.
      */
-    featherOverflow: 0.055,
-    featherReach: 0.22,
-    featherSoft: 0.02,
+    mask: {
+      cx: 0.5,
+      cy: 0.46,
+      rx: 0.78,
+      ry: 0.7,
+      /** Opaque inside this share of the oval. Outside it, the edge falls away. */
+      solid: 0.78,
+      /** Outer share of the photo that stays fully transparent. */
+      sideClear: 0.1,
+      /** Width of the fade that follows that clear band, as a share of the photo. */
+      sideSoft: 0.16,
+      /** The strip above the crown fades out before the photo's top edge. */
+      topClear: 0,
+      topSoft: 0.018,
+    },
   },
   middle: {
     /** Bottom of the line under the name, as a fraction of the frame height. */
@@ -212,9 +235,9 @@ export const frame1Config = {
   },
   seams: {
     /** Soft blend width at the top, as a fraction of the frame width. */
-    top: 0.08,
+    top: 0.22,
     /** Soft blend width at the bottom, as a fraction of the frame width. */
-    bottom: 0.18,
+    bottom: 0.34,
     campusReach: 0.034,
     /**
      * Share of edgeLimit the noise may use. The seam stays on the true
@@ -245,22 +268,19 @@ export const frame1Config = {
   },
   courses: [
     {
-      code: "CS 473",
-      name: "Algorithms I",
-      fullName: "Algorithms I",
-      href: "https://www.cs.bilkent.edu.tr/~ugur/teaching/cs473/",
+      code: "EEE 448",
+      name: "Reinforcement Learning and Dynamic Programming",
+      href: "https://catalog.bilkent.edu.tr/course/c14448.html",
     },
     {
       code: "CS 476",
-      name: "Automata Theory",
-      fullName: "Automata Theory and Formal Languages",
+      name: "Automata Theory and Formal Languages",
       href: "https://www.cs.bilkent.edu.tr/~dibeklioglu/teaching/cs476/",
     },
     {
-      code: "EEE 448",
-      name: "Reinforcement Learning",
-      fullName: "Reinforcement Learning and Dynamic Programming",
-      href: "https://catalog.bilkent.edu.tr/course/c14448.html",
+      code: "CS 473",
+      name: "Algorithms I",
+      href: "https://www.cs.bilkent.edu.tr/~ugur/teaching/cs473/",
     },
   ],
   assets: {
@@ -285,4 +305,6 @@ export const frame1Config = {
     CURSOR_REACTION: true,
     FILM_GRAIN: true,
   },
+  /** Strength of the film grain drawn over the whole frame, including the portrait. */
+  grainAlpha: 0.11,
 };
