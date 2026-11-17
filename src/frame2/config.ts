@@ -83,6 +83,7 @@ export const frame2Config = {
           [0.5224, 0.8906],
         ] satisfies CardPoint[],
         video: true,
+        image: null,
         body: "Everyone tries to keep their score low, because only the lowest survives. You bluff, discard and use special cards to swap hands, steal cards and reveal hidden values. You can play online with friends in rooms, or offline against bots.",
         links: [] as { label: string; href: string }[],
       },
@@ -96,6 +97,10 @@ export const frame2Config = {
           [0.5586, 0.8853],
         ] satisfies CardPoint[],
         video: false,
+        image: {
+          src: `${base}assets/frame2/pedro-multiplayer.jpg`,
+          alt: "Pedro's Join Room screen",
+        },
         body: "I wrote a custom TCP server for real-time play. Players create and join rooms. The server holds the true game state and checks every move, and clients stay in sync through state snapshots. Keeping every rule check on the server side is how I cut down desync errors.",
         links: [
           {
@@ -114,6 +119,10 @@ export const frame2Config = {
           [0.6302, 0.9155],
         ] satisfies CardPoint[],
         video: false,
+        image: {
+          src: `${base}assets/frame2/pedro-rules.jpg`,
+          alt: "Pedro's special cards rule book",
+        },
         body: "The code has three layers: client, server and core. All rules, phases and card effects live in plain Lua logic, separate from the rendering. The bots make rule-based decisions with memory and targeting, with no AI or machine learning. I also prepared the iOS release and kept it stable on different screen sizes.",
         links: [
           {
@@ -129,8 +138,9 @@ export const frame2Config = {
     ],
   },
   open: {
+    /** Cap for the open card, as a fraction of the frame. Its width stays 5/7 of this height. */
     height: 0.78,
-    /** Width divided by height. */
+    /** Width divided by the height cap. */
     aspect: 5 / 7,
     duration: 0.6,
     radius: 14,
@@ -139,7 +149,7 @@ export const frame2Config = {
     titleSize: 28,
     titleWeight: 600,
     titleStretch: 112,
-    bodySize: 16,
+    bodySize: 17,
     bodyWeight: 400,
     bodyStretch: 100,
     bodyLine: 1.5,
