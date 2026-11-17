@@ -20,7 +20,7 @@ export type PlaceHeroOptions = {
 
 /**
  * Largest scale at or below cover. The painted title stays inset from the
- * left, and both the title and the face stay above the caption.
+ * left, and both the title and the face stay above clearBottom.
  * Position stays as close as possible to object-position.
  */
 export function placeHero(
