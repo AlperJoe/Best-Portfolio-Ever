@@ -16,56 +16,82 @@ export const frame2Config = {
     /** object-position, used when the sharp image can keep it. */
     positionX: 0.3,
     positionY: 0.5,
-    /** Painted title stays at least this far from the left edge, in pixels. */
-    titleInset: 32,
+    /** Painted logo stays at least this far from the left edge, in pixels. */
+    titleInset: 8,
+    /** Space kept clear along the bottom. The caption strip no longer reserves any. */
+    bottomClear: 0,
     fillBlur: 40,
     fillDark: 0.46,
     openBlur: 4,
     openBrightness: 0.35,
   },
-  /** Fractions of pedro-hero.jpg that must stay fully on screen. */
+  /** Fractions of the hero that must stay fully on screen. */
   regions: {
-    title: { x: 0.046, y: 0.09, w: 0.45, h: 0.845 } satisfies ImageBox,
-    face: { x: 0.63, y: 0.05, w: 0.3, h: 0.58 } satisfies ImageBox,
+    title: { x: 0.074, y: 0.66, w: 0.4, h: 0.25 } satisfies ImageBox,
+    face: { x: 0.6, y: 0.05, w: 0.29, h: 0.58 } satisfies ImageBox,
+    /** Pedro! logo on the clean hero, used to keep the headline off it. */
+    logo: { x: 0.074, y: 0.675, w: 0.4, h: 0.23 } satisfies ImageBox,
+    /** Leftmost hair in the headline's vertical band, as a fraction of the image. */
+    hairX: 0.59,
   },
-  caption: {
-    gradient: 0.22,
-    color: "#1A0806",
-    opacity: 0.9,
-    insetX: 0.05,
-    maxWidth: 640,
-    size: 17,
-    weight: 400,
-    stretch: 100,
-    line: 1.45,
-    textOpacity: 0.92,
-    padBottom: 28,
-    /** Extra space kept between the title and the caption row. */
-    safeGap: 12,
-    text: "An online multiplayer card game, published on the App Store. I built the programming side from scratch in pure Lua and LÖVE2D, working with a designer.",
+  intro: {
+    left: 0.05,
+    top: 0.12,
+    /** Lowest scale applied to the headline size and the gaps when the block would collide. */
+    minFit: 0.62,
+    logoGap: 18,
+    hairGap: 16,
+    headline: {
+      text: "I programmed Pedro from scratch, without a game engine.",
+      color: "#F5EEE4",
+      weight: 800,
+      stretch: 80,
+      min: 34,
+      preferred: 3.6,
+      max: 64,
+      line: 1.05,
+      maxWidth: 0.46,
+    },
+    lead: {
+      text: "I wrote its game AI, its rules and its multiplayer server in pure Lua, and shipped it on iOS and Android.",
+      size: 19,
+      weight: 400,
+      line: 1.5,
+      opacity: 0.88,
+      maxWidth: 0.4,
+      gap: 18,
+    },
+    stores: {
+      height: 52,
+      gap: 12,
+      lift: 2,
+      above: 28,
+      appStore: "https://apps.apple.com/tr/app/pedro/id6757151351?l=tr",
+      play: "https://play.google.com/store/apps/details?id=com.alperjoe.pedro&hl=tr",
+      /**
+       * The official Google Play badge PNG includes transparent clear space.
+       * These are the file's own pixels, used only to show the badge at the
+       * requested height without editing the artwork.
+       */
+      playFile: { width: 646, height: 250, inset: 41, contentWidth: 564, contentHeight: 168 },
+    },
   },
-  buttons: {
-    plate: "#111F2C",
-    gold: "#EFC785",
-    goldHover: "#FFE7B5",
-    cut: 8,
-    size: 15,
-    weight: 500,
-    stretch: 100,
-    gap: 10,
-    padX: 16,
-    padY: 10,
-    appStore: "https://apps.apple.com/tr/app/pedro/id6757151351?l=tr",
-    code: "https://github.com/AlperJoe/Pedro",
-  },
-  hint: {
-    /** Gap between the hint and the top edge of the middle card. */
-    gap: 32,
-    size: 18,
-    weight: 600,
-    stretch: 100,
+  line: {
+    text: "Pick a card.",
+    size: 30,
+    line: 1.1,
     color: "#EFC785",
-    text: "Pick a card",
+    shadow: "drop-shadow(0 2px 12px rgba(0, 0, 0, 0.82))",
+    /** How often the shine travels across the line. */
+    shine: 6,
+    /** How long that shine itself takes, inside each cycle. */
+    shineTravel: 2.2,
+    cardGap: 16,
+    blockGap: 14,
+    faceGap: 18,
+    /** Image fraction where Pedro's face begins beside the line. */
+    faceX: 0.63,
+    fade: 0.45,
   },
   light: {
     color: "#FFD9A0",
@@ -77,8 +103,6 @@ export const frame2Config = {
   cardBack: {
     width: 608,
     height: 818,
-    /** Height of the card back when it reaches the center, before it turns. */
-    midHeight: 0.4,
   },
   cards: {
     lift: 6,
@@ -134,7 +158,7 @@ export const frame2Config = {
           src: `${base}assets/frame2/pedro-rules.jpg`,
           alt: "Pedro's special cards rule book",
         },
-        body: "The code has three layers: client, server and core. All rules, phases and card effects live in plain Lua logic, separate from the rendering. The bots make rule-based decisions with memory and targeting, with no AI or machine learning. I also prepared the iOS release and kept it stable on different screen sizes.",
+        body: "The code has three layers: client, server and core. All rules, phases and card effects live in plain Lua logic, separate from the rendering. The bots make rule-based decisions with memory and targeting, with no machine learning. I also prepared the iOS release and kept it stable on different screen sizes.",
         links: [
           {
             label: "Read core/Rules.lua",
@@ -153,16 +177,30 @@ export const frame2Config = {
     height: 0.78,
     /** Width divided by the height cap. */
     aspect: 5 / 7,
-    /** Flight from the hand to the center, and back. */
-    travel: 0.48,
-    /** Turn at the center, while the card grows into the open face. */
-    turn: 0.52,
+    /** Flight, turn and growth together, from the hand to the open card. */
+    openTime: 0.45,
+    /** Return to the hand. The face fades out across this, and the card fades in the last third. */
+    closeTime: 0.4,
+    openEase: "cubic-bezier(0.16, 1, 0.3, 1)",
+    closeEase: "cubic-bezier(0.33, 0, 0.2, 1)",
+    /** Keeps the back toward the camera until the face fades in. */
+    openSpinEase: "cubic-bezier(0.45, 0, 0.2, 0.15)",
+    closeSpinEase: "cubic-bezier(0.4, 0, 0.2, 1)",
+    /** Face fade during the last third of the open. */
+    openFace: 0.15,
+    openFaceDelay: 0.3,
+    /** Face fades into the back across the first part of the close. */
+    closeFace: 0.26,
+    /** Card fade during the last third of the close. */
+    closeFade: 0.133,
+    closeFadeDelay: 0.267,
     radius: 14,
     navy: "#111F2C",
     gold: "#EFC785",
+    goldHover: "#FFE7B5",
     titleSize: 28,
-    titleWeight: 600,
-    titleStretch: 112,
+    titleWeight: 700,
+    titleStretch: 100,
     bodySize: 17,
     bodyWeight: 400,
     bodyStretch: 100,
@@ -188,10 +226,12 @@ export const frame2Config = {
     EMBERS_ENABLED: true,
   },
   assets: {
-    hero: `${base}assets/frame2/pedro-hero.jpg`,
+    hero: `${base}assets/frame2/pedro-hero-clean.jpg`,
     gameplay: `${base}assets/frame2/pedro-gameplay.mp4`,
     poster: `${base}assets/frame2/pedro-gameplay-poster.jpg`,
     cardBack: `${base}assets/frame2/card-back.webp`,
+    appStore: `${base}assets/frame2/app-store-badge.svg`,
+    play: `${base}assets/frame2/google-play-badge.png`,
   },
 };
 
