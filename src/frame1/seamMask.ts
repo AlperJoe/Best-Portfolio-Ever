@@ -65,8 +65,8 @@ function makeNoise(columns: number, rows: number, seed: number) {
 function distanceToMiddle(x: number, y: number, width: number, height: number) {
   const half = width / 2;
   const length = Math.hypot(half, height) || 1;
-  const left = -(half * y - height * x) / length;
-  const right = (-half * y - height * (x - width)) / length;
+  const left = (half * (y - height) + height * x) / length;
+  const right = (half * (y - height) - height * (x - width)) / length;
   return { left, right, length };
 }
 
@@ -74,8 +74,7 @@ function distanceToMiddle(x: number, y: number, width: number, height: number) {
  * Sample the three region masks.
  * The blend is centered on the straight seam. Noise may slide that edge,
  * but only within `edgeLimit` of the frame width, measured horizontally.
- * Left stays on x <= width/2 and right stays on x >= width/2, so the
- * three regions meet at the middle of the bottom edge.
+ * The two seams meet at the middle of the top edge.
  */
 export function createSeamSampler(width: number, height: number, settings: SeamMaskSettings) {
   const seed = (20261116 + Math.round(width) * 13 + Math.round(height)) >>> 0;

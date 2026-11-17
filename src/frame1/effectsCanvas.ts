@@ -352,9 +352,9 @@ export class FrameEffects {
       return [frame.lights.left, frame.lights.right, frame.lights.mid];
     }
     return [
-      [frame.width / 6, (2 * frame.height) / 3],
-      [(5 * frame.width) / 6, (2 * frame.height) / 3],
-      [frame.width / 2, frame.height / 3],
+      [frame.width / 6, frame.height / 3],
+      [(5 * frame.width) / 6, frame.height / 3],
+      [frame.width / 2, (2 * frame.height) / 3],
     ];
   }
 
@@ -418,8 +418,8 @@ export class FrameEffects {
       context.save();
       context.beginPath();
       for (const [fx, fy] of lights) addBeam(context, fx, fy, width, height, beams);
-      addSeamRibbon(context, 0, 0, width / 2, height, width, height, this.options.seamTop, this.options.seamBottom);
-      addSeamRibbon(context, width, 0, width / 2, height, width, height, this.options.seamTop, this.options.seamBottom);
+      addSeamRibbon(context, 0, height, width / 2, 0, width, height, this.options.seamTop, this.options.seamBottom);
+      addSeamRibbon(context, width, height, width / 2, 0, width, height, this.options.seamTop, this.options.seamBottom);
       context.clip();
       for (const wisp of this.wisps) {
         context.save();
@@ -557,8 +557,8 @@ function addSeamRibbon(
 }
 
 function nearestSeamPoint(x: number, y: number, width: number, height: number) {
-  const left = closestPoint(x, y, 0, 0, width / 2, height);
-  const right = closestPoint(x, y, width, 0, width / 2, height);
+  const left = closestPoint(x, y, 0, height, width / 2, 0);
+  const right = closestPoint(x, y, width, height, width / 2, 0);
   return left.distance < right.distance ? left : right;
 }
 

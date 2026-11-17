@@ -10,6 +10,7 @@ type Shown = {
   buas: boolean;
   middle: boolean;
   content: boolean;
+  name: boolean;
 };
 
 type ResearchPose = "from" | "open" | "back";
@@ -19,6 +20,7 @@ const ALL_SHOWN: Shown = {
   buas: true,
   middle: true,
   content: true,
+  name: true,
 };
 
 const NONE_SHOWN: Shown = {
@@ -26,13 +28,15 @@ const NONE_SHOWN: Shown = {
   buas: false,
   middle: false,
   content: false,
+  name: false,
 };
 
 const OPENING_STEPS: Array<[number, keyof Shown]> = [
-  [160, "bilkent"],
-  [620, "buas"],
-  [1080, "middle"],
-  [1540, "content"],
+  [frame1Config.opening.bilkent, "bilkent"],
+  [frame1Config.opening.buas, "buas"],
+  [frame1Config.opening.middle, "middle"],
+  [frame1Config.opening.sides, "content"],
+  [frame1Config.opening.name, "name"],
 ];
 
 function usePrefersReducedMotion() {
@@ -115,29 +119,28 @@ function LinkedInIcon() {
   );
 }
 
-function layoutCopy(
-  copy: HTMLElement,
-  side: "left" | "right",
-  width: number,
-  height: number,
-  maxBox: number,
-) {
+function seamAt(side: "left" | "right", y: number, width: number, height: number) {
+  const along = height <= 0 ? 0 : Math.min(1, Math.max(0, y / height));
+  const leftSeam = (width / 2) * (1 - along);
+  return side === "left" ? leftSeam : width - leftSeam;
+}
+
+function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, height: number) {
   const text = frame1Config.text;
-  const bottom = text.insetY * height;
+  const top = text.insetY * height;
   const inset = text.seamInset * width;
   const outer = text.insetX * width;
 
   const lineWidth = (worldY: number) => {
-    const along = Math.min(1, Math.max(0, worldY / height));
-    if (side === "left") {
-      return (width / 2) * along - inset - outer;
-    }
-    return width - outer - (width - (width / 2) * along + inset);
+    const seam = seamAt(side, worldY, width, height);
+    if (side === "left") return seam - inset - outer;
+    return width - outer - (seam + inset);
   };
 
   const shape = copy.querySelector<HTMLElement>(".copy-shape");
   if (shape) shape.style.display = "none";
-  copy.style.bottom = `${bottom}px`;
+  copy.style.top = `${top}px`;
+  copy.style.bottom = "auto";
   if (side === "left") {
     copy.style.left = `${outer}px`;
     copy.style.right = "auto";
@@ -148,19 +151,17 @@ function layoutCopy(
 
   let boxHeight = 0;
   for (let pass = 0; pass < 4; pass += 1) {
-    const worldBottom = height - bottom;
-    const bottomWidth = Math.max(48, Math.min(lineWidth(worldBottom), maxBox));
-    const topWidth = Math.max(32, Math.min(lineWidth(worldBottom - boxHeight), bottomWidth));
-    const used = bottomWidth;
-    copy.style.width = `${used}px`;
+    const topWidth = Math.max(48, lineWidth(top));
+    const bottomWidth = Math.max(32, Math.min(lineWidth(top + boxHeight), topWidth));
+    copy.style.width = `${topWidth}px`;
     if (shape) {
-      const insetAmount = Math.max(0, used - topWidth);
+      const insetAmount = Math.max(0, topWidth - bottomWidth);
       shape.style.display = "block";
       shape.style.width = `${insetAmount}px`;
       shape.style.height = `${Math.max(boxHeight, 1)}px`;
       shape.style.float = side === "left" ? "right" : "left";
       shape.style.shapeOutside =
-        side === "left" ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)";
+        side === "left" ? "polygon(100% 0, 100% 100%, 0 100%)" : "polygon(0 0, 0 100%, 100% 100%)";
     }
     const badge = copy.querySelector<HTMLElement>(".badge");
     if (badge) badge.style.maxWidth = `${topWidth}px`;
@@ -168,6 +169,64 @@ function layoutCopy(
     if (pass > 0 && Math.abs(next - boxHeight) < 1) break;
     boxHeight = next;
   }
+}
+
+function fitPortrait(width: number, height: number) {
+  const layout = frame1Config.portraitLayout;
+  const aspect = layout.naturalWidth / layout.naturalHeight;
+  const cap = layout.naturalHeight * layout.maxScale;
+  let portraitH = Math.min(layout.height * height, cap);
+  const gap = layout.crownGap * width;
+  const fits = (size: number) => {
+    const portraitW = size * aspect;
+    const top = height - size;
+    const left = (width - portraitW) / 2;
+    return layout.crown.every((sample) => {
+      const y = top + sample.y * size;
+      const x0 = left + sample.left * portraitW;
+      const x1 = left + sample.right * portraitW;
+      const seam = (width / 2) * ((height - y) / height);
+      return x0 >= seam + gap && x1 <= width - seam - gap;
+    });
+  };
+  if (!fits(portraitH)) {
+    let low = 0;
+    let high = portraitH;
+    for (let step = 0; step < 18; step += 1) {
+      const mid = (low + high) / 2;
+      if (fits(mid)) low = mid;
+      else high = mid;
+    }
+    portraitH = low;
+  }
+  return portraitH;
+}
+
+function placeIcons(element: HTMLElement, width: number, height: number, portraitH: number) {
+  const layout = frame1Config.portraitLayout;
+  const icons = frame1Config.icons;
+  const aspect = layout.naturalWidth / layout.naturalHeight;
+  const portraitW = portraitH * aspect;
+  const top = height - portraitH;
+  const eyeY = top + layout.eyeY * portraitH;
+  const photoLeft = (width - portraitW) / 2;
+  const faceLeft = photoLeft + layout.faceLeft * portraitW;
+  const faceRight = photoLeft + layout.faceRight * portraitW;
+  const seam = (width / 2) * (eyeY / height);
+  const center = width / 2;
+  const size = icons.size;
+
+  let githubX = faceLeft - icons.faceGap - size;
+  const githubMin = center - seam + icons.seamGap;
+  if (githubX < githubMin) githubX = githubMin;
+
+  let linkedinX = faceRight + icons.faceGap;
+  const linkedinMax = center + seam - icons.seamGap - size;
+  if (linkedinX > linkedinMax) linkedinX = linkedinMax;
+
+  element.style.setProperty("--icon-y", `${eyeY - size / 2}px`);
+  element.style.setProperty("--icon-github-x", `${githubX}px`);
+  element.style.setProperty("--icon-linkedin-x", `${linkedinX}px`);
 }
 
 function placePhoto(
@@ -188,6 +247,7 @@ function placePhoto(
     scale: photo.scale,
     side: prefix === "buas" ? "left" : "right",
     pad: frame1Config.campus.pad,
+    coverTop: frame1Config.campus.coverTop,
   });
   element.style.setProperty(`--${prefix}-photo-left`, `${placed.left}px`);
   element.style.setProperty(`--${prefix}-photo-top`, `${placed.top}px`);
@@ -205,11 +265,11 @@ function paintMotion(
   photoY: number,
 ) {
   element.style.setProperty("--left-light-x", `${width / 6 + shiftX}px`);
-  element.style.setProperty("--left-light-y", `${(2 * height) / 3 + shiftY}px`);
+  element.style.setProperty("--left-light-y", `${height / 3 + shiftY}px`);
   element.style.setProperty("--right-light-x", `${(5 * width) / 6 + shiftX}px`);
-  element.style.setProperty("--right-light-y", `${(2 * height) / 3 + shiftY}px`);
+  element.style.setProperty("--right-light-y", `${height / 3 + shiftY}px`);
   element.style.setProperty("--mid-light-x", `${width / 2 + shiftX}px`);
-  element.style.setProperty("--mid-light-y", `${height / 3 + shiftY}px`);
+  element.style.setProperty("--mid-light-y", `${(2 * height) / 3 + shiftY}px`);
   element.style.setProperty("--photo-shift-x", `${photoX}px`);
   element.style.setProperty("--photo-shift-y", `${photoY}px`);
 }
@@ -282,29 +342,34 @@ export function Frame1() {
       );
       const shift = shiftRef.current;
       paintMotion(element, rect.width, rect.height, shift.x, shift.y, shift.photoX, shift.photoY);
+      element.style.setProperty("--campus-fade", `${frame1Config.campus.fade * rect.height}px`);
       placePhoto(element, "buas", rect.width, rect.height);
       placePhoto(element, "bilkent", rect.width, rect.height);
-      const portraitCap =
-        frame1Config.portraitLayout.naturalHeight * frame1Config.portraitLayout.maxScale;
-      const portraitH = Math.min(frame1Config.portraitLayout.height * rect.height, portraitCap);
+      const portraitH = fitPortrait(rect.width, rect.height);
       element.style.setProperty("--portrait-h", `${portraitH}px`);
-      const middleTop = frame1Config.middle.top * rect.height;
-      const seamAtText = frame1Config.middle.top * (rect.width / 2);
-      const middleRoom = rect.width - seamAtText * 2 - frame1Config.middle.seamGap * 2;
-      const middleWidth = Math.max(
-        160,
-        Math.min(frame1Config.middle.maxWidth * rect.width, middleRoom),
-      );
-      element.style.setProperty("--middle-top", `${middleTop}px`);
-      element.style.setProperty("--middle-width", `${middleWidth}px`);
-      const middleLeft = (rect.width - middleWidth) / 2;
-      const sideLimit = middleLeft - frame1Config.text.insetX * rect.width - frame1Config.middle.blockGap;
+      placeIcons(element, rect.width, rect.height, portraitH);
+      element.style.setProperty("--middle-width", `${frame1Config.middle.maxWidth * rect.width}px`);
+      element.style.setProperty("--name-bottom", `${frame1Config.middle.bottom * rect.height}px`);
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
       element.style.setProperty("--mask-middle", `url("${masks.middle}")`);
-      if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height, sideLimit);
-      if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height, sideLimit);
+      const layCopies = () => {
+        if (leftCopyRef.current) layoutCopy(leftCopyRef.current, "left", rect.width, rect.height);
+        if (rightCopyRef.current) layoutCopy(rightCopyRef.current, "right", rect.width, rect.height);
+      };
+      layCopies();
+      const titles = [leftCopyRef.current, rightCopyRef.current]
+        .map((copy) => copy?.querySelector<HTMLElement>(".title"))
+        .filter((node): node is HTMLElement => Boolean(node));
+      titles.forEach((title) => {
+        title.style.minHeight = "";
+      });
+      const titleSlot = Math.max(0, ...titles.map((title) => title.getBoundingClientRect().height));
+      titles.forEach((title) => {
+        title.style.minHeight = `${titleSlot}px`;
+      });
+      layCopies();
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
     };
@@ -359,9 +424,9 @@ export function Frame1() {
         cursorY: cursor.y,
         cursorInside: cursor.inside,
         lights: {
-          left: [w / 6 + shift.x, (2 * h) / 3 + shift.y],
-          right: [(5 * w) / 6 + shift.x, (2 * h) / 3 + shift.y],
-          mid: [w / 2 + shift.x, h / 3 + shift.y],
+          left: [w / 6 + shift.x, h / 3 + shift.y],
+          right: [(5 * w) / 6 + shift.x, h / 3 + shift.y],
+          mid: [w / 2 + shift.x, (2 * h) / 3 + shift.y],
         },
       };
     };
@@ -580,15 +645,18 @@ export function Frame1() {
     "--badge-gap": `${frame1Config.badge.gap}px`,
     "--badge-buas": `${frame1Config.badge.buasHeight}px`,
     "--badge-bilkent": `${frame1Config.badge.bilkentHeight}px`,
+    "--badge-slot": `${frame1Config.badge.slot}px`,
+    "--space-title": `${frame1Config.text.spaceTitle}px`,
+    "--space-label": `${frame1Config.text.spaceLabel}px`,
+    "--space-body": `${frame1Config.text.spaceBody}px`,
+    "--space-button": `${frame1Config.text.spaceButton}px`,
     "--portrait-aspect": String(
       frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight,
     ),
-    "--portrait-face-x": String(frame1Config.portraitLayout.faceX),
-    "--portrait-face-y": String(frame1Config.portraitLayout.faceY),
     "--portrait-fade": `${frame1Config.portraitLayout.bottomFade * 100}%`,
+    "--portrait-fade-dark": `${frame1Config.portraitLayout.fadeDark * 100}%`,
     "--icon-size": `${frame1Config.icons.size}px`,
     "--icon-lift": `${frame1Config.icons.lift}px`,
-    "--icon-offset": `${frame1Config.icons.offset * 100}%`,
     "--icon-linkedin": frame1Config.icons.linkedin,
     "--icon-radius": `${frame1Config.icons.radius}px`,
     "--icon-glow": `${frame1Config.icons.glow}px`,
@@ -696,6 +764,7 @@ export function Frame1() {
       data-buas={shown.buas ? "1" : "0"}
       data-middle={shown.middle ? "1" : "0"}
       data-content={shown.content ? "1" : "0"}
+      data-name={shown.name ? "1" : "0"}
     >
       <div className="frame-world">
       <section className="region region-left mask-left fill" aria-label="Breda University of Applied Sciences">
@@ -704,7 +773,7 @@ export function Frame1() {
             src={frame1Config.assets.buasCampus}
             alt=""
             className="campus campus-buas"
-            labelAt={{ x: "calc(100% / 6)", y: "calc(200% / 3)" }}
+            labelAt={{ x: "calc(100% / 6)", y: "calc(100% / 3)" }}
           />
           <div className="tone-hue fill" />
           <div className="tone-lift fill" />
@@ -718,7 +787,7 @@ export function Frame1() {
             src={frame1Config.assets.bilkentCampus}
             alt=""
             className="campus campus-bilkent"
-            labelAt={{ x: "calc(500% / 6)", y: "calc(200% / 3)" }}
+            labelAt={{ x: "calc(500% / 6)", y: "calc(100% / 3)" }}
           />
           <div className="tone-hue fill" />
           <div className="tone-lift fill" />

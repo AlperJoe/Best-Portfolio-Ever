@@ -20,7 +20,7 @@ function gradientHalfLength(width: number, height: number, angleDeg: number) {
 
 /**
  * Mask stops for the two seam lines.
- * Each line runs from a top corner to the middle of the bottom edge.
+ * Each line runs from a bottom corner to the middle of the top edge.
  * The blend band is centered on that line and perpendicular to it.
  */
 export function computeSeams(
@@ -32,10 +32,10 @@ export function computeSeams(
   const length = Math.hypot(height, width / 2);
 
   const leftDx = height / length;
-  const leftDy = -(width / 2) / length;
+  const leftDy = (width / 2) / length;
   const leftAngle = (Math.atan2(leftDx, -leftDy) * 180) / Math.PI;
 
-  const rightDx = -height / length;
+  const rightDx = height / length;
   const rightDy = -(width / 2) / length;
   const rightAngle = (Math.atan2(rightDx, -rightDy) * 180) / Math.PI;
 
@@ -50,8 +50,8 @@ export function computeSeams(
     (sy - height / 2) * dy +
     gradientHalfLength(width, height, angle);
 
-  const leftOffset = offset(leftAngle, leftDx, leftDy, 0, 0);
-  const rightOffset = offset(rightAngle, rightDx, rightDy, width, 0);
+  const leftOffset = offset(leftAngle, leftDx, leftDy, 0, height);
+  const rightOffset = offset(rightAngle, rightDx, rightDy, width, height);
   const halfBand = band / 2;
 
   return {
@@ -93,14 +93,14 @@ export function applySeamVariables(
   set("--edge-reach", `${edgeGlowReach * width}px`);
   set("--light-radius", `${lightRadius * width}px`);
   const seamLength = Math.hypot(width / 2, height);
-  const leftAngle = (Math.atan2(height, width / 2) * 180) / Math.PI;
-  const rightAngle = (Math.atan2(height, -width / 2) * 180) / Math.PI;
+  const leftAngle = (Math.atan2(-height, width / 2) * 180) / Math.PI;
+  const rightAngle = (Math.atan2(-height, -width / 2) * 180) / Math.PI;
   set("--seam-length", `${seamLength}px`);
   set("--seam-left-angle", `${leftAngle}deg`);
   set("--seam-right-angle", `${rightAngle}deg`);
 }
 
-/** Blend width at a vertical position. Narrow at the top, wide at the bottom. */
+/** Blend width at a vertical position. The apex is at the top, so the band is usually narrower there. */
 export function seamBandWidth(
   y: number,
   width: number,
@@ -117,8 +117,8 @@ export function distanceToSeam(x: number, y: number, width: number, height: numb
   const half = width / 2;
   const length = Math.hypot(half, height);
   if (length === 0) return 0;
-  const left = Math.abs(half * y - height * x) / length;
-  const right = Math.abs(-half * y - height * (x - width)) / length;
+  const left = Math.abs(half * (y - height) + height * x) / length;
+  const right = Math.abs(half * (y - height) - height * (x - width)) / length;
   return Math.min(left, right);
 }
 
@@ -145,8 +145,10 @@ export function placeCampusPhoto(input: {
   scale: number;
   side: "left" | "right";
   pad: number;
+  /** When false, the photo may start below the top so a landmark can sit low. */
+  coverTop?: boolean;
 }): PhotoFrame {
-  const { frameW, frameH, aspect, anchorX, anchorY, placeX, placeY, scale, side, pad } = input;
+  const { frameW, frameH, aspect, anchorX, anchorY, placeX, placeY, scale, side, pad, coverTop = true } = input;
   const bounds: number[] = [1];
   const leftNeed = side === "left" ? -pad : frameW / 2 - pad;
   const rightNeed = (side === "left" ? frameW / 2 : frameW) + pad;
@@ -155,7 +157,7 @@ export function placeCampusPhoto(input: {
     const coverLeft = (placeX * frameW - leftNeed) / anchorX;
     if (coverLeft > 0) bounds.push(coverLeft);
   }
-  if (anchorY > 0.001) {
+  if (coverTop && anchorY > 0.001) {
     bounds.push((aspect * (placeY * frameH + pad)) / anchorY);
   }
   if (anchorX < 0.999) {

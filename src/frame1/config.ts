@@ -37,12 +37,12 @@ export const frame1Config = {
   /** Largest shift of the campus photos away from the cursor, in pixels. */
   cursorPhotoShift: 10,
   /**
-   * Black veil over each campus photo. Buildings stay visible up high,
-   * and the text sits on the darker ground below.
+   * Black veil over each campus photo. The text sits in the dark top,
+   * and the buildings show through the lighter lower half.
    */
   veil: {
-    top: 0.35,
-    bottom: 0.75,
+    top: 0.78,
+    bottom: 0.3,
   },
   badge: {
     plate: "#F2EEE6",
@@ -50,10 +50,12 @@ export const frame1Config = {
     padY: 8,
     padX: 12,
     radius: 8,
-    /** Space between the badge and the title. */
-    gap: 16,
-    buasHeight: 44,
-    bilkentHeight: 36,
+    /** Space between the badge row and the title. */
+    gap: 20,
+    buasHeight: 56,
+    bilkentHeight: 46,
+    /** Shared row height so the titles on both sides start together. */
+    slot: 56,
   },
   duotone: {
     contrast: 1.35,
@@ -66,59 +68,79 @@ export const frame1Config = {
   },
   campus: {
     pad: 28,
+    /** The roof may sit below the top edge so the landmarks land under the text. */
+    coverTop: false,
+    /** Soft fade at the top of each photo, as a fraction of the frame height. */
+    fade: 0.1,
     buas: {
-      scale: 1.02,
-      anchorX: 0.57,
-      anchorY: 0.2,
-      placeX: 0.09,
-      placeY: 0.33,
+      scale: 1.18,
+      anchorX: 0.5,
+      anchorY: 0.16,
+      placeX: 0.07,
+      placeY: 0.76,
       aspect: 480 / 480,
     },
     bilkent: {
-      scale: 1.03,
+      scale: 1.2,
       anchorX: 0.88,
       anchorY: 0.42,
-      placeX: 0.9,
-      placeY: 0.42,
+      placeX: 0.88,
+      placeY: 0.66,
       aspect: 689 / 445,
     },
   },
   portraitLayout: {
-    /** Height of the portrait as a fraction of the frame height. */
-    height: 0.66,
+    /** Height of the portrait as a fraction of the frame height, before the crown fit. */
+    height: 0.76,
     maxScale: 1.2,
     naturalWidth: 1024,
     naturalHeight: 1026,
-    /** Point in the photo that lands on the middle focal point. */
-    faceX: 0.5,
-    faceY: 0.46,
-    /** Where the bottom fade into black begins, as a fraction of the photo height. */
-    bottomFade: 0.72,
+    /** Where the eyes sit in the photo, as a fraction of its height. */
+    eyeY: 0.44,
+    /** Sides of the face at eye level, as fractions of the photo width. */
+    faceLeft: 0.373,
+    faceRight: 0.691,
+    /** Where the fade into black begins, as a fraction of the photo height. */
+    bottomFade: 0.7,
+    /** The shirt is gone by this fraction, so the name sits on black. */
+    fadeDark: 0.8,
+    /**
+     * Crown samples, as fractions of the photo. The fit keeps each one
+     * inside the middle triangle.
+     */
+    crown: [
+      { y: 0.03, left: 0.43, right: 0.57 },
+      { y: 0.15, left: 0.37, right: 0.63 },
+      { y: 0.26, left: 0.342, right: 0.667 },
+    ],
+    /** Clear space between the crown and each seam, as a fraction of the frame width. */
+    crownGap: 0.03,
   },
   middle: {
-    /** Top of the name block, as a fraction of the frame height. */
-    top: 0.7,
+    /** Bottom of the line under the name, as a fraction of the frame height. */
+    bottom: 0.06,
     /** Widest the block may be, as a fraction of the frame width. */
-    maxWidth: 0.3,
+    maxWidth: 0.4,
     /** Clear space kept between this block and each seam. */
     seamGap: 20,
     /** Clear space kept between this block and a side block. */
     blockGap: 16,
-    nameSize: "clamp(48px, 4.4vw, 80px)",
+    nameSize: "clamp(56px, 5.2vw, 96px)",
     nameLine: 1,
     nameColor: "#F2EEE6",
     nameGap: 10,
-    lineSize: 17,
+    lineSize: 19,
     lineWeight: 400,
     lineLine: 1.45,
-    lineOpacity: 0.85,
+    lineOpacity: 0.88,
   },
   icons: {
     size: 64,
     /** Lift on hover and keyboard focus, in pixels. */
     lift: 2,
-    /** Distance from the frame center to an icon's center, as a fraction of width. */
-    offset: 0.17,
+    /** Kept so the marks stay off the face and off each seam. */
+    faceGap: 36,
+    seamGap: 28,
     linkedin: "#0A66C2",
     radius: 8,
     glow: 16,
@@ -126,29 +148,34 @@ export const frame1Config = {
   text: {
     /** Side blocks sit this far in from the left and right edges. */
     insetX: 0.05,
-    /** Side blocks sit this far above the bottom edge. */
-    insetY: 0.06,
-    titleGap: 12,
-    labelGap: 6,
+    /** Side blocks start this far below the top edge. */
+    insetY: 0.08,
+    /** Shared rhythm: after the badge, after the title, after the label, before the button. */
+    spaceTitle: 20,
+    spaceLabel: 14,
+    spaceBody: 8,
+    spaceButton: 16,
+    titleGap: 14,
+    labelGap: 8,
     /** Lines stop this far before the seam, as a fraction of the frame width. */
     seamInset: 0.04,
     titleLine: 1.05,
-    buasTitleSize: "clamp(26px, 2.4vw, 40px)",
+    buasTitleSize: "clamp(30px, 2.8vw, 48px)",
     buasTitleWeight: 600,
-    bilkentTitleSize: "clamp(28px, 2.6vw, 44px)",
+    bilkentTitleSize: "clamp(32px, 3vw, 52px)",
     bilkentTitleWeight: 800,
-    labelSize: 16,
+    labelSize: 17,
     labelWeight: 600,
-    labelOpacity: 0.85,
+    labelOpacity: 0.88,
     /** Same soft shadow the other Frame 1 text uses. */
     labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
     buasLabel: "#FFD2B0",
     bilkentLabel: "#C9D4FF",
-    bodySize: 18,
-    buttonSize: 17,
+    bodySize: 19,
+    buttonSize: 18,
     buttonWeight: 600,
-    buttonGap: 14,
-    courseSize: 18,
+    buttonGap: 16,
+    courseSize: 19,
     courseCodeWeight: 600,
     courseCodeOpacity: 0.7,
     courseNameWeight: 400,
@@ -157,7 +184,7 @@ export const frame1Config = {
     courseGap: 8,
     bodyWeight: 400,
     bodyLine: 1.45,
-    bodyOpacity: 0.92,
+    bodyOpacity: 0.94,
     shade: 0.35,
     shadeBlur: 26,
   },
@@ -222,6 +249,13 @@ export const frame1Config = {
     portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
     research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
+  },
+  opening: {
+    bilkent: 160,
+    buas: 620,
+    middle: 1080,
+    sides: 1540,
+    name: 2020,
   },
   effects: {
     PORTRAIT_EDGE_LIGHT: true,

@@ -12,11 +12,11 @@
   --photo-shift-x: 0px;
   --photo-shift-y: 0px;
   --left-light-x: 16.6667%;
-  --left-light-y: 66.6667%;
+  --left-light-y: 33.3333%;
   --right-light-x: 83.3333%;
-  --right-light-y: 66.6667%;
+  --right-light-y: 33.3333%;
   --mid-light-x: 50%;
-  --mid-light-y: 33.3333%;
+  --mid-light-y: 66.6667%;
   --light-radius: 58vw;
   --left-angle: 51.34deg;
   --right-angle: -51.34deg;
@@ -78,7 +78,7 @@
   inset: 0;
   overflow: hidden;
   isolation: isolate;
-  background: #000;
+  background: color-mix(in srgb, var(--region-tone, #000) 32%, black);
 }
 
 .region-left {
@@ -109,6 +109,8 @@
   object-fit: fill;
   filter: grayscale(1) contrast(var(--photo-contrast));
   transform: translate3d(var(--photo-shift-x), var(--photo-shift-y), 0);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--campus-fade, 80px), #000 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--campus-fade, 80px), #000 100%);
 }
 
 .campus-buas {
@@ -148,13 +150,27 @@
 
 .portrait-sharp {
   position: absolute;
-  width: calc(var(--portrait-h, 66dvh) * var(--portrait-aspect, 1));
-  height: var(--portrait-h, 66dvh);
-  left: calc(50% - var(--portrait-face-x, 0.5) * var(--portrait-h, 66dvh) * var(--portrait-aspect, 1));
-  top: calc(100% / 3 - var(--portrait-face-y, 0.46) * var(--portrait-h, 66dvh));
+  width: calc(var(--portrait-h, 76dvh) * var(--portrait-aspect, 1));
+  height: var(--portrait-h, 76dvh);
+  left: calc(50% - var(--portrait-h, 76dvh) * var(--portrait-aspect, 1) / 2);
+  top: calc(100% - var(--portrait-h, 76dvh));
   object-fit: fill;
-  mask-image: linear-gradient(to bottom, #000 0%, #000 var(--portrait-fade, 72%), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 var(--portrait-fade, 72%), transparent 100%);
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 var(--portrait-fade, 70%),
+    rgb(0 0 0 / 0.2) calc(var(--portrait-fade, 70%) + 5%),
+    transparent var(--portrait-fade-dark, 80%),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 var(--portrait-fade, 70%),
+    rgb(0 0 0 / 0.2) calc(var(--portrait-fade, 70%) + 5%),
+    transparent var(--portrait-fade-dark, 80%),
+    transparent 100%
+  );
 }
 
 .edge {
@@ -225,8 +241,12 @@
 }
 
 .badge {
-  display: table;
-  margin: 0 0 var(--badge-gap, 16px);
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: fit-content;
+  height: calc(var(--badge-slot, 56px) + var(--badge-pad-y, 8px) * 2);
+  margin: 0 0 var(--space-title, 20px);
   padding: var(--badge-pad-y, 8px) var(--badge-pad-x, 12px);
   background: color-mix(in srgb, var(--badge-plate, #f2eee6) calc(var(--badge-opacity, 0.92) * 100%), transparent);
   border-radius: var(--badge-radius, 8px);
@@ -269,7 +289,7 @@
 }
 
 .copy .title {
-  margin: 0 0 var(--title-gap);
+  margin: 0 0 var(--space-label, 14px);
   line-height: var(--title-line);
   color: #fff;
   font-stretch: 100%;
@@ -289,7 +309,7 @@
 }
 
 .copy .label {
-  margin: 0 0 var(--label-gap);
+  margin: 0 0 var(--space-body, 8px);
   font-family: var(--font-text), sans-serif;
   font-weight: var(--label-weight);
   font-stretch: 100%;
@@ -317,7 +337,7 @@
 }
 
 .research-open {
-  margin: var(--button-gap, 14px) 0 0;
+  margin: var(--space-button, 16px) 0 0;
   padding: 0;
   border: 0;
   background: none;
@@ -412,9 +432,10 @@
 .middle-copy {
   position: absolute;
   z-index: 5;
-  top: var(--middle-top, 70%);
+  bottom: var(--name-bottom, 6%);
   left: 50%;
-  width: var(--middle-width, 34%);
+  width: var(--middle-width, 40%);
+  max-width: 40%;
   transform: translateX(-50%);
   text-align: center;
 }
@@ -527,18 +548,18 @@
 
 .icon-github,
 .icon-linkedin {
-  top: calc(100% / 3 - var(--icon-size, 64px) / 2);
+  top: var(--icon-y, 42%);
 }
 
 .icon-github {
-  left: calc(50% - var(--icon-offset, 17%) - var(--icon-size, 64px) / 2);
+  left: var(--icon-github-x, 28%);
   border-radius: 50%;
   background: #fff;
   color: #000;
 }
 
 .icon-linkedin {
-  left: calc(50% + var(--icon-offset, 17%) - var(--icon-size, 64px) / 2);
+  left: var(--icon-linkedin-x, 64%);
   border-radius: var(--icon-radius, 8px);
   background: var(--icon-linkedin, #0a66c2);
   color: #fff;
@@ -611,12 +632,33 @@
   opacity: var(--edge-strength);
 }
 
-.frame.is-opening:not([data-content="1"]) .hud {
+.frame.is-opening:not([data-middle="1"]) .icon-link {
   visibility: hidden;
   pointer-events: none;
 }
 
-.frame.is-opening[data-content="1"] .hud {
+.frame.is-opening[data-middle="1"] .icon-link {
+  opacity: 1;
+  visibility: visible;
+}
+
+.frame.is-opening:not([data-content="1"]) .copy {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.frame.is-opening[data-content="1"] .copy {
+  opacity: 1;
+  visibility: visible;
+}
+
+.frame.is-opening:not([data-name="1"]) .middle-copy {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.frame.is-opening[data-name="1"] .middle-copy {
   opacity: 1;
   visibility: visible;
 }
