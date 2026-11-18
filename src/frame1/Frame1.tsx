@@ -80,8 +80,10 @@ function applyProgress(element: HTMLElement, p: number, metrics: Metrics, reduce
   element.style.setProperty("--portrait-top", `${top.toFixed(2)}px`);
   const hint = Math.min(1, Math.max(0, 1 - t / 0.28));
   const line = Math.min(1, Math.max(0, (t - 0.22) / 0.45));
+  const panel = Math.min(1, t / 0.7);
   element.style.setProperty("--op-hint", hint.toFixed(4));
   element.style.setProperty("--op-line", line.toFixed(4));
+  element.style.setProperty("--op-panel", panel.toFixed(4));
   const on = t > 0.004 ? "1" : "0";
   element.dataset.side = on;
   element.dataset.icons = on;
@@ -263,7 +265,7 @@ function fitCenter(
 
 /** True when the name, the line under it, or an icon meets the panel text. */
 function centerHitsCopy(frame: HTMLElement) {
-  const centers = [".middle-name", ".middle-line", ".icon-github", ".icon-linkedin"]
+  const centers = [".middle-name", ".middle-line", ".middle-chips", ".icon-github", ".icon-linkedin"]
     .map((selector) => frame.querySelector<HTMLElement>(selector))
     .filter((node): node is HTMLElement => Boolean(node));
   const copies = frame.querySelectorAll<HTMLElement>(
@@ -353,6 +355,129 @@ function placePhoto(frame: HTMLElement, side: "left" | "right", mark: number) {
   const markPx = Math.max(1, mark * cardRect.height);
   const scale = need <= markPx ? 1 : Math.min(1.08, need / markPx);
   frame.style.setProperty(side === "left" ? "--buas-scale" : "--bilkent-scale", scale.toFixed(3));
+}
+
+/** A little past the measured outline, so the shoulders stay off the panels. */
+const PORTRAIT_REACH = 0.016;
+const PORTRAIT_GAP = 18;
+
+function portraitHitsPanel(
+  width: number,
+  height: number,
+  margin: number,
+  cardW: number,
+  lean: number,
+  aspect: number,
+  fullH: number,
+  fullTop: number,
+) {
+  const panelTop = margin;
+  const panelH = Math.max(1, height - margin * 2);
+  const imgW = fullH * aspect;
+  const imgLeft = (width - imgW) / 2;
+  for (const [yFrac, half] of frame1Config.portraitLayout.visibleHalf) {
+    const y = fullTop + fullH * yFrac;
+    if (y < panelTop || y > panelTop + panelH) continue;
+    const t = (y - panelTop) / panelH;
+    const inner = margin + cardW + lean * (1 - t);
+    const left = imgLeft + imgW * (0.5 - (half + PORTRAIT_REACH));
+    if (left < inner + PORTRAIT_GAP) return true;
+  }
+  return false;
+}
+
+/**
+ * Full-state portrait. It aims for `portraitScale` times the usual height
+ * and drops just enough that the shoulders stay between the panels.
+ * The name and the line under it travel with the bottom of the photo.
+ */
+/** Portrait height the full state used before it grew, at the standard panel width. */
+function legacyPortraitHeight(width: number, height: number, margin: number, aspect: number) {
+  const layout = frame1Config.layout;
+  const cardW = width * layout.cardWidth;
+  const lean = layout.lean * width;
+  const textInner = margin + cardW + lean * 0.58 - 20;
+  const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
+  return Math.min(height * layout.portrait * aspect, maxW) / Math.max(aspect, 0.01);
+}
+
+function placeFullPortrait(
+  width: number,
+  height: number,
+  margin: number,
+  cardW: number,
+  lean: number,
+  aspect: number,
+  below: number,
+) {
+  const layout = frame1Config.layout;
+  const wantedH = legacyPortraitHeight(width, height, margin, aspect) * layout.portraitScale;
+  const spot = (fullH: number) => {
+    const anchor = topForHair(layout.hairFrame * height, fullH);
+    const low = height - below - fullH;
+    const to = Math.max(anchor, low);
+    for (let step = 0; step <= 20; step += 1) {
+      const top = anchor + ((to - anchor) * step) / 20;
+      if (top + fullH + below > height - 18) continue;
+      if (!portraitHitsPanel(width, height, margin, cardW, lean, aspect, fullH, top)) return top;
+    }
+    return null;
+  };
+  const direct = spot(wantedH);
+  if (direct != null) return { fullH: wantedH, fullTop: direct };
+
+  const textInner = margin + cardW + lean * 0.58 - 20;
+  const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
+  const floorH = Math.min(height * layout.portrait, maxW / Math.max(aspect, 0.01));
+  let low = Math.min(floorH, wantedH);
+  let high = wantedH;
+  let bestH = low;
+  let bestTop = spot(low) ?? topForHair(layout.hairFrame * height, low);
+  for (let step = 0; step < 14; step += 1) {
+    const mid = (low + high) / 2;
+    const top = spot(mid);
+    if (top != null) {
+      bestH = mid;
+      bestTop = top;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return { fullH: bestH, fullTop: bestTop };
+}
+
+/** Widest panels that still leave room for the larger portrait. */
+function chooseCardFraction(
+  width: number,
+  height: number,
+  margin: number,
+  aspect: number,
+  below: number,
+) {
+  const layout = frame1Config.layout;
+  const wanted = legacyPortraitHeight(width, height, margin, aspect) * layout.portraitScale;
+  const fits = (fraction: number) => {
+    const cardW = width * fraction;
+    const lean = layout.lean * width;
+    return placeFullPortrait(width, height, margin, cardW, lean, aspect, below).fullH >= wanted - 1;
+  };
+  if (fits(layout.cardWidth)) return layout.cardWidth;
+  // Narrowing the panels is only worth it when that actually fits the larger portrait.
+  if (!fits(layout.cardWidthMin)) return layout.cardWidth;
+  let low = layout.cardWidthMin;
+  let high = layout.cardWidth;
+  let best = low;
+  for (let step = 0; step < 10; step += 1) {
+    const mid = (low + high) / 2;
+    if (fits(mid)) {
+      best = mid;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return best;
 }
 
 /** Rebuilds each panel mask from the card's live box, so the slope follows a resize or the opening. */
@@ -669,8 +794,10 @@ export function Frame1() {
 
         const name = element.querySelector<HTMLElement>(".middle-name");
         const under = element.querySelector<HTMLElement>(".under-name");
+        const chips = element.querySelector<HTMLElement>(".middle-chips");
         const nameH = name?.offsetHeight ?? 48;
         const underH = under?.offsetHeight ?? 28;
+        const chipBlock = chips ? chips.offsetHeight + 12 : 0;
 
         let cardW: number;
         let lean: number;
@@ -688,7 +815,7 @@ export function Frame1() {
           cardW = Math.max(120, roomW / 2);
           const topGap = gap - leanWanted * 2;
           lean = topGap < 12 ? Math.max(0, (gap - 12) / 2) : leanWanted;
-          const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + 18 + pad;
+          const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + chipBlock + 18 + pad;
           const roomH = Math.max(220, height - chrome);
           fullH = Math.min(height * 0.32, Math.max(140, roomH * 0.38));
           panelH = Math.max(168, roomH - fullH);
@@ -700,15 +827,15 @@ export function Frame1() {
           limitLeft = pad;
           limitRight = width - pad;
         } else {
-          cardW = width * layout.cardWidth;
+          const belowEstimate = layout.nameGap + nameH + layout.lineGap + underH + chipBlock + 8;
+          const fraction = chooseCardFraction(width, height, margin, aspect, belowEstimate);
+          cardW = width * fraction;
           lean = layout.lean * width;
           panelH = Math.max(1, height - margin * 2);
-          const aspectNow = portraitAspect(element);
           const textInner = margin + cardW + lean * 0.58 - 20;
-          const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
-          const wantedW = height * layout.portrait * aspectNow;
-          fullH = Math.min(wantedW, maxW) / aspectNow;
-          fullTop = topForHair(layout.hairFrame * height, fullH);
+          const placed = placeFullPortrait(width, height, margin, cardW, lean, aspect, belowEstimate);
+          fullH = placed.fullH;
+          fullTop = placed.fullTop;
           if (medium) {
             limitLeft = textInner + layout.mediumClearance;
             limitRight = width - textInner - layout.mediumClearance;
@@ -743,8 +870,17 @@ export function Frame1() {
         element.style.setProperty("--portrait-top", `${fullTop}px`);
         fitCopies(element);
         const inside = fitCenter(element, width, limitLeft, limitRight, medium ? "scale" : "fit");
-        const block = (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH);
+        const identity = element.querySelector<HTMLElement>(".identity");
+        const block = identity?.offsetHeight
+          || (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH) + chipBlock;
         const chrome = layout.nameGap + block;
+        if (!stack) {
+          const placed = placeFullPortrait(width, height, margin, cardW, lean, aspect, chrome);
+          fullH = placed.fullH;
+          fullTop = placed.fullTop;
+          element.style.setProperty("--portrait-h", `${fullH}px`);
+          element.style.setProperty("--portrait-top", `${fullTop}px`);
+        }
         const pad = stack ? Math.max(14, Math.round(Math.min(28, width * 0.04))) : 28;
         let startH: number;
         let startTop: number;
@@ -771,6 +907,10 @@ export function Frame1() {
         }
         placePhoto(element, "left", frame1Config.photos.buasMark);
         placePhoto(element, "right", frame1Config.photos.bilkentMark);
+        const enterLeft = leftCard ? leftCard.offsetLeft + leftCard.offsetWidth : panelW + margin;
+        const enterRight = rightCard ? width - rightCard.offsetLeft : enterLeft;
+        element.style.setProperty("--enter-left", `${Math.ceil(enterLeft + 2)}px`);
+        element.style.setProperty("--enter-right", `${Math.ceil(enterRight + 2)}px`);
         return { inside, metrics: { startH, startTop, fullH, fullTop } };
       };
 
@@ -1174,6 +1314,11 @@ export function Frame1() {
               </p>
             ) : null}
           </div>
+          <ul className="middle-chips">
+            {frame1Config.chips.map((chip) => (
+              <li key={chip} className="middle-chip">{chip}</li>
+            ))}
+          </ul>
         </div>
 
         <a
