@@ -44,7 +44,7 @@ const FIT_SIZES: Array<[string, string]> = [
   ["--body-size", frame3.bodySize],
   ["--item-gap", frame3.itemGap],
   ["--stack-size", frame3.stackSize],
-  ["--button-size", frame3.buttonSize],
+  ["--invite-size", frame3.inviteSize],
   ["--link-gap", frame3.linkGap],
 ];
 
@@ -72,11 +72,91 @@ function AgentGlyph() {
   );
 }
 
+/** The same face the agents use on the map, at a chip size. */
+function LegendAgent({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="1.4" y="2.2" width="13.2" height="11.6" rx="3" fill={frame3.eye} />
+      <rect x="2.4" y="3.2" width="11.2" height="9.6" rx="2.4" fill={color} />
+      <rect x="4.3" y="6.1" width="2.2" height="2.2" fill={frame3.eye} />
+      <rect x="9.5" y="6.1" width="2.2" height="2.2" fill={frame3.eye} />
+    </svg>
+  );
+}
+
+/** Square ring and center, matching a pressure plate on the level. */
+function LegendPlate() {
+  return (
+    <svg viewBox="0 0 1 1" aria-hidden="true">
+      <rect x="0.18" y="0.18" width="0.64" height="0.64" fill="none" stroke={frame3.warmWhite} strokeWidth="0.08" />
+      <rect x="0.38" y="0.38" width="0.24" height="0.24" fill={frame3.warmWhite} />
+    </svg>
+  );
+}
+
+/** Closed door: a pale fill, an outline, and the same bars the map draws. */
+function LegendDoor() {
+  const pad = frame3.doorPad;
+  const bar = frame3.doorBar;
+  const inner = 1 - pad * 2;
+  const width = 1;
+  const count = Math.max(3, Math.round(width * 4));
+  const bars = [];
+  for (let index = 0; index < count; index += 1) {
+    const barX = pad + ((index + 0.5) * inner) / count - bar / 2;
+    bars.push(<rect key={index} x={barX} y={pad} width={bar} height={inner} fill={frame3.warmWhite} />);
+  }
+  return (
+    <svg viewBox="0 0 1 1" aria-hidden="true">
+      <rect x={pad} y={pad} width={inner} height={inner} fill={frame3.warmWhite} opacity={0.2} />
+      <rect x={pad} y={pad} width={inner} height={inner} fill="none" stroke={frame3.warmWhite} strokeWidth={bar} />
+      {bars}
+    </svg>
+  );
+}
+
+/** The chest, using the map's own lid, gold, and base. */
+function LegendTreasure() {
+  return (
+    <svg viewBox="0 0 1 1" aria-hidden="true">
+      <rect x="0.22" y="0.56" width="0.56" height="0.22" fill={frame3.chestBase} />
+      <rect x="0.2" y="0.36" width="0.6" height="0.24" fill={frame3.chestGold} />
+      <rect x="0.2" y="0.28" width="0.6" height="0.12" fill={frame3.chestLid} />
+      <rect x="0.42" y="0.4" width="0.16" height="0.12" fill={frame3.chestHighlight} />
+    </svg>
+  );
+}
+
+/** A slightly uneven gold stroke. It draws only on hover and keyboard focus. */
+function InviteLine() {
+  return (
+    <svg className="frame3-invite-line" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d="M1 4.7C12 3.2 22 6.1 36 4.2 50 2.4 62 5.9 78 3.9 92 2.3 106 5.4 119 3.6"
+        pathLength={1}
+      />
+    </svg>
+  );
+}
+
+/** Hand-drawn arrow. A stroke, not a text character. */
+function InviteArrow() {
+  return (
+    <svg className="frame3-invite-arrow" viewBox="0 0 32 16" aria-hidden="true">
+      <path d="M1 8.7C6.2 7.2 10.4 9.4 16.2 7.8 20.4 6.6 24.2 8.6 29.4 7.4" />
+      <path d="M21.6 2.8C24.6 4.6 27.2 6.4 29.8 7.6" />
+      <path d="M22.8 12.6C25.4 10.6 27.8 9 29.8 7.6" />
+    </svg>
+  );
+}
+
 export function Frame3() {
   const frameRef = useRef<HTMLElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const belowRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const refsRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const refsButtonRef = useRef<HTMLButtonElement>(null);
   const elapsedRef = useRef(0);
@@ -157,6 +237,10 @@ export function Frame3() {
           if (fit >= 1) copy.style.removeProperty(name);
           else copy.style.setProperty(name, `calc(${value} * ${fit.toFixed(3)})`);
         }
+        const refs = refsRef.current;
+        if (!refs) return;
+        if (fit >= 1) refs.style.removeProperty("--invite-size");
+        else refs.style.setProperty("--invite-size", `calc(${frame3.inviteSize} * ${fit.toFixed(3)})`);
       };
       let fit = 1;
       scale(fit);
@@ -170,22 +254,26 @@ export function Frame3() {
       const rect = frame.getBoundingClientRect();
       const columnW = rect.width * (frame3.mapEnd - frame3.mapStart);
       const mapW = Math.min(columnW, rect.height * frame3.mapHeight * 2);
-      const mapH = mapW / 2;
+      const chrome = frame3.mapPad + frame3.mapBorderWidth;
+      const innerW = Math.max(0, mapW - chrome * 2);
+      const mapH = innerW / 2 + chrome * 2;
       const right = rect.width * (1 - frame3.mapEnd);
       const x = rect.width - right - mapW;
       frame.style.setProperty("--text-width", `${rect.width * (frame3.textEnd - frame3.textStart)}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
       fitCopy(rect.height);
       const textH = textRef.current?.offsetHeight ?? mapH;
-      const top = Math.max(0, (rect.height - Math.max(textH, mapH)) / 2);
+      const belowH = belowRef.current?.offsetHeight ?? 0;
+      const mapBlock = mapH + frame3.captionOffset + belowH;
+      const top = Math.max(0, (rect.height - Math.max(textH, mapBlock)) / 2);
       const y = top;
-      const cell = mapW / level.width;
+      const cell = innerW / level.width;
       frame.style.setProperty("--group-top", `${top}px`);
       frame.style.setProperty("--caption-top", `${top + mapH + frame3.captionOffset}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
       frame.style.setProperty("--cell", `${cell}px`);
-      frame.style.setProperty("--grid-x", `${x}px`);
-      frame.style.setProperty("--grid-y", `${y}px`);
+      frame.style.setProperty("--grid-x", `${x + chrome}px`);
+      frame.style.setProperty("--grid-y", `${y + chrome}px`);
       const fade = frame3.edgeFade;
       const topPct = (y / rect.height) * 100;
       const botPct = ((y + mapH) / rect.height) * 100;
@@ -213,6 +301,7 @@ export function Frame3() {
     const observer = new ResizeObserver(resize);
     observer.observe(frame);
     if (mapRef.current) observer.observe(mapRef.current);
+    if (belowRef.current) observer.observe(belowRef.current);
     document.fonts?.ready.then(() => {
       if (!stopped) resize();
     });
@@ -389,14 +478,15 @@ export function Frame3() {
     "--map-right": `${(1 - frame3.mapEnd) * 100}%`,
     "--map-floor": frame3.mapFloor,
     "--map-border": frame3.mapBorder,
+    "--map-border-width": `${frame3.mapBorderWidth}px`,
+    "--map-radius": frame3.mapRadius,
+    "--map-pad": `${frame3.mapPad}px`,
+    "--map-shadow": frame3.mapShadow,
     "--focus": frame3.focus,
-    "--button-size": frame3.buttonSize,
-    "--button-weight": String(frame3.buttonWeight),
-    "--button-pad-y": frame3.buttonPadY,
-    "--button-pad-x": frame3.buttonPadX,
-    "--button-radius": frame3.buttonRadius,
-    "--button-border": frame3.buttonBorder,
-    "--arrow-shift": frame3.arrowShift,
+    "--agent-b": frame3.agentB,
+    "--invite-size": frame3.inviteSize,
+    "--invite-color": frame3.inviteColor,
+    "--invite-draw": frame3.inviteDraw,
     "--grid": frame3.grid,
     "--outside-mix": String(frame3.outsideMix),
     "--outside-grid": frame3.outsideGrid,
@@ -406,6 +496,8 @@ export function Frame3() {
     "--eyebrow-size": frame3.eyebrowSize,
     "--eyebrow-weight": String(frame3.eyebrowWeight),
     "--eyebrow-gap": frame3.eyebrowGap,
+    "--eyebrow-tracking": frame3.eyebrowTracking,
+    "--eyebrow-color": frame3.eyebrowColor,
     "--title-size": frame3.titleSize,
     "--title-weight": String(frame3.titleWeight),
     "--title-line": String(frame3.titleLine),
@@ -415,17 +507,17 @@ export function Frame3() {
     "--intro-gap": frame3.introGap,
     "--label-size": frame3.labelSize,
     "--label-weight": String(frame3.labelWeight),
+    "--label-tracking": frame3.labelTracking,
     "--section-gap": frame3.sectionGap,
     "--label-gap": frame3.labelGap,
     "--body-size": frame3.bodySize,
     "--body-weight": String(frame3.bodyWeight),
     "--body-line": String(frame3.bodyLine),
+    "--body-measure": frame3.bodyMeasure,
     "--item-gap": frame3.itemGap,
     "--bullet": frame3.bullet,
     "--stack-size": frame3.stackSize,
     "--stack-weight": String(frame3.stackWeight),
-    "--link-size": frame3.linkSize,
-    "--link-weight": String(frame3.linkWeight),
     "--link-gap": frame3.linkGap,
     "--caption-size": frame3.captionSize,
     "--note-size": frame3.noteSize,
@@ -437,8 +529,6 @@ export function Frame3() {
     "--note-radius": frame3.noteRadius,
     "--note-pad-y": frame3.notePadY,
     "--note-pad-x": frame3.notePadX,
-    "--refs-size": frame3.refsSize,
-    "--refs-weight": String(frame3.refsWeight),
     "--panel-width": frame3.panelWidth,
     "--panel-pad": frame3.panelPad,
     "--panel-radius": frame3.panelRadius,
@@ -468,52 +558,76 @@ export function Frame3() {
 
       <div className="frame3-stage">
         <div className="frame3-map" id="frame3-main-image" ref={mapRef}>
-          <LevelMap pose={pose} watch={watch} motion={!reduced} />
-          <AgentButton
-            id="A"
-            label="Agent A"
-            color={frame3.agentA}
-            x={pose.a[0]}
-            y={pose.a[1]}
-            opacity={pose.opacity}
-            noted={watch === "A"}
-            onPointerDown={onAgentPointerDown}
-            onPointerEnter={onAgentPointerEnter}
-            onPointerLeave={onAgentPointerLeave}
-            onFocus={onAgentFocus}
-            onBlur={onAgentBlur}
-            onClick={onAgentClick}
-          />
-          <AgentButton
-            id="B"
-            label="Agent B"
-            color={frame3.agentB}
-            x={pose.b[0]}
-            y={pose.b[1]}
-            opacity={pose.opacity}
-            noted={watch === "B"}
-            onPointerDown={onAgentPointerDown}
-            onPointerEnter={onAgentPointerEnter}
-            onPointerLeave={onAgentPointerLeave}
-            onFocus={onAgentFocus}
-            onBlur={onAgentBlur}
-            onClick={onAgentClick}
-          />
-          {watchedPoint && (
-            <p
-              className="frame3-note"
-              id="frame3-vision-note"
-              style={noteStyle(watchedPoint[0], watchedPoint[1], watch === "B" ? frame3.agentB : frame3.agentA)}
-            >
-              {NOTE}
-            </p>
-          )}
+          <div className="frame3-board">
+            <LevelMap pose={pose} watch={watch} motion={!reduced} />
+            <AgentButton
+              id="A"
+              label="Agent A"
+              color={frame3.agentA}
+              x={pose.a[0]}
+              y={pose.a[1]}
+              opacity={pose.opacity}
+              noted={watch === "A"}
+              onPointerDown={onAgentPointerDown}
+              onPointerEnter={onAgentPointerEnter}
+              onPointerLeave={onAgentPointerLeave}
+              onFocus={onAgentFocus}
+              onBlur={onAgentBlur}
+              onClick={onAgentClick}
+            />
+            <AgentButton
+              id="B"
+              label="Agent B"
+              color={frame3.agentB}
+              x={pose.b[0]}
+              y={pose.b[1]}
+              opacity={pose.opacity}
+              noted={watch === "B"}
+              onPointerDown={onAgentPointerDown}
+              onPointerEnter={onAgentPointerEnter}
+              onPointerLeave={onAgentPointerLeave}
+              onFocus={onAgentFocus}
+              onBlur={onAgentBlur}
+              onClick={onAgentClick}
+            />
+            {watchedPoint && (
+              <p
+                className="frame3-note"
+                id="frame3-vision-note"
+                style={noteStyle(watchedPoint[0], watchedPoint[1], watch === "B" ? frame3.agentB : frame3.agentA)}
+              >
+                {NOTE}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
       <canvas className="frame3-grain" ref={grainRef} aria-hidden="true" />
 
-      <div className="frame3-below">
+      <div className="frame3-below" ref={belowRef}>
+        <ul className="frame3-legend" aria-label="Map legend">
+          <li className="frame3-chip">
+            <LegendAgent color={frame3.agentA} />
+            <span>Agent A</span>
+          </li>
+          <li className="frame3-chip">
+            <LegendAgent color={frame3.agentB} />
+            <span>Agent B</span>
+          </li>
+          <li className="frame3-chip">
+            <LegendPlate />
+            <span>Pressure plate</span>
+          </li>
+          <li className="frame3-chip">
+            <LegendDoor />
+            <span>Door</span>
+          </li>
+          <li className="frame3-chip">
+            <LegendTreasure />
+            <span>Treasure</span>
+          </li>
+        </ul>
         <p className="frame3-caption">{COPY.caption}</p>
         {reduced && (
           <button className="frame3-play" type="button" onClick={playOnce} disabled={playing}>
@@ -537,20 +651,27 @@ export function Frame3() {
         <p className="frame3-label">{COPY.resultLabel}</p>
         <p className="frame3-result">{COPY.result}</p>
         <p className="frame3-stack">{COPY.stack}</p>
-        <a className="frame3-project" href={frame3.projectUrl} target="_blank" rel="noreferrer">
-          {COPY.project} <span className="frame3-arrow">→</span>
+        <a className="frame3-invite frame3-project" href={frame3.projectUrl} target="_blank" rel="noreferrer">
+          <span className="frame3-invite-label">
+            {COPY.project}
+            <InviteLine />
+          </span>
+          <InviteArrow />
         </a>
       </div>
 
-      <div className="frame3-refs">
+      <div className="frame3-refs" ref={refsRef}>
         <button
-          className="frame3-refs-button"
+          className="frame3-invite frame3-refs-button"
           type="button"
           ref={refsButtonRef}
           aria-expanded={panel === "open" || panel === "opening"}
           onClick={togglePanel}
         >
-          References
+          <span className="frame3-invite-label">
+            References
+            <InviteLine />
+          </span>
         </button>
         {panel !== "closed" && (
           <div
