@@ -166,7 +166,14 @@ export class InterludeScene {
   measure() {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
+    const narrow = this.width < scrollConfig.tall.maxWidth;
+    this.root.classList.toggle("is-narrow", narrow);
     if (!this.lines.length) return;
+    if (narrow) {
+      this.measureNarrow();
+      return;
+    }
+    this.stack.style.width = "";
     const style = interludeStyle;
     const probe = 100;
     this.text.style.fontSize = `${probe}px`;
@@ -184,6 +191,37 @@ export class InterludeScene {
     this.text.style.fontSize = `${size.toFixed(2)}px`;
     this.rule.style.marginTop = `${(size * style.rule.gap).toFixed(2)}px`;
     this.rule.style.width = `${((widest * size) / probe).toFixed(2)}px`;
+    this.findRule();
+  }
+
+  /**
+   * On a phone the lines wrap inside the side margins at a fixed readable
+   * size, and the gold line spans the widest wrapped line.
+   */
+  private measureNarrow() {
+    const style = interludeStyle;
+    const phone = style.phone;
+    const room = Math.max(1, this.width - 2 * phone.marginX);
+    this.stack.style.width = `${room}px`;
+    const size = clamp(this.width * phone.sizeShare, phone.minSize, phone.maxSize);
+    this.text.style.fontSize = `${size.toFixed(2)}px`;
+    this.rule.style.marginTop = `${(size * style.rule.gap).toFixed(2)}px`;
+    // Lines are centered, so the widest wrapped line spans from the leftmost word to the rightmost.
+    let left = Infinity;
+    let right = -Infinity;
+    for (const line of this.lines) {
+      for (const word of line.words) {
+        const rect = word.el.getBoundingClientRect();
+        left = Math.min(left, rect.left);
+        right = Math.max(right, rect.right);
+      }
+    }
+    const widest = right > left ? Math.min(room, right - left) : room;
+    this.rule.style.width = `${widest.toFixed(2)}px`;
+    this.findRule();
+  }
+
+  private findRule() {
     const box = this.rule.getBoundingClientRect();
     this.ruleBox = { left: box.left, right: box.right, y: box.top + box.height / 2 };
   }

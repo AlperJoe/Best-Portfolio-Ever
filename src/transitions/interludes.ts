@@ -76,6 +76,15 @@ export const interludeStyle = {
   /** Least space kept to the screen edges, as a share of the width and of the height. */
   marginX: 0.1,
   marginY: 0.12,
+  /** Screens narrower than tall.maxWidth in config.ts. The lines wrap, centered, at a readable size. */
+  phone: {
+    /** Text size as a share of the screen width, held between these sizes, in pixels. */
+    sizeShare: 0.08,
+    minSize: 26,
+    maxSize: 34,
+    /** Side margins, in pixels. */
+    marginX: 24,
+  },
   /** The gold line under the text. */
   rule: {
     color: "#EFC785",

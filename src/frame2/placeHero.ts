@@ -34,6 +34,33 @@ function pick(
 }
 
 /**
+ * Phones. The painting fills a stage under the intro, cropped so `crop`, the
+ * face and the hand with the cards, is as large as the stage allows. The
+ * crop sits centered across and on the bottom of the stage, and the painting
+ * still covers the stage's full width.
+ */
+export function placeHeroPhone(
+  frameW: number,
+  stageTop: number,
+  stageH: number,
+  imageW: number,
+  imageH: number,
+  crop: ImageBox,
+): HeroPlacement {
+  if (frameW <= 0 || stageH <= 0) return { left: 0, top: 0, width: 0, height: 0, scale: 0 };
+  const scale = Math.max(
+    Math.min(frameW / (crop.w * imageW), stageH / (crop.h * imageH)),
+    frameW / imageW,
+  );
+  const width = imageW * scale;
+  const height = imageH * scale;
+  const centered = frameW / 2 - (crop.x + crop.w / 2) * width;
+  const left = Math.min(0, Math.max(frameW - width, centered));
+  const top = stageTop + stageH - (crop.y + crop.h) * height;
+  return { left, top, width, height, scale };
+}
+
+/**
  * Cover scale, so the painting always fills the frame. The title and the face
  * stay on screen when that still covers. Position stays as close as possible
  * to object-position.

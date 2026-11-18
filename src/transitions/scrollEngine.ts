@@ -1,6 +1,6 @@
 import { frame1Config } from "../frame1/config";
 import { frameOrder, type FrameId } from "../frameOrder";
-import { OPENING_EVENT, TAIL_VAR, frameIndex, scrollConfig } from "./config";
+import { OPENING_EVENT, SCROLL_VAR, TAIL_VAR, frameIndex, scrollConfig } from "./config";
 import { InterludeScene } from "./interludeScene";
 import { interludes, type FramePair, type Interlude } from "./interludes";
 import { clamp, cubicBezier, lerp } from "./math";
@@ -21,6 +21,8 @@ type Pair = {
 
 type Glide = { from: number; to: number; start: number; ms: number; curve: (x: number) => number };
 type Jump = { to: number; start: number; swapped: boolean };
+/** A scroll position by the part it falls in, so it survives a change in frame heights. */
+type Spot = { part: "opening" | "frame" | "pair" | "tail"; index: number; offset: number };
 
 /**
  * One scroll position, in screen heights, runs from the Frame 1 start state
@@ -29,6 +31,10 @@ type Jump = { to: number; start: number; swapped: boolean };
  * A gesture that reaches a frame stops there, and during a gesture the scene
  * never moves faster than the configured rate. Nothing moves on its own,
  * except a key glide or a jump the visitor asked for.
+ *
+ * On a narrow screen a frame taller than the screen spans a range of the
+ * scroll, from its top to its bottom, and its content moves with the scroll
+ * inside that range.
  */
 export class ScrollEngine {
   /** Where the scene is drawn, and where input has sent it. */
@@ -38,13 +44,21 @@ export class ScrollEngine {
   private floor = 0;
   private readonly openingEnd = frame1Config.scrollOpening.distance;
   private readonly pairs: Pair[] = [];
-  /** Scroll position of every frame, where it sits fully on screen. Frame 1 sits at the end of its opening. */
-  private readonly frameStops: number[] = [];
+  private readonly pairInterludes: (Interlude | null)[] = [];
+  /** Height of every frame past one screen, in screen heights. Zero on wide screens. */
+  private extras: number[] = [];
+  /** Scroll position where each frame's top meets the top of the screen, and where its bottom meets the bottom. */
+  private readonly frameTops: number[] = [];
+  private readonly frameBottoms: number[] = [];
   /** Every place a key press can stop, with and without reduced motion. Includes each interlude's resting place. */
   private readonly stops: number[] = [];
   private readonly reducedStops: number[] = [];
-  private readonly lastFrame: number;
-  private readonly end: number;
+  private lastFrame = 0;
+  private end = 0;
+  private screenH = window.innerHeight;
+  /** How far each frame's content is moved up now, in pixels. */
+  private offsets: number[] = [];
+  private readonly frameSizes: ResizeObserver;
   private readonly scene: InterludeScene;
   private readonly cover = document.createElement("div");
   private readonly media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -61,6 +75,12 @@ export class ScrollEngine {
   private lastStep = 0;
   /** The gesture now in progress has already been caught by a frame. */
   private caught = false;
+  /** Event time of the catch, the largest event since it, and the smallest since the sizes began to fall. */
+  private caughtAt = -Infinity;
+  private catchPeak = 0;
+  private catchLow = Infinity;
+  /** Size of the latest wheel or touch event, in pixels. */
+  private lastSize = 0;
   /**
    * Timestamp of the last wheel or trackpad event, from the event itself.
    * A quiet gap longer than the config starts a new gesture.
@@ -88,25 +108,15 @@ export class ScrollEngine {
     const tau = scrollConfig.follow.ms;
     this.floorMs = tau * Math.exp(scrollConfig.follow.settleMs / tau - 1);
 
-    let at = this.openingEnd;
-    this.stops.push(0, at);
-    this.reducedStops.push(0, at);
-    this.frameStops.push(at);
     for (let index = 0; index + 1 < slots.length; index += 1) {
       const key = `${frameOrder[index]}>${frameOrder[index + 1]}` as FramePair;
-      const interlude = interludes[key] ?? null;
-      const length = InterludeScene.length(interlude);
-      this.pairs.push({ from: index, to: index + 1, start: at, end: at + length, interlude });
-      for (const stop of InterludeScene.stops(interlude, false)) this.stops.push(at + stop);
-      for (const stop of InterludeScene.stops(interlude, true)) this.reducedStops.push(at + stop);
-      at += length;
-      this.stops.push(at);
-      this.reducedStops.push(at);
-      this.frameStops.push(at);
+      this.pairInterludes.push(interludes[key] ?? null);
     }
-    this.lastFrame = at;
-    this.end = at + scrollConfig.tail;
-    this.stops.push(this.end);
+    this.offsets = slots.map(() => 0);
+    this.build(this.measureExtras());
+    this.frameSizes = new ResizeObserver(() => {
+      if (this.relayout()) this.render();
+    });
 
     this.scene = new InterludeScene(stage);
     this.cover.className = "txd-cover";
@@ -120,6 +130,86 @@ export class ScrollEngine {
     this.render();
   }
 
+  /** Frame heights past one screen, in screen heights. Only narrow screens let a frame be taller. */
+  private measureExtras() {
+    const height = window.innerHeight;
+    const narrow = window.innerWidth < scrollConfig.tall.maxWidth;
+    return this.slots.map((slot) => {
+      const frame = slot.firstElementChild;
+      if (!narrow || !(frame instanceof HTMLElement) || height <= 0) return 0;
+      return Math.max(0, Math.round(frame.offsetHeight) - height) / height;
+    });
+  }
+
+  /** Lays every frame, interlude and stop along the scroll for the given frame heights. */
+  private build(extras: number[]) {
+    this.extras = extras;
+    this.screenH = window.innerHeight;
+    this.pairs.length = 0;
+    this.frameTops.length = 0;
+    this.frameBottoms.length = 0;
+    this.stops.length = 0;
+    this.reducedStops.length = 0;
+    this.stops.push(0);
+    this.reducedStops.push(0);
+    const step = scrollConfig.tall.keyStep;
+    let at = this.openingEnd;
+    this.slots.forEach((_, index) => {
+      const extra = extras[index] ?? 0;
+      const frameStops = [at];
+      for (let inside = step; inside < extra - 0.1; inside += step) frameStops.push(at + inside);
+      if (extra > EPS) frameStops.push(at + extra);
+      this.stops.push(...frameStops);
+      this.reducedStops.push(...frameStops);
+      this.frameTops.push(at);
+      at += extra;
+      this.frameBottoms.push(at);
+      if (index + 1 >= this.slots.length) return;
+      const interlude = this.pairInterludes[index];
+      const length = InterludeScene.length(interlude);
+      this.pairs.push({ from: index, to: index + 1, start: at, end: at + length, interlude });
+      for (const stop of InterludeScene.stops(interlude, false)) this.stops.push(at + stop);
+      for (const stop of InterludeScene.stops(interlude, true)) this.reducedStops.push(at + stop);
+      at += length;
+    });
+    this.lastFrame = at;
+    this.end = at + scrollConfig.tail;
+    this.stops.push(this.end);
+  }
+
+  private locate(at: number): Spot {
+    if (at <= this.openingEnd + EPS) return { part: "opening", index: 0, offset: at };
+    for (let index = 0; index < this.frameTops.length; index += 1) {
+      if (at >= this.frameTops[index] - EPS && at <= this.frameBottoms[index] + EPS) {
+        return { part: "frame", index, offset: at - this.frameTops[index] };
+      }
+    }
+    const pair = this.pairs.findIndex((item) => at > item.start && at < item.end);
+    if (pair >= 0) return { part: "pair", index: pair, offset: at - this.pairs[pair].start };
+    return { part: "tail", index: 0, offset: at - this.lastFrame };
+  }
+
+  private place(spot: Spot) {
+    if (spot.part === "opening") return spot.offset;
+    if (spot.part === "frame") return this.frameTops[spot.index] + clamp(spot.offset, 0, this.extras[spot.index]);
+    if (spot.part === "pair") return this.pairs[spot.index].start + spot.offset;
+    return Math.min(this.end, this.lastFrame + spot.offset);
+  }
+
+  /** Rebuilds the scroll when a frame's height changed, keeping the scene where it is. */
+  private relayout() {
+    const extras = this.measureExtras();
+    const same =
+      window.innerHeight === this.screenH && extras.every((extra, index) => Math.abs(extra - this.extras[index]) < 1e-4);
+    if (same) return false;
+    const pos = this.locate(this.pos);
+    this.build(extras);
+    this.glide = null;
+    this.pos = this.place(pos);
+    this.target = this.pos;
+    return true;
+  }
+
   attach() {
     window.addEventListener("wheel", this.onWheel, { passive: false });
     window.addEventListener("keydown", this.onKey);
@@ -130,12 +220,18 @@ export class ScrollEngine {
     window.addEventListener("resize", this.onResize);
     window.addEventListener("tx:goto", this.onGoto);
     this.media.addEventListener("change", this.onMotionPreference);
+    this.stage.addEventListener("focusin", this.onFocusIn);
+    for (const slot of this.slots) {
+      slot.addEventListener("scroll", this.onSlotScroll);
+      if (slot.firstElementChild) this.frameSizes.observe(slot.firstElementChild);
+    }
     const font = `"Instrument Serif"`;
     Promise.all([document.fonts?.load(`400 100px ${font}`), document.fonts?.load(`italic 400 100px ${font}`)])
       .catch(() => undefined)
       .then(() => document.fonts?.ready)
       .then(() => {
         this.scene.measure();
+        this.relayout();
         this.render();
       });
   }
@@ -150,6 +246,9 @@ export class ScrollEngine {
     window.removeEventListener("resize", this.onResize);
     window.removeEventListener("tx:goto", this.onGoto);
     this.media.removeEventListener("change", this.onMotionPreference);
+    this.stage.removeEventListener("focusin", this.onFocusIn);
+    for (const slot of this.slots) slot.removeEventListener("scroll", this.onSlotScroll);
+    this.frameSizes.disconnect();
     if (this.frameId) cancelAnimationFrame(this.frameId);
     this.frameId = 0;
     this.scene.destroy();
@@ -168,8 +267,34 @@ export class ScrollEngine {
     this.settle(this.reduced ? this.nearestStop(this.pos) : this.pos);
   };
 
+  /** The engine alone moves a frame. Focus can scroll a clipped slot, so that is undone. */
+  private onSlotScroll = (event: Event) => {
+    const slot = event.currentTarget as HTMLElement;
+    slot.scrollTop = 0;
+    slot.scrollLeft = 0;
+  };
+
+  /** Focus that lands outside the screen inside a tall frame glides the frame until it shows. */
+  private onFocusIn = (event: FocusEvent) => {
+    const active = this.active;
+    if (active === null || this.extras[active] <= EPS || this.overlayOpen() || this.jump) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || target === this.slots[active] || !this.slots[active].contains(target)) return;
+    const box = target.getBoundingClientRect();
+    const height = this.screenH;
+    const margin = Math.min(48, height * 0.1);
+    let shift = 0;
+    if (box.top < margin) shift = box.top - margin;
+    else if (box.bottom > height - margin) shift = Math.min(box.bottom - height + margin, box.top - margin);
+    if (Math.abs(shift) < 1) return;
+    const top = this.frameTops[active];
+    const to = clamp(this.pos + shift / height, top, top + this.extras[active]);
+    this.startGlide(to, scrollConfig.keyMs, this.keyCurve, performance.now());
+  };
+
   private onResize = () => {
     this.scene.measure();
+    this.relayout();
     this.render();
   };
 
@@ -187,13 +312,22 @@ export class ScrollEngine {
   }
 
   /**
-   * The frame a step from `from` to `to` would reach, in either direction.
-   * Interlude resting places are not in frameStops, so a step passes them.
+   * The frame a step from `from` to `to` would reach, in either direction:
+   * its top on the way down, its bottom on the way up. Interlude resting
+   * places and the inside of a tall frame are passed.
    */
   private frameOnWay(from: number, to: number) {
-    if (to > from + EPS) return this.frameStops.find((at) => at > from + EPS && at <= to + EPS) ?? null;
-    if (to < from - EPS) return [...this.frameStops].reverse().find((at) => at < from - EPS && at >= to - EPS) ?? null;
+    if (to > from + EPS) return this.frameTops.find((at) => at > from + EPS && at <= to + EPS) ?? null;
+    if (to < from - EPS) return [...this.frameBottoms].reverse().find((at) => at < from - EPS && at >= to - EPS) ?? null;
     return null;
+  }
+
+  /** Catches the gesture in progress on a frame. */
+  private hold() {
+    this.caught = true;
+    this.caughtAt = this.gestureAt;
+    this.catchPeak = this.lastSize;
+    this.catchLow = Infinity;
   }
 
   /**
@@ -211,7 +345,7 @@ export class ScrollEngine {
     const frame = this.frameOnWay(from, next);
     if (frame !== null) {
       next = frame;
-      this.caught = true;
+      this.hold();
     }
     this.target = next;
     this.floor = Math.abs(this.target - this.pos) / this.floorMs;
@@ -244,14 +378,33 @@ export class ScrollEngine {
 
   /**
    * A wheel or trackpad gesture. A quiet gap in event time starts a new one
-   * and clears the catch. `now` is the event's own timestamp: the handler can
-   * run much later when a frame is busy drawing, and that delay is not a gap
-   * in the gesture.
+   * and clears the catch. During a catch, a trackpad keeps sending smaller
+   * and smaller events after the finger lifts. An event that rises well
+   * above the smallest of those is a new swipe, which also starts a new
+   * gesture. A catch older than releaseMs lets go, and the rest of the
+   * gesture moves on under the speed cap. `now` is the event's own
+   * timestamp: the handler can run much later when a frame is busy drawing,
+   * and that delay is not a gap in the gesture. `size` is the event's
+   * distance in pixels.
    */
-  private noteWheel(now: number) {
-    const fresh = now - this.gestureAt >= scrollConfig.gesture.quietMs;
-    if (fresh) this.caught = false;
+  private noteWheel(now: number, size: number) {
+    const gesture = scrollConfig.gesture;
+    let fresh = now - this.gestureAt >= gesture.quietMs;
     this.gestureAt = now;
+    this.lastSize = size;
+    if (fresh) {
+      this.caught = false;
+      return true;
+    }
+    if (!this.caught) return false;
+    if (size > this.catchPeak) {
+      this.catchPeak = size;
+      this.catchLow = Infinity;
+    } else {
+      fresh = size > gesture.swipeRise * this.catchLow && size > gesture.swipeMinPx;
+      this.catchLow = Math.min(this.catchLow, size);
+    }
+    if (fresh || now - this.caughtAt >= gesture.releaseMs) this.caught = false;
     return fresh;
   }
 
@@ -326,7 +479,7 @@ export class ScrollEngine {
       if (frame !== null) {
         next = frame;
         this.target = frame;
-        this.caught = true;
+        this.hold();
       }
       this.pos = next;
       if (Math.abs(this.target - this.pos) < 1e-6) this.pos = this.target;
@@ -349,7 +502,7 @@ export class ScrollEngine {
     const index = frameIndex((event as CustomEvent<FrameId>).detail);
     if (index < 0 || this.overlayOpen()) return;
     // Frame 1 is reached at its start state, so the opening plays again with the scroll.
-    this.jumpTo(index === 0 ? 0 : this.frameStops[index]);
+    this.jumpTo(index === 0 ? 0 : this.frameTops[index]);
   };
 
   private onWheel = (event: WheelEvent) => {
@@ -364,13 +517,14 @@ export class ScrollEngine {
     // the handler runs, which falls behind while a frame is painting.
     const now = event.timeStamp || performance.now();
     if (this.jump) return;
+    const size = Math.abs(delta);
     const max = scrollConfig.input.maxDelta;
     delta = clamp(delta, -max, max);
     if (this.reduced) {
       this.step(delta, now);
       return;
     }
-    const fresh = this.noteWheel(now);
+    const fresh = this.noteWheel(now, size);
     const screens = (delta * scrollConfig.input.scrollScale) / window.innerHeight;
     this.move(this.spend(now, screens, fresh));
   };
@@ -402,6 +556,7 @@ export class ScrollEngine {
     const fresh = this.touchFresh;
     this.touchFresh = false;
     this.gestureAt = now;
+    this.lastSize = Math.abs(delta);
     const screens = (delta * scrollConfig.input.scrollScale) / window.innerHeight;
     this.move(this.spend(now, screens, fresh));
   };
@@ -435,6 +590,20 @@ export class ScrollEngine {
     if (this.reduced) this.startGlide(to, scrollConfig.reduced.ms, (x) => x, now);
     else this.startGlide(to, scrollConfig.keyMs, this.keyCurve, now);
   };
+
+  /**
+   * Moves a tall frame's content up by `px`. The slot carries the same
+   * distance in SCROLL_VAR, so a layer inside the frame can stay on screen.
+   */
+  private offsetFrame(slot: HTMLElement, index: number, px: number) {
+    const value = Math.round(px * 100) / 100;
+    if (value === this.offsets[index]) return;
+    this.offsets[index] = value;
+    const frame = slot.firstElementChild;
+    if (frame instanceof HTMLElement) frame.style.transform = value ? `translate3d(0, ${-value}px, 0)` : "";
+    if (value) slot.style.setProperty(SCROLL_VAR, `${value}px`);
+    else slot.style.removeProperty(SCROLL_VAR);
+  }
 
   private pairAt(pos: number) {
     return this.pairs.find((pair) => pos > pair.start + EPS && pos < pair.end - EPS) ?? null;
@@ -475,14 +644,19 @@ export class ScrollEngine {
       this.scene.hide();
       this.pairShown = null;
       let index = 0;
-      for (let at = 0; at < this.frameStops.length; at += 1) {
-        if (pos >= this.frameStops[at] - EPS) index = at;
+      for (let at = 0; at < this.frameTops.length; at += 1) {
+        if (pos >= this.frameTops[at] - EPS) index = at;
       }
       active = index;
       visible.add(index);
     }
 
     this.slots.forEach((slot, index) => {
+      // A tall frame shows its bottom while its interlude plays, and its top while it opens.
+      let offset = 0;
+      if (index === active) offset = clamp(pos - this.frameTops[index], 0, this.extras[index]);
+      else if (pair && index === pair.from) offset = this.extras[index];
+      this.offsetFrame(slot, index, offset * this.screenH);
       const show = visible.has(index);
       if (show !== this.visible.has(index)) {
         slot.classList.toggle("is-parked", !show);

@@ -369,7 +369,7 @@
 .frame2-sheet {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
   height: 100%;
   gap: var(--sheet-gap);
@@ -450,7 +450,7 @@
   flex-direction: column;
   flex: none;
   width: var(--panel-w);
-  height: var(--panel-h);
+  max-height: var(--panel-h);
   min-height: 0;
   box-sizing: border-box;
   padding: 22px 24px 20px;
@@ -506,11 +506,9 @@
 .frame2-picture {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 100%;
-  aspect-ratio: var(--media-aspect);
+  height: 100%;
   flex: none;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center center;
   background: #1a0c09;
   border: 1px solid rgba(239, 199, 133, 0.45);
@@ -613,6 +611,127 @@
 .frame2-gem-br {
   top: calc(100% - var(--gem-at));
   left: calc(100% - var(--gem-at));
+}
+
+/*
+  Phones: the headline, the body and the store badges in one column on top,
+  and the painting cropped to Pedro's face and his cards under them. The
+  frame's height comes from Frame2.tsx.
+*/
+.frame2.is-phone {
+  min-height: 100dvh;
+}
+
+.frame2.is-phone .frame2-intro {
+  left: 0;
+  right: 0;
+  top: 0;
+  max-width: none;
+  padding: var(--phone-top) var(--phone-margin) 0;
+  --headline-size: var(--phone-headline);
+  --lead-gap: 16px;
+  --store-above: 18px;
+}
+
+.frame2.is-phone .frame2-headline {
+  max-width: none;
+}
+
+.frame2.is-phone .frame2-lead {
+  max-width: none;
+  font-size: var(--phone-lead);
+}
+
+.frame2.is-phone .frame2-line {
+  max-width: var(--line-max, 160px);
+}
+
+.frame2.is-phone .frame2-line-help {
+  white-space: normal;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.frame2-open.is-sheet {
+  top: var(--tx-scroll, 0px);
+  bottom: auto;
+  height: 100dvh;
+  perspective: none;
+  opacity: 0;
+  transition: opacity var(--dim-out) var(--close-ease);
+}
+
+.frame2-open.is-sheet.is-shown {
+  opacity: 1;
+  transition-duration: var(--dim-in);
+  transition-timing-function: var(--open-ease);
+}
+
+.frame2-phone-sheet {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(var(--close-size) + 20px);
+  background: var(--sheet-bg);
+  transform: translateY(18px);
+  transition: transform var(--dim-out) var(--close-ease);
+}
+
+.frame2-open.is-shown .frame2-phone-sheet {
+  transform: none;
+  transition-duration: var(--dim-in);
+  transition-timing-function: var(--open-ease);
+}
+
+.frame2-phone-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.frame2-phone-media {
+  aspect-ratio: var(--media-aspect);
+  border-top: 1px solid rgba(239, 199, 133, 0.45);
+  border-bottom: 1px solid rgba(239, 199, 133, 0.45);
+  background: #1a0c09;
+}
+
+.frame2-phone-media .frame2-picture {
+  border: 0;
+}
+
+.frame2-phone-copy {
+  padding: 22px var(--sheet-pad) 40px;
+  color: #f6efe6;
+}
+
+.frame2-phone-copy h2 {
+  margin: 0;
+  font-family: var(--font-frame2), sans-serif;
+  font-weight: var(--open-title-weight);
+  font-size: var(--sheet-title);
+  line-height: 1.15;
+  color: #f5eee4;
+}
+
+.frame2-phone-copy p {
+  margin: 12px 0 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--open-body-weight);
+  font-size: var(--sheet-body);
+  line-height: var(--open-body-line);
+  color: rgba(246, 239, 230, var(--open-body-opacity));
+}
+
+.frame2-phone-close {
+  top: 10px;
+  right: 12px;
+}
+
+.frame2.is-reduced .frame2-phone-sheet {
+  transform: none;
 }
 
 .frame2.is-reduced .frame2-hand-light {

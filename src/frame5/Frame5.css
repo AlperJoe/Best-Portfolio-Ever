@@ -950,6 +950,211 @@
   }
 }
 
+/*
+  Phones: one column. The title, Ending A with the photo beside its line,
+  the contact rows and the icons, the hobby tickets two to a row, then
+  Ending B with each film as a card, and the way back at the end. The frame
+  grows as tall as its content.
+*/
+@media (max-width: 699.98px) {
+  .frame5 {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 48px var(--f5-phone-margin) 40px;
+  }
+
+  .frame5-head {
+    position: relative;
+    top: auto;
+    justify-content: flex-start;
+  }
+
+  .frame5-arrow {
+    display: none;
+  }
+
+  .frame5-content {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    display: flex;
+    flex-direction: column;
+    margin-top: 28px;
+  }
+
+  .frame5-ending-a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 18px;
+    align-items: center;
+  }
+
+  .frame5-ending-a > .frame5-label,
+  .frame5-ending-a .frame5-lines,
+  .frame5-hobbies {
+    grid-column: 1 / -1;
+  }
+
+  .frame5-line-a {
+    grid-column: 1;
+    font-size: var(--f5-phone-a-size);
+  }
+
+  .frame5-contact {
+    display: contents;
+  }
+
+  .frame5-photo,
+  .frame5.is-photo-above .frame5-photo {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0 4px 0 0;
+  }
+
+  .frame5-photo img {
+    width: var(--f5-phone-photo);
+    height: var(--f5-phone-photo);
+  }
+
+  .frame5-lines {
+    width: auto;
+    margin-top: 22px;
+    font-size: var(--f5-phone-contact);
+  }
+
+  .frame5-lines li:first-child {
+    position: relative;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .frame5-copied {
+    position: absolute;
+    left: calc(var(--f5-icon-size) + 10px);
+    top: 100%;
+    font-size: 12px;
+  }
+
+  .frame5-copied-room {
+    display: none;
+  }
+
+  .frame5-hobbies {
+    margin-top: 40px;
+  }
+
+  .frame5-tickets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+
+  .frame5-ticket,
+  .frame5-ticket:nth-child(4) {
+    grid-column: auto;
+  }
+
+  .frame5-ticket:nth-child(5) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: calc(50% - var(--f5-ticket-gap) / 2);
+  }
+
+  .frame5-ticket-label {
+    font-size: var(--f5-phone-ticket);
+  }
+
+  .frame5-ending-b {
+    display: flex;
+    flex-direction: column;
+    margin-top: 56px;
+  }
+
+  .frame5-covers,
+  .frame5-film-texts {
+    display: contents;
+  }
+
+  .frame5-cover:nth-child(1) {
+    order: 1;
+    margin-top: var(--f5-b-gap);
+  }
+
+  .frame5-film-text:nth-child(1) {
+    order: 2;
+  }
+
+  .frame5-cover:nth-child(2) {
+    order: 3;
+    margin-top: 28px;
+  }
+
+  .frame5-film-text:nth-child(2) {
+    order: 4;
+  }
+
+  .frame5-cover.is-hot,
+  .frame5-cover:hover {
+    transform: none;
+  }
+
+  .frame5-back {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    align-self: center;
+    margin-top: 56px;
+    transform: none;
+  }
+
+  /* A film opens over the whole screen: the video on top, the notes scrolling under it. */
+  .frame5-overlay {
+    top: var(--tx-scroll, 0px);
+    bottom: auto;
+    height: 100dvh;
+    place-items: stretch;
+    background: var(--f5-ov-panel);
+  }
+
+  .frame5-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    padding-top: calc(var(--f5-ov-close) + 16px);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: translateY(16px);
+  }
+
+  .frame5-dialog-scroll {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0;
+    flex: 1 1 auto;
+    padding: 0;
+  }
+
+  .frame5-video {
+    border-radius: 0;
+  }
+
+  .frame5-dialog-text {
+    padding: 20px var(--f5-phone-margin) 40px;
+  }
+
+  .frame5-close {
+    top: 8px;
+    right: 12px;
+  }
+
+  .frame5-gate-stack::before {
+    inset: -24px -40px -28px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .frame5-cover,
   .frame5-play,

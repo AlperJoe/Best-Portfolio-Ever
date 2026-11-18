@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { FrameEffects } from "../frame1/effectsCanvas";
 import { frame2Config, type CardPoint, type Frame2Card, type Frame2CardId } from "./config";
 import { createEmbers, drawEmbers, stepEmbers, type Ember } from "./embers";
-import { placeHero, type HeroPlacement } from "./placeHero";
+import { placeHero, placeHeroPhone, type HeroPlacement } from "./placeHero";
 import "./Frame2.css";
 
 type Pose = "from" | "open" | "shut";
@@ -31,6 +31,20 @@ function usePrefersReducedMotion() {
   }, []);
 
   return reduced;
+}
+
+function usePhone() {
+  const query = `(max-width: ${frame2Config.phone.maxWidth - 0.02}px)`;
+  const [phone, setPhone] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setPhone(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+
+  return phone;
 }
 
 function cardBox(points: CardPoint[], image: HeroPlacement): CSSProperties {
@@ -284,11 +298,12 @@ type OpenLayout = {
   gemAt: number;
 };
 
-function cardFrame(picW: number) {
-  const frameOuter = Math.max(4, Math.round(picW * 0.015));
-  const frameGold = Math.max(6, Math.round(picW * 0.02));
-  const radius = Math.max(12, Math.round(picW * 0.038));
-  const gem = Math.max(7, Math.round(picW * 0.016));
+/** Bronze band, gold frame, corners and marks, sized from the card's shorter side. */
+function cardFrame(side: number) {
+  const frameOuter = Math.max(4, Math.round(side * 0.015));
+  const frameGold = Math.max(6, Math.round(side * 0.02));
+  const radius = Math.max(12, Math.round(side * 0.038));
+  const gem = Math.max(7, Math.round(side * 0.016));
   return {
     frameOuter,
     frameGold,
@@ -299,24 +314,49 @@ function cardFrame(picW: number) {
 }
 
 /**
- * Picture card at about 5:7, with the text beside it when the frame is wide
- * and under it when the frame is narrow. The whole group stays inside the frame.
+ * The picture card around a picture in its own aspect ratio, from the card's
+ * outer width. The bands depend on the card's height, so it settles in a few steps.
+ */
+function pictureCard(picW: number) {
+  const aspect = frame2Config.open.mediaAspect;
+  let frame = cardFrame(Math.min(picW, picW / aspect));
+  let picH = picW / aspect;
+  for (let step = 0; step < 3; step += 1) {
+    const band = 2 * (frame.frameOuter + frame.frameGold);
+    picH = Math.round((picW - band) / aspect + band);
+    frame = cardFrame(Math.min(picW, picH));
+  }
+  return { picW: Math.round(picW), picH, frame };
+}
+
+/** Widest picture card that is at most `picH` tall. */
+function pictureCardForHeight(picH: number) {
+  const aspect = frame2Config.open.mediaAspect;
+  const band = 2 * (cardFrame(picH).frameOuter + cardFrame(picH).frameGold);
+  let card = pictureCard(Math.floor((picH - band) * aspect + band));
+  while (card.picH > picH && card.picW > 40) card = pictureCard(card.picW - 2);
+  return card;
+}
+
+/**
+ * The picture card takes the shape of its picture, with the text beside it
+ * when the frame is wide and under it when the frame is narrow. The text
+ * panel is only as tall as its text. The whole group stays inside the frame.
  */
 function layoutOpenCard(frameW: number, frameH: number, textNeed: number): OpenLayout {
   const open = frame2Config.open;
   const need = Math.max(160, textNeed || open.textEstimate);
-  const aspect = open.pictureAspect;
 
   const pack = (
     mode: "wide" | "narrow",
-    picW: number,
-    picH: number,
+    card: ReturnType<typeof pictureCard>,
     panelW: number,
     panelH: number,
     gap: number,
   ): OpenLayout => {
+    const { picW, picH } = card;
     const layoutW = mode === "wide" ? picW + gap + panelW : Math.max(picW, panelW);
-    const layoutH = mode === "wide" ? Math.max(picH, panelH) : picH + gap + panelH;
+    const layoutH = mode === "wide" ? Math.max(picH, Math.min(need, panelH)) : picH + gap + Math.min(need, panelH);
     const originX = mode === "wide" ? picW / 2 : (layoutW - picW) / 2 + picW / 2;
     const originY = mode === "wide" ? layoutH / 2 : picH / 2;
     return {
@@ -332,7 +372,7 @@ function layoutOpenCard(frameW: number, frameH: number, textNeed: number): OpenL
       originY,
       restDx: originX - layoutW / 2,
       restDy: originY - layoutH / 2,
-      ...cardFrame(picW),
+      ...card.frame,
     };
   };
 
@@ -340,47 +380,27 @@ function layoutOpenCard(frameW: number, frameH: number, textNeed: number): OpenL
   const gap = open.wideGap;
   const availW = frameW - margin * 2;
   const availH = frameH - margin * 2;
-  let picH = Math.min(availH, open.pictureMax);
-  let picW = Math.round(picH * aspect);
-  let panelW = Math.min(open.panelMax, Math.max(open.panelMin, availW - gap - picW));
-  if (picW + gap + open.panelMin > availW) {
-    panelW = open.panelMin;
-    picW = Math.max(160, Math.floor(availW - gap - panelW));
-    picH = Math.round(picW / aspect);
-  } else if (picW + gap + panelW > availW) {
-    panelW = availW - gap - picW;
-  }
+  let picW = Math.min(open.pictureMaxWidth, availW - gap - open.panelMax);
+  if (picW < open.pictureMinWidth) picW = availW - gap - open.panelMin;
+  let card = pictureCard(Math.max(160, picW));
+  if (card.picH > availH) card = pictureCardForHeight(availH);
+  const panelW = Math.min(open.panelMax, availW - gap - card.picW);
   const wideFits =
     frameW >= open.wideAt &&
-    picW >= 200 &&
-    picH >= 260 &&
-    picH <= availH &&
+    card.picW >= open.pictureMinWidth &&
     panelW >= open.panelMin &&
-    picW + gap + panelW <= availW + 1;
-  if (wideFits) return pack("wide", picW, picH, panelW, picH, gap);
+    card.picW + gap + panelW <= availW + 1;
+  if (wideFits) return pack("wide", card, panelW, availH, gap);
 
   const narrowMargin = open.narrowMargin;
   const narrowGap = open.narrowGap;
   const boxW = Math.max(160, frameW - narrowMargin * 2);
   const boxH = Math.max(200, frameH - narrowMargin * 2);
   const minPic = 150;
-  let narrowPicW = Math.min(boxW, Math.round(open.pictureMax * aspect));
-  let narrowPicH = Math.round(narrowPicW / aspect);
-  let panelH = need;
-  if (narrowPicH + narrowGap + panelH > boxH) {
-    const room = boxH - narrowGap - panelH;
-    if (room >= minPic) {
-      narrowPicH = Math.floor(room);
-      narrowPicW = Math.min(boxW, Math.round(narrowPicH * aspect));
-      narrowPicH = Math.round(narrowPicW / aspect);
-      if (narrowPicH + narrowGap + panelH > boxH) panelH = boxH - narrowGap - narrowPicH;
-    } else {
-      narrowPicH = minPic;
-      narrowPicW = Math.min(boxW, Math.round(narrowPicH * aspect));
-      panelH = Math.max(120, boxH - narrowGap - narrowPicH);
-    }
-  }
-  return pack("narrow", narrowPicW, narrowPicH, boxW, panelH, narrowGap);
+  let narrow = pictureCard(Math.min(boxW, open.pictureMaxWidth));
+  const room = boxH - narrowGap - need;
+  if (narrow.picH > room) narrow = pictureCardForHeight(Math.max(minPic, room));
+  return pack("narrow", narrow, boxW, Math.max(120, boxH - narrowGap - narrow.picH), narrowGap);
 }
 
 function escapeRegExp(value: string) {
@@ -457,6 +477,7 @@ function cardBounds(points: CardPoint[], image: HeroPlacement) {
 
 export function Frame2() {
   const reduced = usePrefersReducedMotion();
+  const phone = usePhone();
   const frameRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
@@ -474,6 +495,8 @@ export function Frame2() {
   const [place, setPlace] = useState<HeroPlacement>(() =>
     placeHero(window.innerWidth, window.innerHeight, frame2Config.image.bottomClear, heroOptions),
   );
+  /** Phones: the painting's stage under the intro, in frame pixels. */
+  const [stage, setStage] = useState<{ top: number; height: number } | null>(null);
   const [open, setOpen] = useState<OpenCard | null>(null);
   const [copyNeed, setCopyNeed] = useState(0);
   const [inView, setInView] = useState(false);
@@ -493,19 +516,43 @@ export function Frame2() {
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
+    const intro = introRef.current;
     if (!frame) return;
 
     const apply = () => {
+      if (!phone || !intro) {
+        frame.style.height = "";
+        setStage(null);
+        setPlace(
+          placeHero(frame.clientWidth, frame.clientHeight, frame2Config.image.bottomClear, heroOptions),
+        );
+        return;
+      }
+      // The intro sits in one column on top, and the painting fills the rest of the screen under it.
+      const settings = frame2Config.phone;
+      const width = frame.clientWidth;
+      const top = Math.round(intro.offsetTop + intro.offsetHeight + settings.stageGap);
+      const { crop } = settings;
+      const cropH = (width / (crop.w * frame2Config.image.width)) * crop.h * frame2Config.image.height;
+      const height = Math.round(Math.max(window.innerHeight - top, cropH));
+      frame.style.height = `${top + height}px`;
+      setStage((current) => (current && current.top === top && current.height === height ? current : { top, height }));
       setPlace(
-        placeHero(frame.clientWidth, frame.clientHeight, frame2Config.image.bottomClear, heroOptions),
+        placeHeroPhone(width, top, height, frame2Config.image.width, frame2Config.image.height, crop),
       );
     };
 
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(frame);
-    return () => observer.disconnect();
-  }, []);
+    if (intro) observer.observe(intro);
+    window.addEventListener("resize", apply);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", apply);
+      frame.style.height = "";
+    };
+  }, [phone]);
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -513,7 +560,48 @@ export function Frame2() {
     const line = lineRef.current;
     if (!frame || !intro || !line) return;
 
+    /**
+     * Phones: the line sits at the top of the stage, left of Pedro's hair, and
+     * its curve drops onto the middle card.
+     */
+    const placePhoneLine = () => {
+      const settings = frame2Config.phone;
+      const hairLeft = place.left + settings.lineHairX * place.width;
+      line.style.setProperty("--line-max", `${Math.max(120, hairLeft - settings.lineLeft - settings.lineFaceGap)}px`);
+      const frameRect = frame.getBoundingClientRect();
+      const middleCard = frame2Config.cards.items[1];
+      const middleNode = buttonRefs.current[middleCard.id];
+      const cardMid = middleNode ? liveTopMid(middleCard, middleNode, frameRect) : cardTopMid(middleCard.points, place);
+      const lastText =
+        line.querySelector<HTMLElement>(".frame2-line-help") ??
+        line.querySelector<HTMLElement>(".frame2-line-text");
+      const textBottom = lastText ? lastText.offsetTop + lastText.offsetHeight : 0;
+      const lineWidth = line.offsetWidth;
+      const { min, startGap, cardGap } = frame2Config.line.arrow;
+      const top = Math.min((stage?.top ?? 0) + settings.lineTop, cardMid.y - cardGap - min - startGap - textBottom);
+      const left = settings.lineLeft;
+      setIntroFit(1);
+      setLineBox((current) =>
+        current &&
+        current.mode === "above" &&
+        Math.abs(current.left - left) < 0.5 &&
+        Math.abs(current.top - top) < 0.5 &&
+        Math.abs(current.width - lineWidth) < 0.5 &&
+        Math.abs(current.textBottom - textBottom) < 0.5 &&
+        Math.abs(current.tipX - cardMid.x) < 0.5 &&
+        Math.abs(current.tipY - cardMid.y) < 0.5
+          ? current
+          : { left, top, width: lineWidth, textBottom, mode: "above", tipX: cardMid.x, tipY: cardMid.y },
+      );
+    };
+
     const fitBlock = () => {
+      if (phone) {
+        intro.style.setProperty("--intro-fit", "1");
+        placePhoneLine();
+        return;
+      }
+      line.style.removeProperty("--line-max");
       const logoTop = place.top + frame2Config.regions.logo.y * place.height;
       const hairLeft = place.left + frame2Config.regions.hairX * place.width;
       const cardTop = Math.min(
@@ -615,7 +703,7 @@ export function Frame2() {
     return () => {
       cancelled = true;
     };
-  }, [place, seen.length]);
+  }, [place, seen.length, phone, stage]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -924,7 +1012,7 @@ export function Frame2() {
   const closing = open?.pose === "shut";
   const motion = frame2Config.open;
   const playFile = frame2Config.intro.stores.playFile;
-  const storeHeight = frame2Config.intro.stores.height;
+  const storeHeight = phone ? frame2Config.phone.storeHeight : frame2Config.intro.stores.height;
   const playImgHeight = storeHeight * (playFile.height / playFile.contentHeight);
   const playPad = storeHeight * (playFile.inset / playFile.contentHeight);
   const playVisibleWidth = storeHeight * (playFile.contentWidth / playFile.contentHeight);
@@ -1005,9 +1093,21 @@ export function Frame2() {
     "--invite-draw": `${frame2Config.line.inviteDraw}s`,
     "--arrow-room": `${frame2Config.line.arrow.room}px`,
     "--arrow-stroke": `${frame2Config.line.arrow.stroke}px`,
+    "--phone-margin": `${frame2Config.phone.margin}px`,
+    "--phone-top": `${frame2Config.phone.top}px`,
+    "--phone-headline": `${frame2Config.phone.headlineSize}px`,
+    "--phone-lead": `${frame2Config.phone.leadSize}px`,
+    "--sheet-bg": frame2Config.phone.sheet.background,
+    "--sheet-title": `${frame2Config.phone.sheet.titleSize}px`,
+    "--sheet-body": `${frame2Config.phone.sheet.bodySize}px`,
+    "--sheet-pad": `${frame2Config.phone.sheet.pad}px`,
   } as CSSProperties;
 
-  const dimmed = !!open && (open.pose === "open" || (reduced && open.pose === "shut"));
+  // On a phone the sheet covers the whole screen, so the scene behind it is left as it is.
+  const dimmed = !phone && !!open && (open.pose === "open" || (reduced && open.pose === "shut"));
+  const heroFade = stage
+    ? `linear-gradient(to bottom, transparent ${(stage.top - place.top).toFixed(1)}px, #000 ${(stage.top - place.top + frame2Config.phone.fade).toFixed(1)}px)`
+    : undefined;
   const lineCopy =
     seen.length === 0
       ? frame2Config.line.before
@@ -1044,6 +1144,7 @@ export function Frame2() {
   })();
   const sectionClass = [
     "frame2",
+    phone ? "is-phone" : "",
     dimmed ? "is-dim" : "",
     open?.pose === "shut" && !reduced ? "is-closing" : "",
     reduced ? "is-reduced" : "",
@@ -1067,6 +1168,8 @@ export function Frame2() {
             top: `${place.top}px`,
             width: `${place.width}px`,
             height: `${place.height}px`,
+            maskImage: heroFade,
+            WebkitMaskImage: heroFade,
           }}
         />
         {frame2Config.cards.items.map((card, index) => (
@@ -1167,7 +1270,11 @@ export function Frame2() {
         ) : null}
       </div>
 
-      {open && active ? (
+      {open && active && phone ? (
+        <div className={open.pose === "open" ? "frame2-open is-sheet is-shown" : "frame2-open is-sheet"}>
+          <PhoneSheet card={active} dialogRef={dialogRef} closeRef={closeRef} videoRef={videoRef} onClose={requestClose} />
+        </div>
+      ) : open && active ? (
         <div
           className="frame2-open"
           onMouseDown={(event) => {
@@ -1220,6 +1327,53 @@ function CardMedia({
   }
   if (card.image) return <img className="frame2-picture" src={card.image.src} alt={card.image.alt} />;
   return null;
+}
+
+function CardLinks({ card }: { card: Frame2Card }) {
+  if (card.links.length === 0) return null;
+  return (
+    <div className="frame2-card-links">
+      {card.links.map((link) => (
+        <a key={link.href} className="frame2-file" href={link.href} target="_blank" rel="noopener noreferrer">
+          <FileIcon />
+          {link.label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+/** Phones: an open card fills the screen. The picture or video on top, the text under it, and the close button at the top right. */
+function PhoneSheet({
+  card,
+  dialogRef,
+  closeRef,
+  videoRef,
+  onClose,
+}: {
+  card: Frame2Card;
+  dialogRef: RefObject<HTMLDivElement | null>;
+  closeRef: RefObject<HTMLButtonElement | null>;
+  videoRef: RefObject<HTMLVideoElement | null>;
+  onClose: () => void;
+}) {
+  return (
+    <div ref={dialogRef} className="frame2-phone-sheet" role="dialog" aria-modal="true" aria-labelledby="frame2-card-title">
+      <button ref={closeRef} type="button" className="frame2-close frame2-phone-close" aria-label="Close" onClick={onClose}>
+        ×
+      </button>
+      <div className="frame2-phone-scroll">
+        <div className="frame2-phone-media">
+          <CardMedia card={card} videoRef={videoRef} />
+        </div>
+        <div className="frame2-phone-copy">
+          <h2 id="frame2-card-title">{card.title}</h2>
+          <MarkedCopy body={card.body} marks={card.marks} />
+          <CardLinks card={card} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function OpenCardView({
@@ -1333,16 +1487,7 @@ function OpenCardView({
           <div className="frame2-copy-main">
             <MarkedCopy body={card.body} marks={card.marks} />
           </div>
-          {card.links.length > 0 ? (
-            <div className="frame2-card-links">
-              {card.links.map((link) => (
-                <a key={link.href} className="frame2-file" href={link.href} target="_blank" rel="noopener noreferrer">
-                  <FileIcon />
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          ) : null}
+          <CardLinks card={card} />
         </div>
       </div>
     </div>

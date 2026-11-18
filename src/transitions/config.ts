@@ -33,17 +33,41 @@ export const scrollConfig = {
   /**
    * Catching a frame. A wheel, trackpad or touch gesture that reaches a frame,
    * in either direction, stops on it and the rest of that gesture is ignored.
-   * The next gesture moves on from there. A wheel or trackpad gesture ends
-   * after quietMs without input, measured with each event's own timestamp.
-   * A touch gesture ends when the finger lifts.
+   * The next gesture moves on from there. A touch gesture ends when the finger
+   * lifts. A wheel or trackpad catch lets go at the first of: quietMs without
+   * input, measured with each event's own timestamp; a new swipe, seen when
+   * the event size rises again after falling; or releaseMs after the catch.
+   * The speed cap holds after a release.
    * Keys are not gestures, and an interlude's resting place is not a frame,
    * so neither of those catches.
    */
   gesture: {
     /** No wheel or trackpad input for this long ends the gesture, in milliseconds. */
     quietMs: 200,
+    /**
+     * A new swipe during a catch: an event larger than swipeRise times the
+     * smallest event since the sizes began to fall, and larger than swipeMinPx.
+     */
+    swipeRise: 1.5,
+    swipeMinPx: 8,
+    /** A catch lets go this long after it happened, in milliseconds of event time. */
+    releaseMs: 600,
     /** Most the scene moves during a gesture, in screen heights per second. */
     maxPerSecond: 2.5,
+  },
+
+  /**
+   * Phones. Below this screen width a frame may be taller than the screen.
+   * It then gets extra scroll length equal to its extra height, and its
+   * content moves up with the scroll until its bottom meets the bottom of
+   * the screen. Going down, the catch is at the top of the frame. Going up,
+   * it is at the bottom.
+   */
+  tall: {
+    /** Screens narrower than this, in pixels. */
+    maxWidth: 700,
+    /** A key press inside a tall frame moves this many screen heights. */
+    keyStep: 0.85,
   },
 
   /** Scroll lengths of an interlude, in screen heights. */
@@ -94,6 +118,13 @@ export const OPENING_EVENT = "tx:opening";
 
 /** CSS variable on the stage with the progress past the last frame, from 0 to 1. */
 export const TAIL_VAR = "--tx-tail";
+
+/**
+ * CSS variable on a frame's slot with how far a tall frame's content is moved
+ * up, in pixels. A layer at `top: var(--tx-scroll, 0px)` with the screen's
+ * height covers the screen.
+ */
+export const SCROLL_VAR = "--tx-scroll";
 
 export function frameIndex(id: FrameId) {
   return frameOrder.indexOf(id as (typeof frameOrder)[number]);

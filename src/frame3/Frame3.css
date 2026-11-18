@@ -431,6 +431,116 @@
   margin-bottom: 0;
 }
 
+/*
+  Phones: one column in reading order. The label, the title and the intro,
+  then the map with its legend, then the rest of the copy, the tools line and
+  the two invitations. The frame grows as tall as its content.
+*/
+@media (max-width: 699.98px) {
+  .frame3 {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    min-height: 100dvh;
+    box-sizing: border-box;
+    padding: 56px var(--phone-margin) 64px;
+  }
+
+  .frame3-world {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent var(--band-top-fade, 20%),
+      #000 var(--band-top, 30%),
+      #000 var(--band-bot, 50%),
+      transparent var(--band-bot-fade, 60%)
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent var(--band-top-fade, 20%),
+      #000 var(--band-top, 30%),
+      #000 var(--band-bot, 50%),
+      transparent var(--band-bot-fade, 60%)
+    );
+  }
+
+  .frame3-copy {
+    display: contents;
+    --body-size: var(--phone-body);
+    --intro-size: var(--phone-body);
+    --title-size: var(--phone-title);
+  }
+
+  .frame3-stage,
+  .frame3-below,
+  .frame3-refs {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
+  }
+
+  .frame3-copy > *,
+  .frame3-stage,
+  .frame3-below,
+  .frame3-refs {
+    position: relative;
+    z-index: 4;
+    order: 5;
+  }
+
+  .frame3-eyebrow {
+    order: 1;
+  }
+
+  .frame3-title {
+    order: 2;
+    max-width: 16ch;
+  }
+
+  .frame3-intro {
+    order: 3;
+  }
+
+  .frame3-stage {
+    order: 4;
+    z-index: 1;
+    margin-top: 28px;
+  }
+
+  .frame3-below {
+    order: 4;
+    margin-top: 12px;
+  }
+
+  .frame3-copy > .frame3-label:first-of-type {
+    margin-top: 36px;
+  }
+
+  .frame3-project {
+    order: 6;
+    align-self: flex-start;
+  }
+
+  .frame3-refs {
+    order: 7;
+    align-self: flex-start;
+    margin-top: 16px;
+  }
+
+  .frame3-panel {
+    left: 0;
+    right: auto;
+    width: calc(100vw - 2 * var(--phone-margin));
+    max-width: none;
+  }
+
+  .frame3-note {
+    max-width: min(220px, 70%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .frame3-panel {
     transition: none;
