@@ -264,6 +264,128 @@ function cardTopMid(points: CardPoint[], image: HeroPlacement): Point {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+type OpenBox = {
+  width: number;
+  height: number;
+  pictureHeight: number | null;
+};
+
+function sameBox(current: OpenBox | null, next: OpenBox) {
+  return (
+    !!current &&
+    current.width === next.width &&
+    current.height === next.height &&
+    current.pictureHeight === next.pictureHeight
+  );
+}
+
+/** Largest card that stays within the frame, with the picture shown at its own aspect ratio. */
+function measureOpenCard(face: HTMLElement, frameW: number, frameH: number): OpenBox {
+  const { height, sideInset, widthCap, minWidth, mediaAspect } = frame2Config.open;
+  const maxH = Math.max(120, Math.floor(frameH * height) - 2);
+  const maxW = Math.max(280, Math.min(Math.floor(frameW - sideInset * 2), widthCap));
+  const floorW = Math.min(maxW, minWidth);
+  const picture = face.querySelector<HTMLElement>(".frame2-picture");
+
+  const read = (width: number, pictureHeight: number | null) => {
+    face.style.width = `${width}px`;
+    face.style.maxHeight = "none";
+    if (!picture) return face.offsetHeight;
+    if (pictureHeight == null) {
+      picture.style.height = "";
+      picture.style.width = "";
+      picture.style.maxWidth = "";
+      picture.style.alignSelf = "";
+    } else {
+      const style = getComputedStyle(face);
+      const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const available = Math.max(80, face.clientWidth - padX);
+      let nextH = pictureHeight;
+      let nextW = pictureHeight * mediaAspect;
+      if (nextW > available) {
+        nextW = available;
+        nextH = nextW / mediaAspect;
+      }
+      picture.style.height = `${nextH}px`;
+      picture.style.width = `${nextW}px`;
+      picture.style.maxWidth = "100%";
+      picture.style.alignSelf = "center";
+    }
+    return face.offsetHeight;
+  };
+
+  let pictureHeight: number | null = null;
+  let width = maxW;
+  let measured = read(width, null);
+  if (measured > maxH) {
+    let lo = floorW;
+    let hi = maxW;
+    width = floorW;
+    for (let step = 0; step < 14; step += 1) {
+      const mid = Math.round((lo + hi) / 2);
+      const next = read(mid, null);
+      if (next <= maxH) {
+        width = mid;
+        measured = next;
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    measured = read(width, null);
+    if (measured > maxH && picture) {
+      const overflow = measured - maxH;
+      pictureHeight = Math.max(72, Math.round(picture.offsetHeight - overflow));
+      measured = read(width, pictureHeight);
+      let guard = 0;
+      while (measured > maxH && width > floorW && guard < 8) {
+        width = Math.max(floorW, width - 24);
+        pictureHeight = null;
+        measured = read(width, null);
+        if (measured > maxH) {
+          pictureHeight = Math.max(72, Math.round(picture.offsetHeight - (measured - maxH)));
+          measured = read(width, pictureHeight);
+        }
+        guard += 1;
+      }
+    }
+  }
+
+  return { width, height: measured, pictureHeight };
+}
+
+function Headline({ text, gold }: { text: string; gold: string }) {
+  const at = text.indexOf(gold);
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="frame2-gold">{gold}</span>
+      {text.slice(at + gold.length)}
+    </>
+  );
+}
+
+function InviteRule() {
+  return (
+    <svg className="frame2-invite-rule" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d="M0.8 3.7 C 10 2.2, 16 4.6, 28 3.4 C 40 2.1, 48 4.7, 60 3.3 C 72 2, 82 4.5, 92 3.2 C 95.5 2.7, 98 3.6, 99.3 2.9"
+        pathLength={1}
+      />
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg className="frame2-file-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.3 1.6h5.8l3.6 3.5v9.3H3.3z" />
+      <path d="M9 1.8v3.4h3.5" />
+    </svg>
+  );
+}
+
 function cardBounds(points: CardPoint[], image: HeroPlacement) {
   const xs = points.map((point) => point[0]);
   const ys = points.map((point) => point[1]);
@@ -299,10 +421,9 @@ export function Frame2() {
     placeHero(window.innerWidth, window.innerHeight, frame2Config.image.bottomClear, heroOptions),
   );
   const [open, setOpen] = useState<OpenCard | null>(null);
-  const [openCardHeight, setOpenCardHeight] = useState(0);
+  const [openBox, setOpenBox] = useState<OpenBox | null>(null);
   const [inView, setInView] = useState(false);
   const [seen, setSeen] = useState<Frame2CardId[]>([]);
-  const [arrowKey, setArrowKey] = useState(0);
   const lineOn = inView && !open;
   const [introFit, setIntroFit] = useState(1);
   const [lineBox, setLineBox] = useState<{
@@ -353,10 +474,10 @@ export function Frame2() {
         const rect = intro.getBoundingClientRect();
         const bottom = rect.bottom - frameRect.top;
         const right = rect.right - frameRect.left;
-        const lineHeight = line.offsetHeight || frame2Config.line.size * frame2Config.line.line;
+        // The body stays 17px. The invitation finds its own place beside or above the cards.
         const limit = Math.min(
           logoTop - frame2Config.intro.logoGap,
-          cardTop - lineHeight - frame2Config.line.blockGap - frame2Config.line.cardGap,
+          cardTop - frame2Config.line.blockGap,
         );
         const clear = bottom <= limit + 0.5 && right <= hairLeft - frame2Config.intro.hairGap;
         if (clear) break;
@@ -606,12 +727,6 @@ export function Frame2() {
     return () => observer.disconnect();
   }, []);
 
-  const lineWasOn = useRef(false);
-  useLayoutEffect(() => {
-    if (lineOn && !lineWasOn.current) setArrowKey((key) => key + 1);
-    lineWasOn.current = lineOn;
-  }, [lineOn]);
-
   function requestClose() {
     setOpen((current) => {
       if (!current || current.pose === "shut" || current.pose === "from") return current;
@@ -679,14 +794,28 @@ export function Frame2() {
   }, [open, reduced]);
 
   useLayoutEffect(() => {
-    const node = dialogRef.current;
-    if (!open || !node) {
-      setOpenCardHeight((current) => (current === 0 ? current : 0));
+    const face = dialogRef.current;
+    const frame = frameRef.current;
+    if (!open || !face || !frame) {
+      setOpenBox((current) => (current == null ? current : null));
       return;
     }
-    const next = node.offsetHeight;
-    setOpenCardHeight((current) => (Math.abs(current - next) < 0.5 ? current : next));
-  }, [open]);
+    let cancelled = false;
+    const apply = () => {
+      const node = dialogRef.current;
+      const box = frameRef.current;
+      if (cancelled || !node || !box) return;
+      const next = measureOpenCard(node, box.clientWidth, box.clientHeight);
+      setOpenBox((current) => (sameBox(current, next) ? current : next));
+    };
+    apply();
+    document.fonts?.ready.then(() => {
+      if (!cancelled) apply();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open?.id, place]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -703,7 +832,7 @@ export function Frame2() {
   const frameHeight = frameRef.current?.clientHeight || window.innerHeight;
   const frameWidth = frameRef.current?.clientWidth || window.innerWidth;
   const openMaxHeight = frameHeight * frame2Config.open.height;
-  const openWidth = openMaxHeight * frame2Config.open.aspect;
+  const openWidth = openBox?.width ?? Math.min(frameWidth - frame2Config.open.sideInset * 2, frame2Config.open.widthCap);
   const boxes = frame2Config.cards.items.map((card) => cardBounds(card.points, place));
   const middle = boxes[1];
   const handSpan = boxes.reduce(
@@ -732,7 +861,7 @@ export function Frame2() {
             (frameRect.top + frameRect.height / 2),
         }
       : { dx: 0, dy: 0 };
-  const faceHeight = openCardHeight || openMaxHeight;
+  const faceHeight = openBox?.height || openMaxHeight;
   const atHand = !!open && !reduced && (open.pose === "from" || open.pose === "shut");
   const handScale = faceHeight > 0 ? Math.min(1, (buttonRect?.height || frameHeight * 0.18) / faceHeight) : 1;
   const closing = open?.pose === "shut";
@@ -783,7 +912,6 @@ export function Frame2() {
     "--close-size": `${motion.close}px`,
     "--open-pad": `${motion.pad}px`,
     "--open-gap": `${motion.gap}px`,
-    "--open-picture": `${frameHeight * motion.picture}px`,
     "--perspective": `${motion.perspective}px`,
     "--hero-position": `${frame2Config.image.positionX * 100}% ${frame2Config.image.positionY * 100}%`,
     "--intro-left": `${frame2Config.intro.left * 100}%`,
@@ -795,9 +923,9 @@ export function Frame2() {
     "--headline-size": `clamp(${headline.min}px, ${headline.preferred}vw, ${headline.max}px)`,
     "--headline-line": String(headline.line),
     "--headline-color": headline.color,
-    "--lead-max": `${frameWidth * lead.maxWidth}px`,
     "--lead-size": `${lead.size}px`,
     "--lead-weight": String(lead.weight),
+    "--lead-strong": String(lead.emphasis),
     "--lead-line": String(lead.line),
     "--lead-opacity": String(lead.opacity),
     "--lead-gap": `${lead.gap}px`,
@@ -812,13 +940,12 @@ export function Frame2() {
     "--line-height": String(frame2Config.line.line),
     "--line-color": frame2Config.line.color,
     "--line-shadow": frame2Config.line.shadow,
-    "--line-shine": `${frame2Config.line.shine}s`,
     "--line-fade": `${frame2Config.line.fade}s`,
     "--line-help-size": `${frame2Config.line.helperSize}px`,
     "--line-help-weight": String(frame2Config.line.helperWeight),
-    "--line-help-opacity": String(frame2Config.line.helperOpacity),
+    "--line-help-color": frame2Config.line.helperColor,
     "--line-help-gap": `${frame2Config.line.helperGap}px`,
-    "--arrow-draw": `${frame2Config.line.arrow.draw}s`,
+    "--invite-draw": `${frame2Config.line.inviteDraw}s`,
     "--arrow-room": `${frame2Config.line.arrow.room}px`,
     "--arrow-stroke": `${frame2Config.line.arrow.stroke}px`,
   } as CSSProperties;
@@ -917,8 +1044,14 @@ export function Frame2() {
           />
         ) : null}
         <div ref={introRef} className="frame2-intro">
-          <h2 className="frame2-headline">{headline.text}</h2>
-          <p className="frame2-lead">{lead.text}</p>
+          <h2 className="frame2-headline">
+            <Headline text={headline.text} gold={headline.gold} />
+          </h2>
+          <p className="frame2-lead">
+            {lead.parts.map((part) =>
+              part.emphasis ? <strong key={part.text}>{part.text}</strong> : <span key={part.text}>{part.text}</span>,
+            )}
+          </p>
           <div className="frame2-stores">
             <a
               className="frame2-store"
@@ -957,12 +1090,14 @@ export function Frame2() {
         aria-hidden={lineOn ? undefined : true}
         style={lineBox ? { left: `${lineBox.left}px`, top: `${lineBox.top}px` } : { visibility: "hidden" }}
       >
-        <p className="frame2-line-text">{lineCopy}</p>
+        <p className="frame2-line-text" tabIndex={lineOn ? 0 : -1}>
+          {lineCopy}
+          <InviteRule />
+        </p>
         {showHelper ? <p className="frame2-line-help">{frame2Config.line.helper}</p> : null}
         <div className="frame2-arrow-space" />
         {lineBox && arrow ? (
           <svg
-            key={arrowKey}
             className="frame2-arrow"
             width={arrow.width}
             height={arrow.height}
@@ -995,6 +1130,7 @@ export function Frame2() {
             backWidth={openWidth}
             backHeight={faceHeight}
             faceWidth={openWidth}
+            pictureHeight={openBox?.pictureHeight ?? null}
             flightRef={flightRef}
             dialogRef={dialogRef}
             closeRef={closeRef}
@@ -1021,6 +1157,7 @@ function OpenCardView({
   backWidth,
   backHeight,
   faceWidth,
+  pictureHeight,
   flightRef,
   dialogRef,
   closeRef,
@@ -1040,6 +1177,7 @@ function OpenCardView({
   backWidth: number;
   backHeight: number;
   faceWidth: number;
+  pictureHeight: number | null;
   flightRef: RefObject<HTMLDivElement | null>;
   dialogRef: RefObject<HTMLDivElement | null>;
   closeRef: RefObject<HTMLButtonElement | null>;
@@ -1049,6 +1187,15 @@ function OpenCardView({
 }) {
   const closing = flightOpacity === 0;
   const motion = frame2Config.open;
+  const pictureStyle: CSSProperties | undefined =
+    pictureHeight == null
+      ? undefined
+      : {
+          height: `${pictureHeight}px`,
+          width: `${pictureHeight * motion.mediaAspect}px`,
+          maxWidth: "100%",
+          alignSelf: "center",
+        };
   return (
     <div
       ref={flightRef}
@@ -1099,6 +1246,7 @@ function OpenCardView({
             <video
               ref={videoRef}
               className="frame2-picture"
+              style={pictureStyle}
               src={frame2Config.assets.gameplay}
               poster={frame2Config.assets.poster}
               preload="none"
@@ -1106,13 +1254,14 @@ function OpenCardView({
               controls
             />
           ) : card.image ? (
-            <img className="frame2-picture" src={card.image.src} alt={card.image.alt} />
+            <img className="frame2-picture" style={pictureStyle} src={card.image.src} alt={card.image.alt} />
           ) : null}
           <p>{card.body}</p>
           {card.links.length > 0 ? (
             <div className="frame2-card-links">
               {card.links.map((link) => (
-                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer">
+                <a key={link.href} className="frame2-file" href={link.href} target="_blank" rel="noopener noreferrer">
+                  <FileIcon />
                   {link.label}
                 </a>
               ))}
