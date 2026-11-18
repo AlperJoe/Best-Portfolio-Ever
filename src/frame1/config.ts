@@ -31,8 +31,18 @@ export const frame1Config = {
   layout: {
     /** Each card at its bottom edge, as a fraction of the frame width. */
     cardWidth: 0.3,
+    /**
+     * Narrowest a side panel may become so the larger portrait still clears it.
+     * Below this, the portrait stops growing instead.
+     */
+    cardWidthMin: 0.27,
     /** Portrait height in the full frame, as a fraction of the frame height. */
     portrait: 0.48,
+    /**
+     * The full state aims for this multiple of `portrait`. It stops short
+     * where a larger portrait would cross a panel.
+     */
+    portraitScale: 1.4,
     /** Largest the portrait gets in the start state, as a fraction of the frame height. */
     portraitStart: 0.62,
     /** Top, bottom and outer margins, as a fraction of the frame height. */
@@ -54,7 +64,7 @@ export const frame1Config = {
     /** Clear space between the center column and each card, in pixels. */
     columnGutter: 16,
     /** School marks, in pixels. They sit in the bottom margin. */
-    mark: 22,
+    mark: 44,
     /** Stacked cards when the frame is narrower than this, or taller than it is wide. */
     stackBelow: 1000,
     /**
@@ -95,6 +105,32 @@ export const frame1Config = {
       /** Opaque through this share of the oval. The rest fades to clear. */
       solid: 0.78,
     },
+    /**
+     * How far the visible portrait reaches from its center, at each height
+     * fraction, after the oval mask. The full state grows until this outline
+     * meets a panel.
+     */
+    visibleHalf: [
+      [0.208, 0.024],
+      [0.25, 0.08],
+      [0.292, 0.124],
+      [0.333, 0.176],
+      [0.375, 0.196],
+      [0.417, 0.192],
+      [0.458, 0.188],
+      [0.5, 0.18],
+      [0.542, 0.168],
+      [0.583, 0.156],
+      [0.625, 0.124],
+      [0.667, 0.112],
+      [0.708, 0.112],
+      [0.75, 0.148],
+      [0.792, 0.22],
+      [0.833, 0.32],
+      [0.875, 0.339],
+      [0.917, 0.297],
+      [0.958, 0.242],
+    ],
   },
   /**
    * Campus photos are framed for the sloped panels: sky behind the text,
@@ -236,6 +272,8 @@ export const frame1Config = {
   },
   /** Line under the name in the full frame. */
   tagline: "I'm a game programmer. I build gameplay systems and game AI.",
+  /** Small labels under the tagline, in the full frame. */
+  chips: ["Gameplay systems", "Game AI", "Multiplayer servers"],
   /** First sentence, shown alone on a compact card. The rest follows in the full text. */
   buasLead:
     "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals.",
@@ -245,7 +283,7 @@ export const frame1Config = {
   bilkentWhy: {
     line: "These courses made me love this work.",
     label: "Why I say this",
-    note: "Every system runs on algorithms. At the low level, small blocks each do one exact job, and you engineer them together into something new. Underneath it all is one skill, designing algorithms at both the high and the low level and adapting them to the problem. These courses taught me that skill.",
+    note: "Everything a computer does is an algorithm. At the lowest level, small blocks each make one exact piece, and engineers combine those pieces into new systems. Every one of those systems begins with someone who designs algorithms, big and small, and adapts them to the problem. These courses taught me to be that person.",
   },
   /** The "Why I say this" control: same color as the course codes nearby. */
   why: {
