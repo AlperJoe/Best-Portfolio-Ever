@@ -120,7 +120,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: var(--f5-content-top);
+  top: calc(var(--f5-content-top) + var(--f5-below-title));
   bottom: calc(var(--f5-back-bottom) + var(--f5-back-clearance));
   z-index: 3;
   display: grid;
@@ -140,8 +140,7 @@
   min-width: 0;
 }
 
-.frame5-label,
-.frame5-long-heading {
+.frame5-label {
   font-family: var(--font-text), sans-serif;
   font-size: var(--f5-label-size);
   font-weight: var(--f5-label-weight);
@@ -902,6 +901,7 @@
   padding-right: calc(var(--f5-ov-close) - 6px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  overflow-anchor: none;
 }
 
 .frame5-dialog-text h3 {
@@ -928,23 +928,6 @@
 
 .frame5-more {
   margin-top: 16px;
-}
-
-.frame5-long-part {
-  margin-top: 18px;
-}
-
-.frame5-long-heading {
-  margin: 0;
-  text-transform: none;
-}
-
-.frame5-long-part .frame5-dialog-body {
-  margin-top: 8px;
-}
-
-.frame5-long-part .frame5-dialog-body + .frame5-dialog-body {
-  margin-top: 12px;
 }
 
 .frame5-watch {

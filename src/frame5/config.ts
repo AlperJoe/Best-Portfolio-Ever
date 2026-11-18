@@ -2,12 +2,6 @@ const asset = (name: string) => `${import.meta.env.BASE_URL}assets/frame5/${name
 
 export type HobbyIcon = "piano" | "ticket" | "ball" | "mat" | "piece" | "pan";
 
-/** One block of the longer note. A heading is the small label above its paragraphs. */
-export type FilmPart = {
-  heading?: string;
-  paragraphs: readonly string[];
-};
-
 export type Film = {
   id: string;
   title: string;
@@ -20,10 +14,13 @@ export type Film = {
   warning?: string;
   /** The line under the title on the card. */
   summary: string;
-  /** Short note beside the video when the film opens. */
-  personal: string;
-  /** Longer note, opened in place from "Do you want to understand more about the movie?". */
-  long: readonly FilmPart[];
+  /** Short note beside the video when the film opens. One string per paragraph. */
+  personal: readonly string[];
+  /**
+   * Longer note. It replaces the personal note in the same place.
+   * Plain paragraphs, with no subheads.
+   */
+  long: readonly string[];
 };
 
 /**
@@ -89,12 +86,15 @@ export const frame5 = {
   content: {
     /** Top, as a fraction of the frame height. */
     top: 0.125,
+    /**
+     * Extra room, in pixels, under the title row. At 1280x720 the arrows
+     * hang about 3px past the old content top, so 19px leaves about 16px
+     * between the arrowheads and the Ending A and Ending B labels.
+     */
+    labelGap: 19,
   },
 
-  /**
-   * Small label above each ending, and the subheads inside a film note.
-   * Same size, weight and letter spacing so the hierarchy matches.
-   */
+  /** Small label above each ending. */
   label: {
     size: "14px",
     weight: 600,
@@ -259,15 +259,20 @@ export const frame5 = {
         year: 2023,
         videoId: "Eu5t1X9Fnzc",
         summary:
-          "A friend's relationship with Amsterdam, from the surface to belonging, told through the five stages of change.",
-        personal:
-          "Amsterdam was the first love of a friend of mine. At first his bond with the city stayed on the surface. Over time he fell in love with it and began to feel like a part of it. The film tells that change with no script, only through mise-en-scène and cinematography.",
+          "His first love was a city. A journey through Amsterdam, from being a tourist to feeling at home, and leaving after falling in love.",
+        personal: [
+          "My friend’s first love was a city: Amsterdam. I wanted to tell the story of how that experience changed him, little by little.",
+          "At first, he encounters the city as a tourist. Over time, he begins to feel that he belongs there, and being a visitor is no longer enough. By the time he leaves, he has fallen in love with the city and has to face losing that closeness. He returns home changed by both experiences.",
+          "I used the Kübler-Ross Change Curve as a narrative framework to trace his changing relationship with Amsterdam. Its stages helped me structure the gradual change within him as he experienced the city. I had no script or production team, so I filmed during the trip, looking for moments that could carry that story through mise-en-scène and cinematography. The film took the form of a travel journal, with his changing sense of belonging running through it.",
+        ],
         long: [
-          {
-            paragraphs: [
-              "I had no production team and no time to prepare the shoot, so I made the film in the form of a travel vlog. I caught each scene myself when it matched the story, and then I put the scenes together. The film follows the change through the five stages of change from psychology.",
-            ],
-          },
+          "When I say that Amsterdam was my friend’s first love, I mean it quite literally. His attachment to the city became something more than enjoying a place he was visiting. I wanted to make a film about how that relationship developed and how it changed him.",
+          "At the beginning, he is a tourist. His relationship with Amsterdam stays on the surface: he is visiting somewhere that exists outside his own everyday life. As he spends time there, that distance begins to disappear. He starts to feel that he belongs.",
+          "That feeling changes what it means to be there. He can no longer experience the city as an ordinary tourist, because he has become personally attached to it. Visiting is temporary, but what he feels is no longer something he can leave behind as easily as a trip.",
+          "I used the stages of a psychological theory of change to structure this progression. I wanted to follow the experience piece by piece, showing how each part changes his relationship with the city and leads him into the next. The movement from visitor to belonging gives the journey its emotional direction.",
+          "Leaving carries the loss of that relationship as he experienced it there. He returns having fallen in love and having had to leave that love behind. The journey ends, but he returns as someone who has been changed by it.",
+          "I made the film without a script, a production team, or time to prepare the shoot. That shaped the way I worked. I filmed it as a travel vlog, capturing scenes myself when I felt they belonged to the story, then bringing those moments together in the edit.",
+          "Mise-en-scène and cinematography were how I tried to make his internal change visible. The city and his presence within it had to carry the progression. I wanted the footage of a trip to also hold something personal: the experience of arriving somewhere as a visitor, beginning to feel at home, and then having to leave.",
         ],
       },
       {
@@ -277,34 +282,27 @@ export const frame5 = {
         videoId: "6B0btHK9d2U",
         warning: "Content warning: this film contains violence.",
         summary: "A couple shows how to boil an egg, and the egg stands for a child.",
-        personal:
-          "This film is personal. It comes from the life of a person I love very much, and I did not want to hide that. The whole project began as a film I wanted to dedicate to this person, and in a way it is also a memorial. Their identity stays private, and they agreed to it. It tells a story about a woman and a child that exists even when we do not see it. It can be hard to watch, but that does not make it less real, so I used no effects and no tricks.",
+        personal: [
+          "This film began with someone I love very much. I wanted to make something dedicated to her, shaped by what she had lived through. Her identity remains private, and she has given her consent to this dedication.",
+          "But I knew that many people lived through the same thing. To me, the problem was in the system, and I wanted the film to keep that in view. As personal as its starting point was, I did not want the viewer’s connection to one character to become the centre of the film. That was a difficult choice for me, but it led me to tell the story through a metaphor and a separate narrative: a couple boiling an egg. Through them, I wanted to show how people repeat what they have seen and treat decisions whose consequences shape another person’s life as ordinary, everyday acts.",
+          "The suddenness and impulsiveness mattered to me too. In the reality behind the film, the violence had become part of ordinary life. There was no dramatic build-up, no pause to acknowledge the weight of what was happening. That normality made it more disturbing for me to film, and it is part of what makes it difficult to watch.",
+          "I wanted to show this without adding effects to make it more disturbing or softening it to make it easier to watch. Apart from the doorbell, all sound was recorded naturally, with no dubbing. Finding something difficult to watch does not change the fact that someone endured this violence regularly, while a child grew up exposed to it for years. That thought stayed with me throughout the film.",
+        ],
         long: [
-          {
-            heading: "What really happened",
-            paragraphs: [
-              "The woman in the film is young, and in real life she was even younger. When these things happened to her, she was eight years younger than the actress who plays her. I know this makes the film more disturbing, but this is what happened. I play the father. I made my voice as deep as I could and never show myself, because in real life he was twice my age when these things happened.",
-            ],
-          },
-          {
-            heading: "Why a system",
-            paragraphs: [
-              "My aim was to show it as it is. I did not try to make it disturbing. However hard the story is, I did not want the film to ask for pity for one person. Many people inside this system became like this without being aware of it. So I built a wider narrative and tied it to one theme, a cycle that repeats itself. The film is about that system.",
-            ],
-          },
-          {
-            heading: "Reading the film",
-            paragraphs: [
-              "We asked a couple, Ahmet and Ayşe, how to boil an egg, and they do what they have always seen. The egg stands for a child.",
-              "Ayşe comes quickly out of the dark into a room with very bright light. The contrast shows that her decision was born in the dark. She wants to be in the light, which means she wants to take on the idea of having a child, but all of it is an attempt to escape the dark. Both decisions, boiling the egg and having a child, come from a sudden urge.",
-              "The axis is broken on purpose, so we sense that something does not fit. She goes on anyway. She already knows how to make the egg. The hard part is why she makes it, and that question is already behind her. The pan to the right shows how smooth the action is for her, and with no technical mistake she leaves the egg to boil, the way a child is left open to the world.",
-              "At first she watches over it. Then a rack focus shows that her attention moves to herself, because she is the one trying to survive. She is tense, and we do not know why yet.",
-              "Then the doorbell rings, as it does again and again. This visit is part of a cycle. Two pans to the left take her to the door and tell us that something dangerous and wrong is coming. She knows who it is and what will happen, and she opens the door anyway. While the egg boils, we see what the child is exposed to. Surrounded and unable to move, it takes it all without a reaction.",
-              "The egg boils hard, and a small crack appears. It has to stay where it is, so it only keeps bubbling inside.",
-              "In the end, the mother turns off the timer and the stove as if nothing happened. A lot of time has passed, and the egg and the place it grew up in are broken. We hear her throw the egg into the trash as if that were normal. To her, a broken person is normal, because she grew up seeing the same thing.",
-              "Every sound except the doorbell is natural. There are no effects and no dubbing.",
-            ],
-          },
+          "The film began as a dedication to someone I love very much. For me, it also has the value of preserving a memory: acknowledging what she lived through without revealing her identity. She has given her consent to that dedication. I wanted that personal connection to remain part of how I speak about the film, because it is the reason I made it.",
+          "Her mother was eight years younger than the actress playing Ayşe when she was regularly experiencing this violence. I know that makes an already difficult story harder to sit with, but it was part of the reality behind it. I play the father myself. I kept him unseen and made my voice as deep as I could, because the real father was twice my age when these events took place.",
+          "That personal connection made it difficult for me to step back. But I knew that many people lived through situations like this. I did not want to build the film around one person’s suffering and lead the viewer towards taking sides. I decided to build its structure around the system these people were part of: what they had learned to accept, what they repeated without questioning, and what happened to a child growing up within it. Although that distance was difficult for me, I felt it would preserve what I wanted the film to express.",
+          "The whole project is subjective. I think of its premise as asking Ahmet and Ayşe, “How do you boil an egg?” Their answer is to do what they have always seen. This is their version of an ordinary act, shaped by the world they know.",
+          "The egg stands for a child, but the central question is the decision that comes before it: what can follow when someone acts on a momentary impulse, perhaps to escape their own reality, without considering what that action will mean. The film is about this particular couple and the consequences of their decisions. Ayşe knows how to boil an egg. What she has not thought through is why she is doing it, or what she is bringing it into.",
+          "She enters quickly from the darkness into a brightly lit space. I wanted the contrast to be conspicuous. The thought of having a child offers her somewhere brighter to go, but the decision itself comes out of the darkness she is trying to escape. She wants to stay in that light, to embrace the idea. On both levels—boiling an egg and having a child—the action begins with a sudden desire whose consequences become clear later.",
+          "At this point, I deliberately break the camera axis. I wanted a visible inconsistency beneath the apparent brightness of the decision: something feels wrong, but she carries on. The rightward pan that follows is smooth. Once she has decided, the practical actions come easily to her. She knows the process, and I stop disrupting its visual continuity. The question of whether to begin has already been passed over.",
+          "She leaves the egg to boil, exposing it to its surroundings as a child is exposed to the world it enters. At first, she stays with it. Then a rack focus shifts our attention to her, following the way her own attention turns inward. She is trying to survive herself. We see her tension before we understand its cause, and the egg is no longer her focus.",
+          "When the doorbell rings, two leftward pans take her towards the door. Within this film, I use those movements to bring back a sense of danger and unease. She knows who is there and what is coming. Her opening the door belongs to an established pattern; we are seeing one occurrence in an ongoing cycle.",
+          "While the egg boils, the violence around it becomes the environment in which it develops. It is enclosed, unable to move away or intervene. A small crack appears as the boiling becomes more violent, but the egg remains where it is. It has nowhere else to go. The disturbance continues inside it.",
+          "By the end, a long time has passed. Ayşe switches off the timer and the stove as though nothing unusual has happened. The egg and the environment it has remained in have deteriorated. We hear her throw it into the rubbish with the same ordinary familiarity.",
+          "For me, that final gesture carries the way the child is treated: damaged within this environment, then discarded as though the damage were simply normal. The egg is treated as rubbish, just as the person it represents is treated as disposable. For Ayşe, this outcome is familiar because it is what she has seen herself. The ending returns to the same learned normality with which the film began.",
+          "I wanted the film to retain the directness of what was performed and recorded. Apart from the doorbell, the sounds are natural, with no added sound effects or dubbing. I avoided effects and tricks intended to heighten the violence. My intention was to show the situation as it was, even when it became uncomfortable to watch. The fact that we struggle to watch it does not change the fact that someone endured it regularly, while a child remained exposed to it for years. Nor does keeping violence outside the image make it absent from the lives being represented.",
+          "Some images I considered did not make it into the film. I had imagined two eggs positioned end to end in the refrigerator as a reference to the womb, and Ayşe carrying the egg towards the stove at the height of her abdomen to suggest pregnancy. I left them out because they did not fit with the other scenes.",
         ],
       },
     ] satisfies Film[],

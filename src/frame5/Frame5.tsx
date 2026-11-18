@@ -321,6 +321,7 @@ export function Frame5() {
   const grainRef = useRef<HTMLCanvasElement>(null);
   const linesRef = useRef<HTMLUListElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const coverRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -335,6 +336,18 @@ export function Frame5() {
   const [longOpen, setLongOpen] = useState(false);
   const [hot, setHot] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
+
+  // The note can be taller than the panel. Bring it back to the first line
+  // whenever the visitor opens a film or swaps the personal and long text.
+  useLayoutEffect(() => {
+    const node = textRef.current;
+    if (!node) return;
+    node.scrollTop = 0;
+    const frame = requestAnimationFrame(() => {
+      if (textRef.current) textRef.current.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [overlay?.film.id, longOpen]);
 
   const shownRef = useRef(shown);
   const reducedRef = useRef(reduced);
@@ -530,6 +543,7 @@ export function Frame5() {
     "--f5-arrow-line-ms": `${Math.round(ARROWS.drawSeconds * ARROWS.lineShare * 1000)}ms`,
     "--f5-arrow-head-ms": `${Math.round(ARROWS.drawSeconds * (1 - ARROWS.lineShare) * 1000)}ms`,
     "--f5-content-top": `${frame5.content.top * 100}%`,
+    "--f5-below-title": `${frame5.content.labelGap}px`,
     "--f5-cta": frame5.cta.color,
     "--f5-cta-size": frame5.cta.size,
     "--f5-cta-draw": frame5.cta.draw,
@@ -856,33 +870,25 @@ export function Frame5() {
                   ) : null}
                 </div>
               </div>
-              <div className="frame5-dialog-text">
+              <div className="frame5-dialog-text" ref={textRef}>
                 <h3 id="frame5-dialog-title">{activeFilm.title}</h3>
                 <p className="frame5-dialog-year">{activeFilm.year}</p>
-                <p className="frame5-dialog-body">{activeFilm.personal}</p>
+                <div className="frame5-note" id="frame5-film-note">
+                  {(longOpen ? activeFilm.long : activeFilm.personal).map((paragraph, index) => (
+                    <p key={index} className="frame5-dialog-body">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
                 <button
                   type="button"
                   className="frame5-cta frame5-more"
                   aria-expanded={longOpen}
-                  aria-controls={longOpen ? "frame5-long-text" : undefined}
+                  aria-controls="frame5-film-note"
                   onClick={() => setLongOpen((open) => !open)}
                 >
                   <CtaLabel>{longOpen ? OVERLAY.lessLabel : OVERLAY.moreLabel}</CtaLabel>
                 </button>
-                {longOpen ? (
-                  <div className="frame5-long" id="frame5-long-text">
-                    {activeFilm.long.map((part) => (
-                      <section key={part.heading ?? "note"} className="frame5-long-part">
-                        {part.heading ? <h4 className="frame5-long-heading">{part.heading}</h4> : null}
-                        {part.paragraphs.map((paragraph) => (
-                          <p key={paragraph} className="frame5-dialog-body">
-                            {paragraph}
-                          </p>
-                        ))}
-                      </section>
-                    ))}
-                  </div>
-                ) : null}
                 <a
                   className="frame5-watch"
                   href={B.watch(activeFilm.videoId)}
