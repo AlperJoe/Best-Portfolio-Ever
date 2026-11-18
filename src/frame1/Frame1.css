@@ -105,8 +105,11 @@
 
 .campus {
   position: absolute;
+  top: 0;
+  height: 100%;
+  width: var(--campus-box, 50%);
   max-width: none;
-  object-fit: fill;
+  object-fit: cover;
   filter: grayscale(1) contrast(var(--photo-contrast));
   transform: translate3d(var(--photo-shift-x), var(--photo-shift-y), 0);
   mask-image: linear-gradient(to bottom, transparent 0, #000 var(--campus-fade, 80px), #000 100%);
@@ -114,17 +117,13 @@
 }
 
 .campus-buas {
-  left: var(--buas-photo-left, 0px);
-  top: var(--buas-photo-top, 0px);
-  width: var(--buas-photo-w, 100%);
-  height: var(--buas-photo-h, 100%);
+  left: 0;
+  object-position: left bottom;
 }
 
 .campus-bilkent {
-  left: var(--bilkent-photo-left, 0px);
-  top: var(--bilkent-photo-top, 0px);
-  width: var(--bilkent-photo-w, 100%);
-  height: var(--bilkent-photo-h, 100%);
+  right: 0;
+  object-position: right bottom;
 }
 
 .tone-hue {
@@ -433,6 +432,7 @@
 }
 
 .course {
+  position: relative;
   display: block;
   max-width: 100%;
   color: inherit;
@@ -461,7 +461,12 @@
 
 .course-name::after {
   content: " ↗";
+  position: absolute;
+  left: 100%;
+  bottom: 0;
   opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
   transition: opacity 0.2s ease;
 }
 
@@ -489,8 +494,8 @@
   pointer-events: none;
   bottom: var(--name-bottom, 6%);
   left: 50%;
-  width: var(--middle-width, 40%);
-  max-width: 40%;
+  width: var(--middle-width, 44%);
+  max-width: var(--middle-width, 44%);
   transform: translateX(-50%);
   text-align: center;
 }

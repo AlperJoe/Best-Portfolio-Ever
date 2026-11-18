@@ -500,7 +500,7 @@ export function Frame2() {
     "--fill-blur": `${frame2Config.image.fillBlur}px`,
     "--fill-dark": String(frame2Config.image.fillDark),
     "--open-blur": `${frame2Config.image.openBlur}px`,
-    "--open-brightness": String(frame2Config.image.openBrightness),
+    "--open-veil": motion.veil,
     "--dim-in": `${motion.openTime}s`,
     "--dim-out": `${motion.closeTime}s`,
     "--open-ease": motion.openEase,
@@ -518,9 +518,9 @@ export function Frame2() {
     "--open-body-opacity": String(motion.bodyOpacity),
     "--close-size": `${motion.close}px`,
     "--open-pad": `${motion.pad}px`,
+    "--open-gap": `${motion.gap}px`,
+    "--open-picture": `${frameHeight * motion.picture}px`,
     "--perspective": `${motion.perspective}px`,
-    "--fire-core": motion.fireCore,
-    "--fire-mid": motion.fire,
     "--hero-position": `${frame2Config.image.positionX * 100}% ${frame2Config.image.positionY * 100}%`,
     "--intro-left": `${frame2Config.intro.left * 100}%`,
     "--intro-top": `${frame2Config.intro.top * 100}%`,
@@ -642,6 +642,7 @@ export function Frame2() {
 
       <canvas ref={emberRef} className="frame2-embers" aria-hidden="true" />
       <canvas ref={grainRef} className="frame2-grain" aria-hidden="true" />
+      <div className="frame2-veil" aria-hidden="true" />
 
       <p
         ref={lineRef}
@@ -659,7 +660,6 @@ export function Frame2() {
             if (event.target === event.currentTarget) requestClose();
           }}
         >
-          <div className="frame2-fire" />
           <OpenCardView
             card={active}
             dx={atHand ? handOffset.dx : 0}

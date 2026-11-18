@@ -22,8 +22,8 @@ export const frame2Config = {
     bottomClear: 0,
     fillBlur: 40,
     fillDark: 0.46,
+    /** Blur on the scene while a card is open. Same timing as the card. */
     openBlur: 4,
-    openBrightness: 0.35,
   },
   /** Fractions of the hero that must stay fully on screen. */
   regions: {
@@ -42,7 +42,7 @@ export const frame2Config = {
     logoGap: 18,
     hairGap: 16,
     headline: {
-      text: "I programmed Pedro from scratch, without a game engine.",
+      text: "I programmed Pedro from the ground up, on a bare-bones framework.",
       color: "#F5EEE4",
       weight: 800,
       stretch: 80,
@@ -53,7 +53,7 @@ export const frame2Config = {
       maxWidth: 0.46,
     },
     lead: {
-      text: "I wrote its game AI, its rules and its multiplayer server in pure Lua, and shipped it on iOS and Android.",
+      text: "Pedro runs on LÖVE, the lightweight Lua framework behind Balatro. LÖVE gives you drawing, sound and input. I wrote everything else myself in about 18,000 lines of Lua: card motion and layout, the rules, the bots and a multiplayer server. Pedro is live on iOS and Android.",
       size: 19,
       weight: 400,
       line: 1.5,
@@ -112,7 +112,7 @@ export const frame2Config = {
     items: [
       {
         id: "play" as const,
-        title: "How it plays",
+        title: "Built from scratch",
         points: [
           [0.4977, 0.6439],
           [0.5518, 0.6101],
@@ -121,12 +121,17 @@ export const frame2Config = {
         ] satisfies CardPoint[],
         video: true,
         image: null,
-        body: "Everyone tries to keep their score low, because only the lowest survives. You bluff, discard and use special cards to swap hands, steal cards and reveal hidden values. You can play online with friends in rooms, or offline against bots.",
-        links: [] as { label: string; href: string }[],
+        body: "LÖVE has no cards, no tables and no animations. I wrote my own animation system for dealing, dragging and flipping cards, a layout service that places the whole table from one set of coordinates on any screen size, and an input manager that sends every tap to the right layer.",
+        links: [
+          {
+            label: "Read ui/CardAnimator.lua",
+            href: "https://github.com/AlperJoe/Pedro/blob/main/ui/CardAnimator.lua",
+          },
+        ],
       },
       {
         id: "multiplayer" as const,
-        title: "Multiplayer",
+        title: "The server",
         points: [
           [0.5349, 0.5909],
           [0.631, 0.5682],
@@ -138,7 +143,7 @@ export const frame2Config = {
           src: `${base}assets/frame2/pedro-multiplayer.jpg`,
           alt: "Pedro's Join Room screen",
         },
-        body: "I wrote a custom TCP server for real-time play. Players create and join rooms. The server holds the true game state and checks every move, and clients stay in sync through state snapshots. Keeping every rule check on the server side is how I cut down desync errors.",
+        body: "I wrote the multiplayer server myself, in Lua on plain TCP. It runs the rooms, keeps the only true copy of each game and checks every move. A player who drops can reconnect to their own seat, and bots take over the seats nobody is using. Offline games run the same game controller inside the app, so single player and online play follow exactly the same rules.",
         links: [
           {
             label: "Read server/TcpServer.lua",
@@ -160,7 +165,7 @@ export const frame2Config = {
           src: `${base}assets/frame2/pedro-rules.jpg`,
           alt: "Pedro's special cards rule book",
         },
-        body: "The code has three layers: client, server and core. All rules, phases and card effects live in plain Lua logic, separate from the rendering. The bots make rule-based decisions with memory and targeting, with no machine learning. I also prepared the iOS release and kept it stable on different screen sizes.",
+        body: "All the rules live in one pure Lua module with no LÖVE code in it, so the same rules run on the phone and on the server. My bots play by those rules. Each bot keeps three memories, its own hand, the cards it has seen in other hands and the cards already thrown, and decides its moves from them, with no machine learning.",
         links: [
           {
             label: "Read core/Rules.lua",
@@ -176,15 +181,17 @@ export const frame2Config = {
   },
   open: {
     /** Cap for the open card, as a fraction of the frame. Its width stays 5/7 of this height. */
-    height: 0.78,
+    height: 0.9,
     /** Width divided by the height cap. */
     aspect: 5 / 7,
     /** Flight, turn and growth together, from the hand to the open card. */
     openTime: 0.45,
     /** Return to the hand. The face fades out across this, and the card fades in the last third. */
     closeTime: 0.4,
-    openEase: "cubic-bezier(0.16, 1, 0.3, 1)",
-    closeEase: "cubic-bezier(0.33, 0, 0.2, 1)",
+    /** Soft ease-out. The card, the veil and the blur share it. */
+    openEase: "cubic-bezier(0.22, 1, 0.36, 1)",
+    /** Soft ease-in-out. The card, the veil and the blur share it. */
+    closeEase: "cubic-bezier(0.45, 0.05, 0.55, 0.95)",
     /** Keeps the back toward the camera until the face fades in. */
     openSpinEase: "cubic-bezier(0.45, 0, 0.2, 0.15)",
     closeSpinEase: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -200,19 +207,23 @@ export const frame2Config = {
     navy: "#111F2C",
     gold: "#EFC785",
     goldHover: "#FFE7B5",
-    titleSize: 28,
+    titleSize: 24,
     titleWeight: 700,
     titleStretch: 100,
-    bodySize: 17,
+    bodySize: 15,
     bodyWeight: 400,
     bodyStretch: 100,
     bodyLine: 1.5,
     bodyOpacity: 0.88,
-    close: 44,
-    pad: 28,
+    close: 40,
+    pad: 20,
+    /** Space between the title, picture, text and links. */
+    gap: 10,
+    /** Picture height as a fraction of the frame, so the copy still fits at 1280×720. */
+    picture: 0.2,
     perspective: 1400,
-    fire: "rgba(255, 132, 42, 0.55)",
-    fireCore: "rgba(255, 196, 110, 0.72)",
+    /** Warm dark veil behind an open card. */
+    veil: "rgba(20, 6, 4, 0.72)",
   },
   embers: {
     count: 16,

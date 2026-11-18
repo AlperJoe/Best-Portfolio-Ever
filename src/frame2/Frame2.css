@@ -21,11 +21,28 @@
 .frame2-scene {
   position: absolute;
   inset: 0;
+  filter: blur(0.01px);
   transition: filter var(--dim-out) var(--close-ease);
 }
 
 .frame2.is-dim .frame2-scene {
-  filter: blur(var(--open-blur)) brightness(var(--open-brightness));
+  filter: blur(var(--open-blur));
+  transition-duration: var(--dim-in);
+  transition-timing-function: var(--open-ease);
+}
+
+.frame2-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--open-veil, rgba(20, 6, 4, 0.72));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dim-out) var(--close-ease);
+}
+
+.frame2.is-dim .frame2-veil {
+  opacity: 1;
   transition-duration: var(--dim-in);
   transition-timing-function: var(--open-ease);
 }
@@ -267,28 +284,6 @@
   perspective: var(--perspective);
 }
 
-.frame2-fire {
-  position: absolute;
-  inset: -10% -6% -8%;
-  background:
-    radial-gradient(ellipse at 50% 38%, var(--fire-core) 0%, var(--fire-mid) 28%, rgba(120, 24, 8, 0.16) 52%, transparent 72%);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  filter: blur(36px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dim-in) var(--open-ease);
-}
-
-.frame2.is-dim .frame2-fire {
-  opacity: 1;
-}
-
-.frame2.is-closing .frame2-fire {
-  opacity: 0;
-  transition-duration: var(--dim-out);
-  transition-timing-function: var(--close-ease);
-}
-
 .frame2-flight {
   position: absolute;
   left: 50%;
@@ -352,7 +347,7 @@
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--open-gap, 10px);
   padding: var(--open-pad);
   overflow: hidden;
   color: #fff;
@@ -390,11 +385,12 @@
 
 .frame2-picture {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: var(--open-picture, 144px);
   border: 1px solid var(--gold);
   background: #000;
   display: block;
   object-fit: cover;
+  flex: 0 0 auto;
 }
 
 .frame2-card-links {
@@ -490,7 +486,7 @@
 .frame2.is-reduced .frame2-face,
 .frame2.is-reduced .frame2-line,
 .frame2.is-reduced .frame2-scene,
-.frame2.is-reduced .frame2-fire {
+.frame2.is-reduced .frame2-veil {
   transition: none;
 }
 
@@ -509,7 +505,7 @@
   .frame2-flight,
   .frame2-flip,
   .frame2-face,
-  .frame2-fire,
+  .frame2-veil,
   .frame2-line,
   .frame2-store {
     transition: none;

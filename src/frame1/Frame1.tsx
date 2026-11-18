@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { frame1Config } from "./config";
 import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsCanvas";
-import { applySeamVariables, placeCampusPhoto } from "./geometry";
-import { buildPortraitMask, buildSeamMasks } from "./seamMask";
+import { applySeamVariables } from "./geometry";
+import { buildSeamMasks, paintPortraitMask } from "./seamMask";
 import "./Frame1.css";
 
 type Shown = {
@@ -255,34 +255,6 @@ function placeBadges(element: HTMLElement, width: number, height: number) {
   element.style.setProperty("--badge-gap", `${badge.gap}px`);
 }
 
-function placePhoto(
-  element: HTMLElement,
-  prefix: "buas" | "bilkent",
-  width: number,
-  height: number,
-) {
-  const photo = frame1Config.campus[prefix];
-  const placed = placeCampusPhoto({
-    frameW: width,
-    frameH: height,
-    aspect: photo.aspect,
-    anchorX: photo.anchorX,
-    anchorY: photo.anchorY,
-    placeX: photo.placeX,
-    placeY: photo.placeY,
-    scale: photo.scale,
-    side: prefix === "buas" ? "left" : "right",
-    pad: frame1Config.campus.pad,
-    coverTop: frame1Config.campus.coverTop,
-    naturalWidth: photo.naturalWidth,
-    maxZoom: photo.maxZoom,
-  });
-  element.style.setProperty(`--${prefix}-photo-left`, `${placed.left}px`);
-  element.style.setProperty(`--${prefix}-photo-top`, `${placed.top}px`);
-  element.style.setProperty(`--${prefix}-photo-w`, `${placed.width}px`);
-  element.style.setProperty(`--${prefix}-photo-h`, `${placed.height}px`);
-}
-
 function paintMotion(
   element: HTMLElement,
   width: number,
@@ -319,6 +291,8 @@ export function Frame1() {
   const startRef = useRef<() => void>(() => {});
   const redrawRef = useRef<() => void>(() => {});
   const layoutRef = useRef({ w: 0, h: 0 });
+  const portraitMaskRef = useRef<HTMLCanvasElement | null>(null);
+  const portraitCutRef = useRef<EffectsOptions["portraitCut"]>(null);
   const shiftRef = useRef({ x: 0, y: 0, photoX: 0, photoY: 0 });
   const cursorRef = useRef({ x: 0, y: 0, inside: false });
   const runtimeRef = useRef({
@@ -371,8 +345,7 @@ export function Frame1() {
       const shift = shiftRef.current;
       paintMotion(element, rect.width, rect.height, shift.x, shift.y, shift.photoX, shift.photoY);
       element.style.setProperty("--campus-fade", `${frame1Config.campus.fade * rect.height}px`);
-      placePhoto(element, "buas", rect.width, rect.height);
-      placePhoto(element, "bilkent", rect.width, rect.height);
+      element.style.setProperty("--campus-box", `${frame1Config.campus.boxWidth * 100}%`);
       placeBadges(element, rect.width, rect.height);
       element.style.setProperty("--middle-width", `${frame1Config.middle.maxWidth * rect.width}px`);
       element.style.setProperty("--name-bottom", `${frame1Config.middle.bottom * rect.height}px`);
@@ -411,7 +384,9 @@ export function Frame1() {
       element.style.setProperty("--portrait-top", `${portrait.top}px`);
       const fadeEnd = nameTop + frame1Config.portraitLayout.fadeSpan * rect.height;
       const maskShape = frame1Config.portraitLayout.mask;
-      const mask = buildPortraitMask({
+      const maskCanvas = portraitMaskRef.current ?? document.createElement("canvas");
+      portraitMaskRef.current = maskCanvas;
+      const maskInput = {
         top: portrait.top,
         height: portrait.size,
         fadeStart: nameTop,
@@ -425,8 +400,22 @@ export function Frame1() {
         sideSoft: maskShape.sideSoft,
         topClear: maskShape.topClear,
         topSoft: maskShape.topSoft,
-      });
-      if (mask) element.style.setProperty("--portrait-mask", `url("${mask}")`);
+      };
+      paintPortraitMask(maskCanvas, maskInput);
+      if (maskCanvas.width >= 2) {
+        element.style.setProperty("--portrait-mask", `url("${maskCanvas.toDataURL("image/png")}")`);
+      }
+      const aspect =
+        frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight;
+      const portraitW = portrait.size * aspect;
+      portraitCutRef.current = {
+        canvas: maskCanvas,
+        x: (rect.width - portraitW) / 2,
+        y: portrait.top,
+        w: portraitW,
+        h: portrait.size,
+        keep: frame1Config.grainOnPortrait,
+      };
       placeIcons(element, rect.width, rect.height);
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
@@ -464,6 +453,7 @@ export function Frame1() {
       haze: false,
       dust: false,
       grainAlpha: frame1Config.grainAlpha,
+      portraitCut: portraitCutRef.current,
     });
     effectsRef.current = effects;
 
@@ -505,6 +495,7 @@ export function Frame1() {
         haze: false,
         dust: false,
         grainAlpha: frame1Config.grainAlpha,
+        portraitCut: portraitCutRef.current,
       };
     };
 
@@ -905,6 +896,8 @@ export function Frame1() {
         <p className="label">AI & Procedural Generation</p>
         <p className="text">
           Exploring how AI agents can help generate dungeon levels that match a designer's goals.
+          Behavioural agents with different play styles play every generated level, so each level that
+          comes back has already been played and checked.
         </p>
         <button
           ref={researchButtonRef}
@@ -958,7 +951,8 @@ export function Frame1() {
       <div className="middle-copy hud">
         <p className="middle-name">Alper Bozkurt</p>
         <p className="middle-line">
-          Game programmer building gameplay systems, game AI and multiplayer servers.
+          Game programmer. I shipped my own multiplayer game from the ground up, and now I research AI
+          that builds and tests levels.
         </p>
       </div>
       </div>
