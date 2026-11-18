@@ -663,8 +663,7 @@
   color: var(--f5-white-70);
 }
 
-.frame5-film-warning,
-.frame5-dialog-warning {
+.frame5-film-warning {
   margin: 4px 0 0;
   font-family: var(--font-text), sans-serif;
   font-size: var(--f5-warning-size);
@@ -674,10 +673,6 @@
   line-height: 1.35;
   text-transform: none;
   color: var(--f5-warning-color);
-}
-
-.frame5-dialog-warning {
-  margin: 0;
 }
 
 /* Back to the beginning, centered near the bottom. */
@@ -759,10 +754,6 @@
   transform: none;
 }
 
-.frame5-dialog-warning {
-  margin: 0;
-}
-
 .frame5-video {
   position: relative;
   width: 100%;
@@ -778,6 +769,94 @@
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* The egg film waits on its cover until the visitor chooses to watch. */
+
+.frame5-gate {
+  position: absolute;
+  inset: 0;
+}
+
+.frame5-gate img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame5-gate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--f5-gate-veil);
+}
+
+.frame5-gate-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 28px;
+  text-align: center;
+}
+
+.frame5-gate-stack {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+/* A soft pool of dark behind the words, so the poster title does not cut through them. */
+.frame5-gate-stack::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -36px -88px -44px;
+  background: var(--f5-gate-pool);
+  pointer-events: none;
+}
+
+.frame5-gate-mark {
+  display: block;
+  width: var(--f5-gate-mark);
+  height: var(--f5-gate-mark);
+  overflow: visible;
+  color: var(--f5-warning-color);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frame5-gate-dot {
+  stroke-width: 3.4;
+}
+
+.frame5-gate-warning {
+  margin: 0;
+  max-width: 36em;
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--f5-gate-text);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--f5-gate-ink);
+}
+
+.frame5-gate-watch {
+  margin-top: 2px;
 }
 
 .frame5-dialog-text {
@@ -868,10 +947,6 @@
   .frame5-dialog-scroll {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .frame5-dialog-warning {
-    padding-right: var(--f5-ov-close);
   }
 }
 
