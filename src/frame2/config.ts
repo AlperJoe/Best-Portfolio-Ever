@@ -104,11 +104,26 @@ export const frame2Config = {
     /** Image fraction where Pedro's face begins beside the line. */
     faceX: 0.63,
     fade: 0.45,
-    /** Gold curve from the line down to the cards. */
+    /** Gold curve from the line down to the middle card. Its length comes from the layout. */
     arrow: {
       draw: 0.6,
-      length: 58,
-      width: 1.5,
+      /** Room kept under the text inside the line block, which sets where the text sits. */
+      room: 58,
+      stroke: 2.5,
+      /** Space between the last line of text and the start of the curve. */
+      startGap: 6,
+      /** Space between the tip and the top edge of the middle card. */
+      cardGap: 14,
+      /**
+       * Sideways pull on the curve's control point, past the tip, in px. Positive pulls right.
+       * Near 0 the curve lands straight down; larger values swing the end in at more of an angle.
+       */
+      bend: 6,
+      head: {
+        length: 11,
+        /** Angle between each arm and the shaft, in degrees. */
+        angle: 35,
+      },
     },
     /** Short gold dash on the top edge of a card that has been opened. */
     mark: {

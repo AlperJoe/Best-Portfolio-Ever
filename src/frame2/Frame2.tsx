@@ -94,11 +94,59 @@ function seenMark(points: CardPoint[], image: HeroPlacement): CSSProperties {
   };
 }
 
-/** A thin curve that ends in a small downward arrowhead. One path, so it draws as one stroke. */
-function arrowPath(width: number, height: number) {
-  const x = width / 2;
-  const tip = height - 2;
-  return `M ${x} 1 C ${x - width * 0.08} ${height * 0.38}, ${x + width * 0.16} ${height * 0.62}, ${x} ${tip - 8} l -6 -6 l 6 6 l 6 -6`;
+type Point = { x: number; y: number };
+
+/**
+ * One quadratic curve, so it has a single bend, then an open V head along its final direction.
+ * One path, so the draw-on runs down the shaft and out along both arms.
+ */
+function arrowPath(start: Point, tip: Point) {
+  const { bend, head } = frame2Config.line.arrow;
+  const control = { x: tip.x + bend, y: (start.y + tip.y) / 2 };
+  const ex = tip.x - control.x;
+  const ey = tip.y - control.y;
+  const end = Math.hypot(ex, ey) || 1;
+  const bx = -ex / end;
+  const by = -ey / end;
+  const turn = (head.angle * Math.PI) / 180;
+  const arm = (sign: number) => {
+    const cos = Math.cos(turn);
+    const sin = Math.sin(turn) * sign;
+    return {
+      x: tip.x + (bx * cos - by * sin) * head.length,
+      y: tip.y + (bx * sin + by * cos) * head.length,
+    };
+  };
+  const a = arm(1);
+  const b = arm(-1);
+  const f = (value: number) => value.toFixed(2);
+  return [
+    `M ${f(start.x)} ${f(start.y)}`,
+    `Q ${f(control.x)} ${f(control.y)} ${f(tip.x)} ${f(tip.y)}`,
+    `L ${f(a.x)} ${f(a.y)}`,
+    `M ${f(tip.x)} ${f(tip.y)}`,
+    `L ${f(b.x)} ${f(b.y)}`,
+  ].join(" ");
+}
+
+/** Midpoint of a card's top edge, in frame pixels. */
+function cardTopMid(points: CardPoint[], image: HeroPlacement): Point {
+  const local = points.map(([x, y]) => ({
+    x: image.left + x * image.width,
+    y: image.top + y * image.height,
+  }));
+  let edge = 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < local.length; index += 1) {
+    const y = (local[index].y + local[(index + 1) % local.length].y) / 2;
+    if (y < best) {
+      best = y;
+      edge = index;
+    }
+  }
+  const a = local[edge];
+  const b = local[(edge + 1) % local.length];
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
 function cardBounds(points: CardPoint[], image: HeroPlacement) {
@@ -142,7 +190,12 @@ export function Frame2() {
   const [arrowKey, setArrowKey] = useState(0);
   const lineOn = inView && !open;
   const [introFit, setIntroFit] = useState(1);
-  const [lineBox, setLineBox] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [lineBox, setLineBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    textBottom: number;
+  } | null>(null);
   placeRef.current = place;
 
   useLayoutEffect(() => {
@@ -205,15 +258,18 @@ export function Frame2() {
       const introBottom = intro.getBoundingClientRect().bottom - frameRect.top;
       const minTop = introBottom + frame2Config.line.blockGap;
       if (top < minTop) top = minTop;
+      const lastText = line.querySelector<HTMLElement>(".frame2-line-help") ?? line.querySelector<HTMLElement>(".frame2-line-text");
+      const textBottom = lastText ? lastText.offsetTop + lastText.offsetHeight : 0;
 
       setIntroFit((current) => (Math.abs(current - fit) < 0.001 ? current : fit));
       setLineBox((current) =>
         current &&
         Math.abs(current.left - left) < 0.5 &&
         Math.abs(current.top - top) < 0.5 &&
-        Math.abs(current.width - lineWidth) < 0.5
+        Math.abs(current.width - lineWidth) < 0.5 &&
+        Math.abs(current.textBottom - textBottom) < 0.5
           ? current
-          : { left, top, width: lineWidth },
+          : { left, top, width: lineWidth, textBottom },
       );
     };
 
@@ -606,8 +662,8 @@ export function Frame2() {
     "--line-help-opacity": String(frame2Config.line.helperOpacity),
     "--line-help-gap": `${frame2Config.line.helperGap}px`,
     "--arrow-draw": `${frame2Config.line.arrow.draw}s`,
-    "--arrow-length": `${frame2Config.line.arrow.length}px`,
-    "--arrow-width": `${frame2Config.line.arrow.width}px`,
+    "--arrow-room": `${frame2Config.line.arrow.room}px`,
+    "--arrow-stroke": `${frame2Config.line.arrow.stroke}px`,
   } as CSSProperties;
 
   const dimmed = !!open && (open.pose === "open" || (reduced && open.pose === "shut"));
@@ -618,6 +674,14 @@ export function Frame2() {
         ? frame2Config.line.again
         : frame2Config.line.done;
   const showHelper = seen.length === 0;
+  const arrow = (() => {
+    if (!lineBox || lineBox.width <= 0 || lineBox.textBottom <= 0) return null;
+    const card = cardTopMid(frame2Config.cards.items[1].points, place);
+    const start = { x: lineBox.width / 2, y: lineBox.textBottom + frame2Config.line.arrow.startGap };
+    const tip = { x: card.x - lineBox.left, y: card.y - lineBox.top - frame2Config.line.arrow.cardGap };
+    if (tip.y - start.y < frame2Config.line.arrow.head.length) return null;
+    return { start, tip };
+  })();
   const sectionClass = [
     "frame2",
     dimmed ? "is-dim" : "",
@@ -722,14 +786,16 @@ export function Frame2() {
         <p className="frame2-line-text">{lineCopy}</p>
         {showHelper ? <p className="frame2-line-help">{frame2Config.line.helper}</p> : null}
         <div className="frame2-arrow-space" />
-        {lineBox && lineBox.width > 0 ? (
+        {lineBox && arrow ? (
           <svg
             key={arrowKey}
             className="frame2-arrow"
-            viewBox={`0 0 ${lineBox.width} ${frame2Config.line.arrow.length}`}
+            width={lineBox.width}
+            height={arrow.tip.y}
+            viewBox={`0 0 ${lineBox.width} ${arrow.tip.y}`}
             aria-hidden="true"
           >
-            <path d={arrowPath(lineBox.width, frame2Config.line.arrow.length)} pathLength={1} />
+            <path d={arrowPath(arrow.start, arrow.tip)} pathLength={1} />
           </svg>
         ) : null}
       </div>
