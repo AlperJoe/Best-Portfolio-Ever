@@ -604,6 +604,11 @@ export function Frame5() {
     "--f5-ov-close": `${OVERLAY.closeSize}px`,
     "--f5-ov-fade": `${OVERLAY.fadeMs}ms`,
     "--f5-ov-from": String(OVERLAY.fromScale),
+    "--f5-phone-margin": `${frame5.phone.margin}px`,
+    "--f5-phone-a-size": frame5.phone.lineSize,
+    "--f5-phone-photo": `${frame5.phone.photoWidth}px`,
+    "--f5-phone-contact": frame5.phone.contactSize,
+    "--f5-phone-ticket": frame5.phone.ticketSize,
     "--f5-back-bottom": `${frame5.back.bottom}px`,
     "--f5-back-clearance": `${frame5.back.clearance}px`,
   } as CSSProperties;

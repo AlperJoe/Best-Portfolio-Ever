@@ -348,6 +348,19 @@ export const frame5 = {
     clearance: 54,
   },
 
+  /**
+   * Screens narrower than 700px: one column, with the photo smaller beside
+   * the Ending A line and the tickets two to a row.
+   */
+  phone: {
+    /** Side margins, in pixels. */
+    margin: 24,
+    lineSize: "28px",
+    photoWidth: 84,
+    contactSize: "16px",
+    ticketSize: "14px",
+  },
+
   /** The frame Back to the beginning returns to. */
   backTo: "frame1" as const,
 };

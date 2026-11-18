@@ -85,6 +85,16 @@
   text-rendering: geometricPrecision;
 }
 
+.txd-layer.is-narrow .txd-line {
+  width: auto;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.txd-layer.is-narrow .txd-line + .txd-line {
+  margin-top: 0.35em;
+}
+
 .txd-word {
   opacity: 0.15;
 }

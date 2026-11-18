@@ -139,6 +139,20 @@ export const frame3 = {
   white15: "rgba(255, 255, 255, 0.15)",
   noteColor: "rgba(255, 255, 255, 0.92)",
 
+  /**
+   * Screens narrower than maxWidth, in pixels: one column in reading order,
+   * with the map at full width under the intro.
+   */
+  phone: {
+    maxWidth: 700,
+    /** Side margins, in pixels. */
+    margin: "24px",
+    titleSize: "26px",
+    bodySize: "15px",
+    /** The floor tiles fade out over this far above and below the map, in pixels. */
+    edgeFade: 120,
+  },
+
   projectUrl: "https://github.com/AlperJoe/Reinforcement_Learning",
 
   copy: {

@@ -250,7 +250,39 @@ export function Frame3() {
       }
     };
 
+    /** Phones: one column in the page flow. The map is as wide as the column, and the floor tiles line up with it. */
+    const placePhone = () => {
+      const map = mapRef.current;
+      const copy = textRef.current;
+      if (copy) for (const [name] of FIT_SIZES) copy.style.removeProperty(name);
+      refsRef.current?.style.removeProperty("--invite-size");
+      for (const name of ["--text-width", "--map-w", "--group-top", "--caption-top"]) frame.style.removeProperty(name);
+      if (!map) return;
+      const rect = frame.getBoundingClientRect();
+      const mapRect = map.getBoundingClientRect();
+      const chrome = frame3.mapPad + frame3.mapBorderWidth;
+      const innerW = Math.max(0, mapRect.width - chrome * 2);
+      const x = mapRect.left - rect.left;
+      const y = mapRect.top - rect.top;
+      const fade = frame3.phone.edgeFade;
+      frame.style.setProperty("--cell", `${innerW / level.width}px`);
+      frame.style.setProperty("--grid-x", `${x + chrome}px`);
+      frame.style.setProperty("--grid-y", `${y + chrome}px`);
+      frame.style.setProperty("--band-top", `${(y / rect.height) * 100}%`);
+      frame.style.setProperty("--band-top-fade", `${((y - fade) / rect.height) * 100}%`);
+      frame.style.setProperty("--band-bot", `${((y + mapRect.height) / rect.height) * 100}%`);
+      frame.style.setProperty("--band-bot-fade", `${((y + mapRect.height + fade) / rect.height) * 100}%`);
+      frame.style.setProperty("--band-left", "0%");
+      frame.style.setProperty("--band-left-fade", "0%");
+      frame.style.setProperty("--band-right", "100%");
+      frame.style.setProperty("--band-right-fade", "100%");
+    };
+
     const placeMap = () => {
+      if (window.innerWidth < frame3.phone.maxWidth) {
+        placePhone();
+        return;
+      }
       const rect = frame.getBoundingClientRect();
       const columnW = rect.width * (frame3.mapEnd - frame3.mapStart);
       const mapW = Math.min(columnW, rect.height * frame3.mapHeight * 2);
@@ -293,7 +325,7 @@ export function Frame3() {
       const rect = frame.getBoundingClientRect();
       effects.resize(rect.width, rect.height);
       placeMap();
-      placeCaption();
+      if (window.innerWidth >= frame3.phone.maxWidth) placeCaption();
       drewStill = false;
     };
 
@@ -541,6 +573,9 @@ export function Frame3() {
     "--white-55": frame3.white55,
     "--white-88": frame3.white88,
     "--white-15": frame3.white15,
+    "--phone-margin": frame3.phone.margin,
+    "--phone-title": frame3.phone.titleSize,
+    "--phone-body": frame3.phone.bodySize,
     "--cols": String(level.width),
     "--rows": String(level.height),
   } as CSSProperties;

@@ -252,12 +252,15 @@ export const frame2Config = {
     ],
   },
   open: {
-    /** Picture side, width divided by height. The same shape as the card in Pedro's hand. */
-    pictureAspect: 5 / 7,
-    /** Gameplay, the join screen and the rule book are 16:9. Shown whole, inside the card. */
+    /**
+     * Gameplay, the join screen and the rule book are 16:9. The open card takes
+     * this shape, so the picture fills it inside the gold frame with no empty space.
+     */
     mediaAspect: 16 / 9,
-    /** The picture card stops growing taller than this. The frame inset can make it shorter. */
-    pictureMax: 860,
+    /** The picture card stops growing wider than this. The frame inset can make it smaller. */
+    pictureMaxWidth: 860,
+    /** Narrower than this, the text stacks under the picture. */
+    pictureMinWidth: 420,
     /** Text panel beside the card. Below the minimum, the picture stacks on top. */
     panelMin: 300,
     panelMax: 440,
@@ -309,6 +312,46 @@ export const frame2Config = {
     perspective: 1400,
     /** Warm dark veil behind an open card. */
     veil: "rgba(20, 6, 4, 0.72)",
+  },
+  /**
+   * Screens narrower than maxWidth, in pixels. The headline, the body and the
+   * store badges sit in one column on top. Under them the painting is cropped
+   * to Pedro's face and the hand with the cards. A card opens as a sheet over
+   * the whole screen.
+   */
+  phone: {
+    maxWidth: 700,
+    /** Space around the intro column, in pixels. */
+    margin: 24,
+    top: 48,
+    headlineSize: 30,
+    leadSize: 15,
+    storeHeight: 44,
+    /**
+     * The part of the painting the stage shows, in image fractions. It always
+     * spans the screen width. When the screen has less room under the intro
+     * than the crop needs, the frame grows taller.
+     */
+    crop: { x: 0.48, y: 0.03, w: 0.45, h: 0.97 } satisfies ImageBox,
+    /** Space between the badges and the top of the stage, in pixels. */
+    stageGap: 8,
+    /** The painting fades in over this far from the top of the stage, in pixels. */
+    fade: 90,
+    /**
+     * "Pick a card." sits this far from the left edge and from the top of the
+     * stage, and its helper wraps before Pedro's hair, at lineHairX of the image.
+     */
+    lineLeft: 18,
+    lineTop: 10,
+    lineHairX: 0.66,
+    lineFaceGap: 10,
+    /** The open card sheet. */
+    sheet: {
+      background: "#1E0E0B",
+      titleSize: 26,
+      bodySize: 16,
+      pad: 24,
+    },
   },
   embers: {
     count: 16,
