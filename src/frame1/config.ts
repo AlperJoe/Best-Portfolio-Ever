@@ -290,6 +290,40 @@ export const frame1Config = {
     /** Fade after the first transition, in seconds. */
     fade: 0.6,
   },
+  /**
+   * Opening driven by the scroll, used only with ?transition=d. It replaces
+   * the timed opening below and the scroll cue.
+   */
+  scrollOpening: {
+    /** Line under the name in the start state. */
+    hint: "Scroll me to know me better.",
+    /** Space between the name and that line, in pixels. */
+    hintGap: 12,
+    /** Scroll distance from the start state to the full frame, in screen heights. */
+    distance: 1.2,
+    /**
+     * Portrait size in the start state, as a multiple of its size in the full
+     * frame. It grows around the top of the crown and rises toward the top
+     * edge, and the name moves down with it. It stays smaller when the
+     * name and the line would not fit.
+     */
+    portraitStart: 1.3,
+    /** In the start state the top of the crown stays at least this far below the top edge, as a fraction of the frame height. */
+    startTopMin: 0.02,
+    /**
+     * When each part comes in, as a share of the scroll distance. The hint
+     * fades out over its window, everything else fades in. The portrait
+     * shrinks to its place over its window.
+     */
+    order: [
+      { part: "hint", from: 0, to: 0.3 },
+      { part: "portrait", from: 0, to: 0.62 },
+      { part: "sides", from: 0.14, to: 0.62 },
+      { part: "tagline", from: 0.6, to: 0.8 },
+      { part: "icons", from: 0.68, to: 0.88 },
+      { part: "research", from: 0.78, to: 1 },
+    ] as Array<{ part: "hint" | "portrait" | "sides" | "tagline" | "icons" | "research"; from: number; to: number }>,
+  },
   opening: {
     bilkent: 160,
     buas: 620,

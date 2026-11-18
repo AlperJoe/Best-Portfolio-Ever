@@ -773,6 +773,62 @@
   visibility: visible;
 }
 
+/* ?transition=d: the opening follows the scroll. Frame1.tsx writes the --op-* values. */
+.frame.is-scroll-opening .frame-world {
+  opacity: var(--op-world, 1);
+}
+
+.frame.is-scroll-opening .region-left,
+.frame.is-scroll-opening .region-right,
+.frame.is-scroll-opening .copy,
+.frame.is-scroll-opening .crown-glow {
+  opacity: var(--op-sides, 1);
+}
+
+.frame.is-scroll-opening .research-open {
+  opacity: var(--op-research, 1);
+}
+
+.frame.is-scroll-opening .middle-line {
+  opacity: var(--op-tagline, 1);
+}
+
+.frame.is-scroll-opening .icon-link {
+  opacity: var(--op-icons, 1);
+}
+
+.frame.is-scroll-opening .portrait-sharp {
+  transform-origin: 50% var(--crown-origin, 2%);
+  transform: translateY(var(--op-shift, 0px)) scale(var(--op-scale, 1));
+}
+
+.frame.is-scroll-opening .middle-name {
+  transform: translateY(var(--op-name-y, 0px));
+}
+
+.middle-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--hint-top, 100%);
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--middle-line-weight, 400);
+  font-size: var(--middle-line-size, 17px);
+  line-height: var(--middle-line-height, 1.45);
+  color: rgba(255, 255, 255, var(--middle-line-opacity, 0.85));
+  opacity: var(--op-hint, 1);
+  transform: translateY(var(--op-name-y, 0px));
+}
+
+.frame.is-scroll-opening[data-op-sides="0"] .copy,
+.frame.is-scroll-opening[data-op-research="0"] .research-open,
+.frame.is-scroll-opening[data-op-icons="0"] .icon-link,
+.frame.is-scroll-opening[data-op-hint="0"] .middle-hint {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .frame.is-opening .region,
   .frame.is-opening .edge,

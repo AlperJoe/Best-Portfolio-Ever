@@ -3,7 +3,60 @@ import { frame1Config } from "./config";
 import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsCanvas";
 import { applySeamVariables } from "./geometry";
 import { buildSeamMasks, paintPortraitMask } from "./seamMask";
+import { OPENING_EVENT, readVariant } from "../transitions/config";
 import "./Frame1.css";
+
+type OpeningPart = (typeof frame1Config.scrollOpening.order)[number]["part"];
+
+type OpeningState = {
+  /** Scroll progress from the start state, 0, to the full frame, 1. */
+  p: number;
+  /** Portrait scale in the start state. */
+  startScale: number;
+  /** Portrait shift in the start state, in pixels. Negative is up. */
+  startShift: number;
+  /** Distance from the top of the crown down to the top of the name, in the full frame. */
+  nameSpan: number;
+};
+
+function smooth(from: number, to: number, x: number) {
+  if (to <= from) return x >= to ? 1 : 0;
+  const t = Math.min(1, Math.max(0, (x - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Writes the scroll opening onto the frame. With reduced motion it fades through black instead of zooming. */
+function paintOpening(element: HTMLElement, state: OpeningState, reduced: boolean) {
+  const order = frame1Config.scrollOpening.order;
+  let world = 1;
+  let amount = (part: OpeningPart) => {
+    const window = order.find((entry) => entry.part === part);
+    return window ? smooth(window.from, window.to, state.p) : 1;
+  };
+  if (reduced) {
+    const full = state.p >= 0.5 ? 1 : 0;
+    world = Math.abs(1 - 2 * state.p);
+    amount = () => full;
+  }
+  const portrait = amount("portrait");
+  const scale = state.startScale + (1 - state.startScale) * portrait;
+  const shift = state.startShift * (1 - portrait);
+  const parts: Record<string, number> = {
+    hint: 1 - amount("hint"),
+    sides: amount("sides"),
+    tagline: amount("tagline"),
+    icons: amount("icons"),
+    research: amount("research"),
+  };
+  element.style.setProperty("--op-scale", scale.toFixed(5));
+  element.style.setProperty("--op-shift", `${shift.toFixed(2)}px`);
+  element.style.setProperty("--op-name-y", `${(shift + (scale - 1) * state.nameSpan).toFixed(2)}px`);
+  element.style.setProperty("--op-world", world.toFixed(4));
+  for (const [name, value] of Object.entries(parts)) {
+    element.style.setProperty(`--op-${name}`, value.toFixed(4));
+    element.dataset[`op${name[0].toUpperCase()}${name.slice(1)}`] = value > 0.001 ? "1" : "0";
+  }
+}
 
 type Shown = {
   bilkent: boolean;
@@ -276,7 +329,11 @@ function paintMotion(
 
 export function Frame1() {
   const reduced = usePrefersReducedMotion();
-  const playOpening = frame1Config.effects.OPENING_SEQUENCE && !reduced;
+  const [scrollOpening] = useState(() => readVariant() === "d");
+  const playOpening = !scrollOpening && frame1Config.effects.OPENING_SEQUENCE && !reduced;
+  const openingRef = useRef<OpeningState>({ p: 0, startScale: 1, startShift: 0, nameSpan: 0 });
+  const reducedRef = useRef(reduced);
+  reducedRef.current = reduced;
   const [shown, setShown] = useState<Shown>(playOpening ? NONE_SHOWN : ALL_SHOWN);
 
   const frameRef = useRef<HTMLDivElement>(null);
@@ -332,6 +389,7 @@ export function Frame1() {
     if (!element) return;
 
     const apply = () => {
+      if (scrollOpening) element.style.setProperty("--op-name-y", "0px");
       const rect = element.getBoundingClientRect();
       layoutRef.current.w = rect.width;
       layoutRef.current.h = rect.height;
@@ -418,6 +476,23 @@ export function Frame1() {
         keep: frame1Config.grainOnPortrait,
       };
       placeIcons(element, rect.width, rect.height);
+      if (scrollOpening && name instanceof HTMLElement) {
+        const setup = frame1Config.scrollOpening;
+        const hint = element.querySelector<HTMLElement>(".middle-hint");
+        const crownY = frame1Config.portraitLayout.crownFrame * rect.height;
+        const nameSpan = Math.max(1, nameTop - crownY);
+        const hintH = hint?.offsetHeight ?? 0;
+        const floor = rect.height * (1 - frame1Config.middle.bottom);
+        const nameMax = floor - name.offsetHeight - setup.hintGap - hintH;
+        const topMin = setup.startTopMin * rect.height;
+        const startScale = Math.max(1, Math.min(setup.portraitStart, (nameMax - Math.min(topMin, crownY)) / nameSpan));
+        openingRef.current.startScale = startScale;
+        openingRef.current.startShift = Math.min(0, nameMax - crownY - startScale * nameSpan);
+        openingRef.current.nameSpan = nameSpan;
+        element.style.setProperty("--hint-top", `${name.offsetTop + name.offsetHeight + setup.hintGap}px`);
+        element.style.setProperty("--crown-origin", `${frame1Config.portraitLayout.crownTopY * 100}%`);
+        paintOpening(element, openingRef.current, reducedRef.current);
+      }
       effectsRef.current?.resize(rect.width, rect.height);
       redrawRef.current();
     };
@@ -668,6 +743,18 @@ export function Frame1() {
     startRef.current();
   }, [shown.content, reduced]);
 
+  useLayoutEffect(() => {
+    const element = frameRef.current;
+    if (!scrollOpening || !element) return;
+    paintOpening(element, openingRef.current, reduced);
+    const onOpening = (event: Event) => {
+      openingRef.current.p = (event as CustomEvent<number>).detail;
+      paintOpening(element, openingRef.current, reducedRef.current);
+    };
+    window.addEventListener(OPENING_EVENT, onOpening);
+    return () => window.removeEventListener(OPENING_EVENT, onOpening);
+  }, [scrollOpening, reduced]);
+
   useEffect(() => {
     const stage = frameRef.current?.closest(".tx-stage");
     if (!stage) return;
@@ -836,6 +923,7 @@ export function Frame1() {
       className={[
         "frame",
         playOpening ? "is-opening" : "",
+        scrollOpening ? "is-scroll-opening" : "",
         reduced ? "is-reduced" : "",
         research ? "is-research" : "",
       ].filter(Boolean).join(" ")}
@@ -978,20 +1066,23 @@ export function Frame1() {
           Game programmer. I shipped my own multiplayer game from the ground up, and now I research AI
           that builds and tests levels.
         </p>
+        {scrollOpening ? <p className="middle-hint">{frame1Config.scrollOpening.hint}</p> : null}
       </div>
-      <p className={cueOn ? "scroll-cue" : "scroll-cue is-gone"} aria-hidden={cueOn ? undefined : true}>
-        <span>{frame1Config.scrollCue.text}</span>
-        <svg className="scroll-cue-arrow" viewBox="0 0 12 12" aria-hidden="true">
-          <path
-            d="M2.2 4.4 L6 8.1 L9.8 4.4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </p>
+      {scrollOpening ? null : (
+        <p className={cueOn ? "scroll-cue" : "scroll-cue is-gone"} aria-hidden={cueOn ? undefined : true}>
+          <span>{frame1Config.scrollCue.text}</span>
+          <svg className="scroll-cue-arrow" viewBox="0 0 12 12" aria-hidden="true">
+            <path
+              d="M2.2 4.4 L6 8.1 L9.8 4.4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </p>
+      )}
       </div>
 
       {research ? (
