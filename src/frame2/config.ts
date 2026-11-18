@@ -43,6 +43,8 @@ export const frame2Config = {
     hairGap: 16,
     headline: {
       text: "Pedro is an online card game. I programmed all of it on a framework with no game tools.",
+      /** This phrase is gold. The rest of the sentence keeps the headline color. */
+      gold: "no game tools",
       color: "#F5EEE4",
       weight: 800,
       stretch: 80,
@@ -53,19 +55,32 @@ export const frame2Config = {
       maxWidth: 0.46,
     },
     lead: {
-      text: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. I wrote everything else myself in about 18,000 lines of Lua, including card motion and layout, the rules, the bots and an online server. Pedro is live on iOS and Android.",
-      size: 19,
+      size: 17,
       weight: 400,
-      line: 1.5,
+      /** Heavier than the body, in the body's own color. */
+      emphasis: 650,
+      line: 1.55,
       opacity: 0.88,
-      maxWidth: 0.4,
-      gap: 18,
+      /** Matches the gap above the store badges. */
+      gap: 22,
+      parts: [
+        {
+          text: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. I wrote everything else myself in about ",
+          emphasis: false,
+        },
+        { text: "18,000 lines of Lua", emphasis: true },
+        { text: ", including card motion and layout, the rules, the bots and ", emphasis: false },
+        { text: "an online server", emphasis: true },
+        { text: ". Pedro is ", emphasis: false },
+        { text: "live on iOS and Android", emphasis: true },
+        { text: ".", emphasis: false },
+      ],
     },
     stores: {
       height: 52,
       gap: 12,
       lift: 2,
-      above: 28,
+      above: 22,
       appStore: "https://apps.apple.com/tr/app/pedro/id6757151351?l=tr",
       play: "https://play.google.com/store/apps/details?id=com.alperjoe.pedro&hl=tr",
       /**
@@ -84,20 +99,19 @@ export const frame2Config = {
     done: "That's my whole hand.",
     /** Shown under the line until the first card opens. */
     helper: "Each card opens a part I built.",
-    helperSize: 13,
+    helperSize: 14,
     helperWeight: 400,
-    helperOpacity: 0.7,
-    helperGap: 6,
-    size: 30,
-    line: 1.1,
+    /** Warm light, so the helper reads with the invitation. */
+    helperColor: "#F6E7D0",
+    helperGap: 10,
+    size: 20,
+    line: 1.2,
     color: "#EFC785",
     shadow: "drop-shadow(0 2px 12px rgba(0, 0, 0, 0.82))",
     /** Share of Frame 2 that must be visible before the line appears. */
     viewShare: 0.5,
-    /** How often the shine travels across the line. The first pass starts as the line fades in. */
-    shine: 6,
-    /** How long that shine itself takes, inside each cycle. */
-    shineTravel: 2.2,
+    /** The gold underline draws across this, and only while the line is hovered or focused. */
+    inviteDraw: 0.2,
     cardGap: 16,
     /** Gap kept between the line and the cards when the line sits to their left. */
     sideGap: 20,
@@ -108,7 +122,6 @@ export const frame2Config = {
     fade: 0.3,
     /** Gold curve from the line down to the middle card. Its length comes from the layout. */
     arrow: {
-      draw: 0.3,
       /** Room kept under the text inside the line block, which sets where the text sits. */
       room: 58,
       stroke: 2.5,
@@ -235,10 +248,16 @@ export const frame2Config = {
     ],
   },
   open: {
-    /** Cap for the open card, as a fraction of the frame. Its width stays 5/7 of this height. */
-    height: 0.9,
-    /** Width divided by the height cap. */
-    aspect: 5 / 7,
+    /** Cap for the open card, as a fraction of the frame height. */
+    height: 0.8,
+    /** Clear space on each side so the card stays inside the frame. */
+    sideInset: 32,
+    /** The card stops growing wider than this, in pixels. The height cap still wins. */
+    widthCap: 1720,
+    /** Narrowest width tried before the picture itself shrinks. */
+    minWidth: 400,
+    /** Gameplay, the join screen and the rule book are 16:9. Shown whole, never cropped. */
+    mediaAspect: 16 / 9,
     /** Flight, turn and growth together, from the hand to the open card. */
     openTime: 0.45,
     /** Return to the hand. The face fades out across this, and the card fades in the last third. */
@@ -262,20 +281,18 @@ export const frame2Config = {
     navy: "#111F2C",
     gold: "#EFC785",
     goldHover: "#FFE7B5",
-    titleSize: 24,
+    titleSize: 32,
     titleWeight: 700,
     titleStretch: 100,
-    bodySize: 15,
+    bodySize: 16,
     bodyWeight: 400,
     bodyStretch: 100,
-    bodyLine: 1.5,
+    bodyLine: 1.55,
     bodyOpacity: 0.88,
     close: 40,
     pad: 20,
     /** Space between the title, picture, text and links. */
-    gap: 10,
-    /** Picture height as a fraction of the frame, so the copy still fits at 1280×720. */
-    picture: 0.2,
+    gap: 12,
     perspective: 1400,
     /** Warm dark veil behind an open card. */
     veil: "rgba(20, 6, 4, 0.72)",
