@@ -1,5 +1,7 @@
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/frame5/${name}`;
 
+export type HobbyIcon = "piano" | "ticket" | "ball" | "mat" | "piece";
+
 export type Film = {
   id: string;
   title: string;
@@ -88,6 +90,12 @@ export const frame5 = {
     line: "You pushed all the way here. I think we should talk.",
     left: 0.06,
     maxWidth: 0.36,
+    /**
+     * Narrowest width for this half, in pixels. On a short screen the column
+     * is too slim for the photo to sit beside the lines, and the stacked
+     * photo leaves no room under the contact details.
+     */
+    minWidth: 560,
     lineSize: "clamp(30px, 3vw, 52px)",
     lineHeight: 1.1,
     lineGap: "22px",
@@ -125,6 +133,25 @@ export const frame5 = {
     githubColor: "#181717",
     linkedinBackground: "#0A66C2",
     linkedinColor: "#FFFFFF",
+    /** Small block under the contact lines. */
+    hobbies: {
+      heading: "Know me better.",
+      line: "Let's talk about hobbies. This is what I do every week.",
+      items: [
+        { id: "piano", label: "Piano and bass in a jam session" },
+        { id: "ticket", label: "Cinema, up to three times a week" },
+        { id: "ball", label: "Basketball and volleyball" },
+        { id: "mat", label: "Yoga" },
+        { id: "piece", label: "Board games" },
+      ] satisfies { id: HobbyIcon; label: string }[],
+      /** Display face, kept well under the ending line. */
+      headingSize: "clamp(18px, 1.35vw, 22px)",
+      /** Archivo, smaller than the contact lines. */
+      textSize: "13px",
+      /** Space between the contact block and this heading, in pixels. */
+      topGap: "12px",
+      iconSize: "14px",
+    },
   },
 
   endingB: {
