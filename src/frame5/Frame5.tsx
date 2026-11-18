@@ -285,6 +285,7 @@ export function Frame5() {
   const [photoRight, setPhotoRight] = useState(A.photoPlacement === "right");
   const [rolled, setRolled] = useState(false);
   const [overlay, setOverlay] = useState<OverlayState>(null);
+  const [longOpen, setLongOpen] = useState(false);
   const [hot, setHot] = useState<string | null>(null);
 
   const shownRef = useRef(shown);
@@ -312,9 +313,6 @@ export function Frame5() {
 
     setArrowLength(Math.round(Math.min(ARROWS.maxLength, Math.max(ARROWS.minLength, width * ARROWS.length))));
 
-    const band = Math.min(CREDITS.maxHeight, Math.max(CREDITS.minHeight, height * CREDITS.height));
-    frame.style.setProperty("--band-h", `${band}px`);
-
     // A wrapped label keeps its full max width; hug the longest line so the stubs stay snug.
     const scale = frame.getBoundingClientRect().width / width || 1;
     for (const label of frame.querySelectorAll<HTMLElement>(".frame5-ticket-label")) {
@@ -324,6 +322,20 @@ export function Frame5() {
       const widest = Math.max(...[...range.getClientRects()].map((rect) => rect.width));
       if (Number.isFinite(widest)) label.style.width = `${Math.ceil(widest / scale)}px`;
     }
+
+    // Give the tickets the dark room under them when a short screen would clip a second row.
+    const naturalBand = Math.min(CREDITS.maxHeight, Math.max(CREDITS.minHeight, height * CREDITS.height));
+    const contentTop = height * frame5.content.top;
+    const bandBottom = height * CREDITS.bottom;
+    const roomFor = (band: number) => height - contentTop - bandBottom - frame5.content.bottomGap - band;
+    const endingHeight = Math.max(
+      frame.querySelector<HTMLElement>(".frame5-ending-a")?.offsetHeight ?? 0,
+      frame.querySelector<HTMLElement>(".frame5-ending-b")?.offsetHeight ?? 0,
+    );
+    const overflow = endingHeight - roomFor(naturalBand);
+    const band =
+      overflow > 1 ? Math.max(CREDITS.minFitHeight, Math.round(naturalBand - overflow - 2)) : naturalBand;
+    frame.style.setProperty("--band-h", `${band}px`);
 
     if (A.photoPlacement === "auto") {
       const lines = linesRef.current?.offsetWidth ?? 0;
@@ -397,6 +409,7 @@ export function Frame5() {
 
   const openFilm = (film: Film, opener: HTMLElement | null) => {
     openerRef.current = opener;
+    setLongOpen(false);
     setOverlay({ film, phase: "opening" });
   };
 
@@ -539,6 +552,7 @@ export function Frame5() {
     "--f5-ticket-shadow": TICKET.shadow,
     "--f5-stamp-color": TICKET.stamp.color,
     "--f5-stamp-size": `${TICKET.stamp.size}px`,
+    "--f5-stamp-font": TICKET.stamp.fontSize,
     "--f5-stamp-tilt": `${TICKET.stamp.tilt}deg`,
     "--f5-hobby-arrow-w": `${A.hobbies.arrow.width}px`,
     "--f5-b-left": `${B.left * 100}%`,
@@ -725,7 +739,11 @@ export function Frame5() {
                 }}
                 type="button"
                 className={hot === film.id ? "frame5-cover is-hot" : "frame5-cover"}
-                aria-label={`Play ${film.title} (${film.year})`}
+                aria-label={
+                  film.warning
+                    ? `Play ${film.title} (${film.year}). ${film.warning}`
+                    : `Play ${film.title} (${film.year})`
+                }
                 aria-haspopup="dialog"
                 onClick={(event) => openFilm(film, event.currentTarget)}
                 onPointerEnter={() => setHot(film.id)}
@@ -748,6 +766,7 @@ export function Frame5() {
                 <p className="frame5-film-title">
                   {film.title} <span className="frame5-film-year">{film.year}</span>
                 </p>
+                {film.warning ? <p className="frame5-film-warning">{film.warning}</p> : null}
                 <p className="frame5-film-summary">{film.summary}</p>
               </div>
             ))}
@@ -799,29 +818,58 @@ export function Frame5() {
             <button ref={closeRef} type="button" className="frame5-close" aria-label="Close" onClick={closeFilm}>
               ×
             </button>
-            <div className="frame5-video">
-              {overlay.phase !== "closing" ? (
-                <iframe
-                  src={B.embed(activeFilm.videoId)}
-                  title={activeFilm.title}
-                  allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-                  allowFullScreen
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              ) : null}
-            </div>
-            <div className="frame5-dialog-text">
-              <h3 id="frame5-dialog-title">{activeFilm.title}</h3>
-              <p className="frame5-dialog-year">{activeFilm.year}</p>
-              <p className="frame5-dialog-body">{activeFilm.description}</p>
-              <a
-                className="frame5-watch"
-                href={B.watch(activeFilm.videoId)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {OVERLAY.watchLabel} <span aria-hidden="true">↗</span>
-              </a>
+            <div className="frame5-dialog-scroll">
+              <div className="frame5-dialog-media">
+                {activeFilm.warning ? <p className="frame5-dialog-warning">{activeFilm.warning}</p> : null}
+                <div className="frame5-video">
+                  {overlay.phase !== "closing" ? (
+                    <iframe
+                      key={activeFilm.videoId}
+                      src={B.embed(activeFilm.videoId)}
+                      title={activeFilm.title}
+                      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  ) : null}
+                </div>
+              </div>
+              <div className="frame5-dialog-text">
+                <h3 id="frame5-dialog-title">{activeFilm.title}</h3>
+                <p className="frame5-dialog-year">{activeFilm.year}</p>
+                <p className="frame5-dialog-body">{activeFilm.personal}</p>
+                <button
+                  type="button"
+                  className="frame5-more"
+                  aria-expanded={longOpen}
+                  aria-controls={longOpen ? "frame5-long-text" : undefined}
+                  onClick={() => setLongOpen((open) => !open)}
+                >
+                  {longOpen ? OVERLAY.lessLabel : OVERLAY.moreLabel}
+                </button>
+                {longOpen ? (
+                  <div className="frame5-long" id="frame5-long-text">
+                    {activeFilm.long.map((part) => (
+                      <section key={part.heading ?? "note"} className="frame5-long-part">
+                        {part.heading ? <h4 className="frame5-long-heading">{part.heading}</h4> : null}
+                        {part.paragraphs.map((paragraph) => (
+                          <p key={paragraph} className="frame5-dialog-body">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </section>
+                    ))}
+                  </div>
+                ) : null}
+                <a
+                  className="frame5-watch"
+                  href={B.watch(activeFilm.videoId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {OVERLAY.watchLabel} <span aria-hidden="true">↗</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>

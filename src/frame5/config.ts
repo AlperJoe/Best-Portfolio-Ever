@@ -2,13 +2,25 @@ const asset = (name: string) => `${import.meta.env.BASE_URL}assets/frame5/${name
 
 export type HobbyIcon = "piano" | "ticket" | "ball" | "mat" | "piece";
 
+/** One block of the longer note. A heading is the small label above its paragraphs. */
+export type FilmPart = {
+  heading?: string;
+  paragraphs: readonly string[];
+};
+
 export type Film = {
   id: string;
   title: string;
   year: number;
   videoId: string;
+  /** Small line on the card and above the video. */
+  warning?: string;
+  /** The line under the title on the card. */
   summary: string;
-  description: string;
+  /** Short note beside the video when the film opens. */
+  personal: string;
+  /** Longer note, opened in place from "Want to understand it better?". */
+  long: readonly FilmPart[];
 };
 
 /**
@@ -75,7 +87,7 @@ export const frame5 = {
     /** Top, as a fraction of the frame height. */
     top: 0.15,
     /** Gap above the credits band, in pixels. */
-    bottomGap: 12,
+    bottomGap: 8,
   },
 
   label: {
@@ -98,7 +110,7 @@ export const frame5 = {
     minWidth: 560,
     lineSize: "clamp(30px, 3vw, 52px)",
     lineHeight: 1.1,
-    lineGap: "22px",
+    lineGap: "16px",
     /** Photo beside the contact lines, or above them. "auto" picks what fits. */
     photoPlacement: "auto" as "auto" | "right" | "above",
     photo: asset("contact-photo.webp"),
@@ -149,21 +161,22 @@ export const frame5 = {
       /** Archivo, smaller than the contact lines. */
       textSize: "13px",
       /** Space between the contact block and this heading, in pixels. */
-      topGap: "12px",
-      iconSize: "28px",
-      /** Each hobby is a small ticket stub, pinned beside the photo. */
+      topGap: "8px",
+      iconSize: "32px",
+      /** Each hobby is a ticket stub, pinned under the contact details. */
       ticket: {
         paper: "#F3EADB",
         ink: "#2B211A",
-        textSize: "11.5px",
-        /** Widest the label may run before it wraps, in pixels. */
-        labelWidth: 104,
-        band: "5px",
+        /** At least 13px, and about 30% above the previous 11.5px stubs. */
+        textSize: "15px",
+        /** Widest the label may run before it wraps, in pixels. About 30% wider. */
+        labelWidth: 135,
+        band: "6.5px",
         /** Radius of the half circles along the torn edge, and their spacing, in pixels. */
-        tearRadius: 2.6,
-        tearStep: 8,
-        gap: "10px",
-        shadow: "drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35))",
+        tearRadius: 3.4,
+        tearStep: 10,
+        gap: "12px",
+        shadow: "drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35))",
         /** Band color, tilt in degrees and a small vertical nudge in pixels, per hobby. */
         look: {
           piano: { band: "#ED7624", tilt: -3, lift: 2 },
@@ -172,7 +185,14 @@ export const frame5 = {
           mat: { band: "#B9704A", tilt: 3.5, lift: -1 },
           piece: { band: "#D9622B", tilt: -2.5, lift: 1 },
         } satisfies Record<HobbyIcon, { band: string; tilt: number; lift: number }>,
-        stamp: { on: "ticket" as HobbyIcon, text: "up to 3×", color: "#B23A26", size: 34, tilt: -14 },
+        stamp: {
+          on: "ticket" as HobbyIcon,
+          text: "up to 3×",
+          color: "#B23A26",
+          size: 44,
+          fontSize: "11px",
+          tilt: -14,
+        },
       },
       /** The small arrow from the heading down to the first ticket, in pixels. */
       arrow: { width: 40, height: 46 },
@@ -207,22 +227,57 @@ export const frame5 = {
         videoId: "Eu5t1X9Fnzc",
         summary:
           "A friend's relationship with Amsterdam, from the surface to belonging, told through the five stages of change.",
-        description:
-          "A friend's relationship with Amsterdam. At first it stays on the surface, then he wants to become part of the city. The film follows that change through the five stages of change from psychology.",
+        personal:
+          "Amsterdam was the first love of a friend of mine. At first his bond with the city stayed on the surface. Over time he fell in love with it and began to feel like a part of it. The film tells that change with no script, only through mise-en-scène and cinematography.",
+        long: [
+          {
+            paragraphs: [
+              "I had no production team and no time to prepare the shoot, so I made the film in the form of a travel vlog. I caught each scene myself when it matched the story, and then I put the scenes together. The film follows the change through the five stages of change from psychology.",
+            ],
+          },
+        ],
       },
       {
         id: "egg",
         title: "How to Boil an Egg",
         year: 2024,
         videoId: "6B0btHK9d2U",
+        warning: "Content warning: this film contains violence.",
         summary: "A couple shows how to boil an egg, and the egg stands for a child.",
-        description:
-          "We asked a couple, Ahmet and Ayşe, how to boil an egg, and they do what they have always seen. The egg stands for a child. Ayşe decides on it in a hurry, half to escape her own darkness, and the egg is boiled until it cracks, then thrown away as if that were normal. It is a film about what one thoughtless decision can cause. Every sound except the doorbell is natural, with no effects and no dubbing.",
+        personal:
+          "This film is personal. It comes from the life of a person I love very much, and I did not want to hide that. The whole project began as a film I wanted to dedicate to this person, and in a way it is also a memorial. Their identity stays private, and they agreed to it. It tells a story about a woman and a child that exists even when we do not see it. It can be hard to watch, but that does not make it less real, so I used no effects and no tricks.",
+        long: [
+          {
+            heading: "What really happened",
+            paragraphs: [
+              "The woman in the film is young, and in real life she was even younger. When these things happened to her, she was eight years younger than the actress who plays her. I know this makes the film more disturbing, but this is what happened. I play the father. I made my voice as deep as I could and never show myself, because in real life he was twice my age when these things happened.",
+            ],
+          },
+          {
+            heading: "Why a system",
+            paragraphs: [
+              "My aim was to show it as it is. I did not try to make it disturbing. However hard the story is, I did not want the film to ask for pity for one person. Many people inside this system became like this without being aware of it. So I built a wider narrative and tied it to one theme, a cycle that repeats itself. The film is about that system.",
+            ],
+          },
+          {
+            heading: "Reading the film",
+            paragraphs: [
+              "We asked a couple, Ahmet and Ayşe, how to boil an egg, and they do what they have always seen. The egg stands for a child.",
+              "Ayşe comes quickly out of the dark into a room with very bright light. The contrast shows that her decision was born in the dark. She wants to be in the light, which means she wants to take on the idea of having a child, but all of it is an attempt to escape the dark. Both decisions, boiling the egg and having a child, come from a sudden urge.",
+              "The axis is broken on purpose, so we sense that something does not fit. She goes on anyway. She already knows how to make the egg. The hard part is why she makes it, and that question is already behind her. The pan to the right shows how smooth the action is for her, and with no technical mistake she leaves the egg to boil, the way a child is left open to the world.",
+              "At first she watches over it. Then a rack focus shows that her attention moves to herself, because she is the one trying to survive. She is tense, and we do not know why yet.",
+              "Then the doorbell rings, as it does again and again. This visit is part of a cycle. Two pans to the left take her to the door and tell us that something dangerous and wrong is coming. She knows who it is and what will happen, and she opens the door anyway. While the egg boils, we see what the child is exposed to. Surrounded and unable to move, it takes it all without a reaction.",
+              "The egg boils hard, and a small crack appears. It has to stay where it is, so it only keeps bubbling inside.",
+              "In the end, the mother turns off the timer and the stove as if nothing happened. A lot of time has passed, and the egg and the place it grew up in are broken. We hear her throw the egg into the trash as if that were normal. To her, a broken person is normal, because she grew up seeing the same thing.",
+              "Every sound except the doorbell is natural. There are no effects and no dubbing.",
+            ],
+          },
+        ],
       },
     ] satisfies Film[],
     cover: (videoId: string) => `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
     embed: (videoId: string) =>
-      `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1`,
+      `https://www.youtube-nocookie.com/embed/${videoId}?start=0&autoplay=1&rel=0&playsinline=1`,
     watch: (videoId: string) => `https://www.youtube.com/watch?v=${videoId}`,
   },
 
@@ -245,6 +300,8 @@ export const frame5 = {
     bodyLine: 1.55,
     closeSize: 40,
     watchLabel: "Watch on YouTube",
+    moreLabel: "Want to understand it better?",
+    lessLabel: "Show less",
     fadeMs: 240,
     fromScale: 0.97,
     /** For this long after opening, focus the player takes on its own goes back to the close button. */
@@ -256,6 +313,11 @@ export const frame5 = {
     height: 0.22,
     minHeight: 150,
     maxHeight: 230,
+    /**
+     * Shortest the roll may get when the tickets need the room under them.
+     * The roll still plays; the window is just shorter on a short screen.
+     */
+    minFitHeight: 96,
     bottom: 0.025,
     /** Share of the band, at each edge, that fades out. */
     fade: 0.24,
