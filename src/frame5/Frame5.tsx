@@ -10,6 +10,7 @@ const B = frame5.endingB;
 const CREDITS = frame5.credits;
 const OVERLAY = frame5.overlay;
 const ARROWS = frame5.arrows;
+const TICKET = A.hobbies.ticket;
 
 const GRAIN = {
   steam: false,
@@ -174,42 +175,73 @@ function HobbyIcon({ id }: { id: HobbyIcon }) {
   if (id === "piano") {
     return (
       <Icon>
-        <rect x="2.5" y="7.5" width="19" height="9.5" rx="1.4" />
-        <path d="M2.5 12.6h19" />
-        <path d="M7 7.5v5.1M12 7.5v5.1M17 7.5v5.1" />
+        <path d="M11.6 13 16.4 6.4M14.2 13l4.3-5.4" />
+        <path d="M16.4 6.4 15.9 2.6c-.1-.8.6-1.3 1.3-.9l4.3 2.6c.6.4.6 1.2 0 1.6l-3 2.1" />
+        <path d="M17.6 3.4h.01M19.7 4.7h.01" strokeWidth="2" />
+        <path d="M17.6 3.4 16.2 4.6M19.7 4.7l1.1 1.6" strokeWidth="1.1" />
+        <rect x="1.8" y="13" width="17" height="8.2" rx="1" />
+        <path d="M6 13v8.2M10.3 13v8.2M14.5 13v8.2" />
+        <path d="M6 13v4.4M10.3 13v4.4M14.5 13v4.4" strokeWidth="2.6" strokeLinecap="butt" />
       </Icon>
     );
   }
   if (id === "ticket") {
     return (
       <Icon>
-        <path d="M5 8h14.2c.7 0 1.3.6 1.3 1.3v1.4a1.6 1.6 0 0 0 0 3V15c0 .7-.6 1.3-1.3 1.3H5c-.7 0-1.3-.6-1.3-1.3v-1.3a1.6 1.6 0 0 0 0-3V9.3C3.7 8.6 4.3 8 5 8Z" />
-        <path d="M9.2 8v8.3" strokeDasharray="1.3 1.5" />
+        <rect x="2.5" y="5" width="19" height="14" rx="1.2" />
+        <path d="M2.5 8.4h19M2.5 15.6h19M9 8.4v7.2M15 8.4v7.2" />
+        <path d="M5 6.7h.01M8.5 6.7h.01M12 6.7h.01M15.5 6.7h.01M19 6.7h.01M5 17.3h.01M8.5 17.3h.01M12 17.3h.01M15.5 17.3h.01M19 17.3h.01" strokeWidth="1.9" />
       </Icon>
     );
   }
   if (id === "ball") {
     return (
       <Icon>
-        <circle cx="12" cy="12" r="7.4" />
-        <path d="M12 4.6c2.2 2.2 3.4 4.6 3.4 7.4s-1.2 5.2-3.4 7.4c-2.2-2.2-3.4-4.6-3.4-7.4s1.2-5.2 3.4-7.4Z" />
-        <path d="M4.8 12h14.4" />
+        <circle cx="12" cy="12" r="8.6" />
+        <path d="M12 3.4v17.2M3.4 12h17.2" />
+        <path d="M6.1 5.7a11 11 0 0 1 0 12.6M17.9 5.7a11 11 0 0 0 0 12.6" />
       </Icon>
     );
   }
   if (id === "mat") {
     return (
       <Icon>
-        <path d="M8.4 7.2h9.1A2.3 2.3 0 0 1 19.8 9.5v5a2.3 2.3 0 0 1-2.3 2.3H8.4" />
-        <ellipse cx="7.5" cy="12" rx="2.5" ry="5" />
+        <circle cx="12" cy="4.2" r="1.9" />
+        <path d="M12 7.4v5.8M3.2 9.6h17.6" />
+        <path d="M12 13.2 7.6 15.4l-1.4 5M12 13.2l6.4 7.2" />
+        <path d="M2.8 21.2h18.4" />
       </Icon>
     );
   }
   return (
     <Icon>
-      <circle cx="12" cy="6.2" r="2.15" />
-      <path d="M8.3 10.8c.6-1.4 2-2.2 3.7-2.2s3.1.8 3.7 2.2c.9.6 1.6 1.1 1.6 2 0 1-.8 1.7-1.9 1.9V19H8.6v-4.3c-1.1-.2-1.9-.9-1.9-1.9 0-.9.7-1.4 1.6-2Z" />
+      <circle cx="7" cy="6.6" r="2.3" />
+      <path d="M5.5 9.6h3l1.2 7.4H4.3Z" />
+      <path d="M3.2 20.2h7.6M3.6 20.2l.7-3.2h5.4l.7 3.2" />
+      <rect x="12.6" y="9.8" width="9" height="9" rx="1.8" transform="rotate(8 17.1 14.3)" />
+      <path d="M15 12.1h.01M17.1 14.3h.01M19.2 16.5h.01" strokeWidth="2.2" />
     </Icon>
+  );
+}
+
+/** A static hook from under the heading down into the first ticket, drawn like the title arrows. */
+function HobbyArrow() {
+  const { width, height } = A.hobbies.arrow;
+  const { head, headAngle } = ARROWS;
+  const start = { x: 9, y: 1 };
+  const control = { x: 7, y: height - 6 };
+  const end = { x: width - 2, y: height - 7 };
+  const angle = Math.atan2(end.y - control.y, end.x - control.x);
+  const spread = (headAngle * Math.PI) / 180;
+  const wing = (side: number) => {
+    const a = angle + Math.PI + side * spread;
+    return `${(end.x + Math.cos(a) * head).toFixed(2)} ${(end.y + Math.sin(a) * head).toFixed(2)}`;
+  };
+  return (
+    <svg className="frame5-hobby-arrow" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <path d={`M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`} />
+      <path d={`M ${wing(-1)} L ${end.x} ${end.y} L ${wing(1)}`} />
+    </svg>
   );
 }
 
@@ -282,6 +314,16 @@ export function Frame5() {
 
     const band = Math.min(CREDITS.maxHeight, Math.max(CREDITS.minHeight, height * CREDITS.height));
     frame.style.setProperty("--band-h", `${band}px`);
+
+    // A wrapped label keeps its full max width; hug the longest line so the stubs stay snug.
+    const scale = frame.getBoundingClientRect().width / width || 1;
+    for (const label of frame.querySelectorAll<HTMLElement>(".frame5-ticket-label")) {
+      label.style.width = "";
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const widest = Math.max(...[...range.getClientRects()].map((rect) => rect.width));
+      if (Number.isFinite(widest)) label.style.width = `${Math.ceil(widest / scale)}px`;
+    }
 
     if (A.photoPlacement === "auto") {
       const lines = linesRef.current?.offsetWidth ?? 0;
@@ -487,6 +529,19 @@ export function Frame5() {
     "--f5-hobby-size": A.hobbies.textSize,
     "--f5-hobby-gap": A.hobbies.topGap,
     "--f5-hobby-icon": A.hobbies.iconSize,
+    "--f5-ticket-paper": TICKET.paper,
+    "--f5-ticket-ink": TICKET.ink,
+    "--f5-ticket-size": TICKET.textSize,
+    "--f5-ticket-label-w": `${TICKET.labelWidth}px`,
+    "--f5-ticket-band-h": TICKET.band,
+    "--f5-ticket-tear-r": `${TICKET.tearRadius}px`,
+    "--f5-ticket-tear-step": `${TICKET.tearStep}px`,
+    "--f5-ticket-gap": TICKET.gap,
+    "--f5-ticket-shadow": TICKET.shadow,
+    "--f5-stamp-color": TICKET.stamp.color,
+    "--f5-stamp-size": `${TICKET.stamp.size}px`,
+    "--f5-stamp-tilt": `${TICKET.stamp.tilt}deg`,
+    "--f5-hobby-arrow-w": `${A.hobbies.arrow.width}px`,
     "--f5-b-left": `${B.left * 100}%`,
     "--f5-b-right": `${B.right * 100}%`,
     "--f5-b-size": B.lineSize,
@@ -623,17 +678,40 @@ export function Frame5() {
             </ul>
           </div>
           <section className="frame5-hobbies" aria-labelledby="frame5-hobbies-heading">
-            <h3 id="frame5-hobbies-heading" className="frame5-hobby-heading">
-              {A.hobbies.heading}
-            </h3>
-            <p className="frame5-hobby-line">{A.hobbies.line}</p>
-            <ul className="frame5-hobby-list">
-              {A.hobbies.items.map((item) => (
-                <li key={item.id} className="frame5-hobby">
-                  <HobbyIcon id={item.id} />
-                  <span>{item.label}</span>
-                </li>
-              ))}
+            <div className="frame5-hobby-head">
+              <h3 id="frame5-hobbies-heading" className="frame5-hobby-heading">
+                {A.hobbies.heading}
+              </h3>
+              <p className="frame5-hobby-line">{A.hobbies.line}</p>
+            </div>
+            <HobbyArrow />
+            <ul className="frame5-tickets">
+              {A.hobbies.items.map((item) => {
+                const look = TICKET.look[item.id];
+                const ticketStyle = {
+                  "--f5-ticket-band": look.band,
+                  "--f5-ticket-tilt": `${look.tilt}deg`,
+                  "--f5-ticket-lift": `${look.lift}px`,
+                } as CSSProperties;
+                const stamped = TICKET.stamp.on === item.id;
+                return (
+                  <li
+                    key={item.id}
+                    className={stamped ? "frame5-ticket is-stamped" : "frame5-ticket"}
+                    style={ticketStyle}
+                  >
+                    <div className="frame5-ticket-paper">
+                      <HobbyIcon id={item.id} />
+                      <span className="frame5-ticket-label">{item.label}</span>
+                      {stamped ? (
+                        <span className="frame5-stamp" aria-hidden="true">
+                          {TICKET.stamp.text}
+                        </span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         </div>
