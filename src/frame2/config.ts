@@ -77,7 +77,17 @@ export const frame2Config = {
     },
   },
   line: {
-    text: "Pick a card.",
+    before: "Pick a card.",
+    /** After one or two cards have been opened. */
+    again: "Pick another card.",
+    /** After all three cards have been opened. */
+    done: "That's my whole hand.",
+    /** Shown under the line until the first card opens. */
+    helper: "Each card opens a part I built.",
+    helperSize: 13,
+    helperWeight: 400,
+    helperOpacity: 0.7,
+    helperGap: 6,
     size: 30,
     line: 1.1,
     color: "#EFC785",
@@ -94,6 +104,18 @@ export const frame2Config = {
     /** Image fraction where Pedro's face begins beside the line. */
     faceX: 0.63,
     fade: 0.45,
+    /** Gold curve from the line down to the cards. */
+    arrow: {
+      draw: 0.6,
+      length: 58,
+      width: 1.5,
+    },
+    /** Short gold dash on the top edge of a card that has been opened. */
+    mark: {
+      length: 16,
+      thickness: 2,
+      inset: 5,
+    },
   },
   light: {
     color: "#FFD9A0",

@@ -275,6 +275,21 @@ export const frame1Config = {
     research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
+  scrollCue: {
+    text: "Scroll to continue",
+    /** Inset from the right edge and the bottom edge, as fractions of the frame. */
+    right: 0.04,
+    bottom: 0.04,
+    size: 13,
+    weight: 500,
+    opacity: 0.55,
+    /** How far the arrow nudges, in pixels, once each interval. */
+    nudge: 3,
+    /** Seconds between nudges. */
+    every: 4,
+    /** Fade after the first transition, in seconds. */
+    fade: 0.6,
+  },
   opening: {
     bilkent: 160,
     buas: 620,

@@ -209,7 +209,22 @@
 .frame2-line {
   position: absolute;
   z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
   margin: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity var(--line-fade) ease;
+}
+
+.frame2-line-text,
+.frame2-line-help {
+  margin: 0;
+}
+
+.frame2-line-text {
   font-family: var(--font-pedro), serif;
   font-style: italic;
   font-weight: 400;
@@ -217,9 +232,6 @@
   line-height: var(--line-height);
   color: var(--line-color);
   filter: var(--line-shadow);
-  pointer-events: none;
-  white-space: nowrap;
-  transition: opacity var(--line-fade) ease;
 }
 
 .frame2-line.is-hidden {
@@ -258,6 +270,55 @@
 
 .frame2-line.is-hidden .frame2-line-text {
   animation: none;
+}
+
+.frame2-line-help {
+  margin-top: var(--line-help-gap);
+  font-family: var(--font-text), sans-serif;
+  font-style: normal;
+  font-weight: var(--line-help-weight);
+  font-size: var(--line-help-size);
+  line-height: 1.3;
+  color: rgba(255, 255, 255, var(--line-help-opacity));
+}
+
+.frame2-arrow-space {
+  height: var(--arrow-length);
+}
+
+.frame2-arrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--arrow-length);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.frame2-arrow path {
+  fill: none;
+  stroke: var(--line-color);
+  stroke-width: var(--arrow-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: frame2-arrow-draw var(--arrow-draw) ease forwards;
+}
+
+@keyframes frame2-arrow-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.frame2-seen {
+  position: absolute;
+  background: var(--gold);
+  border-radius: 1px;
+  pointer-events: none;
 }
 
 .frame2-embers,
@@ -464,8 +525,13 @@
 }
 
 .frame2.is-reduced .frame2-hand-light,
-.frame2.is-reduced .frame2-line-text {
+.frame2.is-reduced .frame2-line-text,
+.frame2.is-reduced .frame2-arrow path {
   animation: none;
+}
+
+.frame2.is-reduced .frame2-arrow path {
+  stroke-dashoffset: 0;
 }
 
 .frame2.is-reduced .frame2-line-text {
@@ -492,8 +558,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .frame2-hand-light,
-  .frame2-line-text {
+  .frame2-line-text,
+  .frame2-arrow path {
     animation: none;
+  }
+
+  .frame2-arrow path {
+    stroke-dashoffset: 0;
   }
 
   .frame2-line-text {

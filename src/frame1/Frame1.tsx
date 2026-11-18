@@ -287,6 +287,7 @@ export function Frame1() {
   const researchCloseRef = useRef<HTMLButtonElement>(null);
   const effectsRef = useRef<FrameEffects | null>(null);
   const [research, setResearch] = useState<ResearchPose | null>(null);
+  const [cueOn, setCueOn] = useState(true);
   const researchWasOpen = useRef(false);
   const startRef = useRef<() => void>(() => {});
   const redrawRef = useRef<() => void>(() => {});
@@ -667,6 +668,21 @@ export function Frame1() {
     startRef.current();
   }, [shown.content, reduced]);
 
+  useEffect(() => {
+    const stage = frameRef.current?.closest(".tx-stage");
+    if (!stage) return;
+    const hide = () => setCueOn(false);
+    const check = () => {
+      const active = stage.getAttribute("data-active");
+      const phase = stage.getAttribute("data-phase");
+      if ((active && active !== "0") || (phase && phase !== "idle")) hide();
+    };
+    const observer = new MutationObserver(check);
+    observer.observe(stage, { attributes: true, attributeFilter: ["data-active", "data-phase"] });
+    check();
+    return () => observer.disconnect();
+  }, []);
+
   const style = {
     "--buas-tone": frame1Config.colors.buasTone,
     "--bilkent-tone": frame1Config.colors.bilkentTone,
@@ -762,6 +778,14 @@ export function Frame1() {
     "--research-border": frame1Config.research.border,
     "--research-radius": `${frame1Config.research.radius}px`,
     "--research-close": `${frame1Config.research.close}px`,
+    "--cue-right": `${frame1Config.scrollCue.right * 100}%`,
+    "--cue-bottom": `${frame1Config.scrollCue.bottom * 100}%`,
+    "--cue-size": `${frame1Config.scrollCue.size}px`,
+    "--cue-weight": String(frame1Config.scrollCue.weight),
+    "--cue-opacity": String(frame1Config.scrollCue.opacity),
+    "--cue-nudge": `${frame1Config.scrollCue.nudge}px`,
+    "--cue-every": `${frame1Config.scrollCue.every}s`,
+    "--cue-fade": `${frame1Config.scrollCue.fade}s`,
   } as React.CSSProperties;
 
   useEffect(() => {
@@ -955,6 +979,19 @@ export function Frame1() {
           that builds and tests levels.
         </p>
       </div>
+      <p className={cueOn ? "scroll-cue" : "scroll-cue is-gone"} aria-hidden={cueOn ? undefined : true}>
+        <span>{frame1Config.scrollCue.text}</span>
+        <svg className="scroll-cue-arrow" viewBox="0 0 12 12" aria-hidden="true">
+          <path
+            d="M2.2 4.4 L6 8.1 L9.8 4.4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </p>
       </div>
 
       {research ? (

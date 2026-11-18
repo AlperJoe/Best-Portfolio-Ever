@@ -518,6 +518,50 @@
   color: rgba(255, 255, 255, var(--middle-line-opacity, 0.85));
 }
 
+.scroll-cue {
+  position: absolute;
+  z-index: 6;
+  right: var(--cue-right, 4%);
+  bottom: var(--cue-bottom, 4%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--cue-weight, 500);
+  font-size: var(--cue-size, 13px);
+  line-height: 1;
+  color: rgba(255, 255, 255, var(--cue-opacity, 0.55));
+  pointer-events: none;
+  transition: opacity var(--cue-fade, 0.6s) ease;
+}
+
+.scroll-cue.is-gone {
+  opacity: 0;
+}
+
+.scroll-cue-arrow {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  animation: scroll-cue-nudge var(--cue-every, 4s) ease-in-out infinite;
+}
+
+@keyframes scroll-cue-nudge {
+  0%,
+  72%,
+  100% {
+    transform: translateY(0);
+  }
+  84% {
+    transform: translateY(var(--cue-nudge, 3px));
+  }
+}
+
+.frame.is-reduced .scroll-cue-arrow {
+  animation: none;
+}
+
 .research-layer {
   position: absolute;
   inset: 0;
@@ -737,7 +781,9 @@
   .frame.is-opening .portrait-layer,
   .icon-link,
   .research-panel,
-  .frame-world {
+  .frame-world,
+  .scroll-cue,
+  .scroll-cue-arrow {
     transition: none;
     animation: none;
   }
