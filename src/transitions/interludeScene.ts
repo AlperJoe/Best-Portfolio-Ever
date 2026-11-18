@@ -1,5 +1,6 @@
 import { scrollConfig } from "./config";
-import { interludeStyle, type Interlude } from "./interludes";
+import { attachWhyNote, type WhyNote } from "../whyNote/whyNote";
+import { interludeStyle, interludeWhy, type Interlude } from "./interludes";
 import { clamp, lerp, smoothstep } from "./math";
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -9,6 +10,10 @@ type Point = { x: number; y: number };
 type LineLayout = {
   /** Text size, in pixels, when the line sits at its own size on screen. */
   size: number;
+  /** Width of the line, and the top and bottom of its ink relative to its center, at that size. */
+  width: number;
+  top: number;
+  bottom: number;
   /** Center of the focus word, relative to the line's center, at that size. */
   focus: Point;
   group: SVGGElement;
@@ -172,8 +177,15 @@ export class InterludeScene {
   private width = 0;
   private height = 0;
   private shown = false;
+  private readonly why = document.createElement("button");
+  private whyNote: WhyNote | null = null;
+  private whyShown = false;
 
-  constructor(stage: HTMLElement) {
+  constructor(private readonly stage: HTMLElement) {
+    this.why.type = "button";
+    this.why.className = "why-button txd-why";
+    this.why.textContent = interludeWhy.label;
+    this.why.style.setProperty("--why-color", interludeWhy.color);
     this.root.className = "txd-layer";
     this.root.setAttribute("aria-hidden", "true");
     this.mask.id = this.maskId;
@@ -184,11 +196,18 @@ export class InterludeScene {
     defs.append(this.mask);
     this.svgRoot.append(defs, this.bg, this.linesRoot);
     this.root.append(this.svgRoot);
-    stage.append(this.root);
+    stage.append(this.root, this.why);
   }
 
   destroy() {
+    this.whyNote?.destroy();
     this.root.remove();
+    this.why.remove();
+  }
+
+  /** True while the note of the current interlude is open. */
+  noteOpen() {
+    return Boolean(this.whyNote?.isOpen());
   }
 
   /** Scroll length of a pair, in screen heights. */
@@ -207,6 +226,10 @@ export class InterludeScene {
     this.tint = tint;
     if (interlude === this.interlude && this.layout) return;
     this.interlude = interlude;
+    this.whyNote?.destroy();
+    this.whyNote = interlude?.note
+      ? attachWhyNote(this.why, this.stage, { note: interlude.note, label: interludeWhy.label })
+      : null;
     this.build();
   }
 
@@ -304,7 +327,15 @@ export class InterludeScene {
       const visible = makeText([style.textColor, style.textColor, style.textColor]);
       group.append(visible.text);
       this.linesRoot.append(group);
-      lines.push({ size, focus: focusCenter, group, focusSpan: visible.focusSpan });
+      lines.push({
+        size,
+        width: total,
+        top: baseline - ascent,
+        bottom: baseline + descent,
+        focus: focusCenter,
+        group,
+        focusSpan: visible.focusSpan,
+      });
 
       if (index === interlude.lines.length - 1) {
         maskGroup = svg("g");
@@ -327,9 +358,35 @@ export class InterludeScene {
   }
 
   hide() {
+    this.showWhy(false);
     if (!this.shown) return;
     this.shown = false;
     this.root.classList.remove("is-on");
+  }
+
+  private showWhy(on: boolean) {
+    if (!on) this.whyNote?.close();
+    if (on === this.whyShown) return;
+    this.whyShown = on;
+    this.why.classList.toggle("is-on", on);
+  }
+
+  /**
+   * The "Why I say this" control sits under the last line while that line is
+   * fully readable: alone on screen, opaque, inside the screen and not yet
+   * zooming, so it is gone before the zoom-through starts.
+   */
+  private placeWhy(line: LineLayout, t: { x: number; y: number; s: number }, readable: boolean) {
+    const left = t.x - (t.s * line.width) / 2;
+    const right = t.x + (t.s * line.width) / 2;
+    const top = t.y + t.s * line.top;
+    const bottom = t.y + t.s * line.bottom;
+    const below = bottom + interludeWhy.gap;
+    const fits =
+      left >= 0 && right <= this.width && top >= 0 && below + this.why.offsetHeight <= this.height;
+    const on = readable && fits && t.s <= interludeWhy.maxScale;
+    if (on) this.why.style.transform = `translate(${t.x.toFixed(2)}px, ${below.toFixed(2)}px) translateX(-50%)`;
+    this.showWhy(on);
   }
 
   /**
@@ -352,6 +409,7 @@ export class InterludeScene {
       const u = clamp(x / total);
       this.root.style.opacity = (u < 0.5 ? smoothstep(0, 0.5, u) : 1 - smoothstep(0.5, 1, u)).toFixed(4);
       this.bg.removeAttribute("mask");
+      this.showWhy(false);
       return { source: u < 0.5, sourceGrow: 0, dest: u >= 0.5 };
     }
 
@@ -462,6 +520,12 @@ export class InterludeScene {
       lastLine.focusSpan.setAttribute("fill-opacity", "1");
     }
     this.root.style.opacity = layerOpacity < 0.999 ? layerOpacity.toFixed(4) : "";
+    const readable =
+      Boolean(interlude.note) &&
+      layerOpacity >= 0.98 &&
+      hole <= 0.02 &&
+      opacity.every((value, index) => (index === n - 1 ? value >= 0.98 : value <= 0.02));
+    this.placeWhy(lastLine, transforms[n - 1], readable);
     return view;
   }
 }

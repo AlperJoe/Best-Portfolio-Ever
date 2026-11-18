@@ -249,6 +249,20 @@ export const frame1Config = {
     /** Scale of the panel when it is still at the button. */
     fromScale: 0.08,
   },
+  /** Line under the name. */
+  tagline: "I'm a game programmer. I build gameplay systems and game AI.",
+  buasText:
+    "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals. Agents with different play styles play every new level, so each level is already playtested when the designer sees it.",
+  /** Line between the Bilkent divider and the course label, with its "Why I say this" note. */
+  bilkentWhy: {
+    line: "These courses made me love this work.",
+    label: "Why I say this",
+    note: "Every system runs on algorithms. At the low level, small blocks each do one exact job, and you engineer them together into something new. Underneath it all is one skill, designing algorithms at both the high and the low level and adapting them to the problem. These courses taught me that skill.",
+  },
+  /** The "Why I say this" control: same color as the course codes nearby. */
+  why: {
+    color: "rgba(255, 255, 255, 0.7)",
+  },
   courses: [
     {
       code: "EEE 448",

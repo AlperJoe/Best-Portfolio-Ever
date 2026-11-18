@@ -180,6 +180,15 @@
   z-index: 4;
 }
 
+.frame3-eyebrow {
+  margin: 0 0 var(--eyebrow-gap);
+  font-family: var(--font-text), sans-serif;
+  font-weight: var(--eyebrow-weight);
+  font-size: var(--eyebrow-size);
+  line-height: 1.4;
+  color: var(--white-60);
+}
+
 .frame3-title {
   margin: 0;
   font-family: var(--font-mono), monospace;

@@ -133,6 +133,7 @@ export class ScrollEngine {
   }
 
   private overlayOpen() {
+    if (this.scene.noteOpen()) return true;
     return this.slots.some((slot) => !slot.classList.contains("is-parked") && slot.querySelector(transitionConfig.overlays));
   }
 

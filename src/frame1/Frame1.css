@@ -383,6 +383,10 @@
   color: rgba(255, 255, 255, var(--body-opacity));
 }
 
+.copy .why-line {
+  margin: 0 0 var(--space-label, 16px);
+}
+
 .research-open {
   margin: var(--space-button, 24px) 0 0;
   padding: var(--button-pad-y, 8px) var(--button-pad-x, 14px);

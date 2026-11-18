@@ -29,6 +29,25 @@ const REFERENCES = [
 const NOTE =
   "What this agent sees: 7×7 tiles in one layer, its position and how long it can keep a door open. 52 numbers in total.";
 
+const COPY = frame3.copy;
+
+/** Type and gaps of the text column that shrink together when it would not fit. */
+const FIT_SIZES: Array<[string, string]> = [
+  ["--eyebrow-size", frame3.eyebrowSize],
+  ["--eyebrow-gap", frame3.eyebrowGap],
+  ["--title-size", frame3.titleSize],
+  ["--intro-size", frame3.introSize],
+  ["--intro-gap", frame3.introGap],
+  ["--label-size", frame3.labelSize],
+  ["--section-gap", frame3.sectionGap],
+  ["--label-gap", frame3.labelGap],
+  ["--body-size", frame3.bodySize],
+  ["--item-gap", frame3.itemGap],
+  ["--stack-size", frame3.stackSize],
+  ["--button-size", frame3.buttonSize],
+  ["--link-gap", frame3.linkGap],
+];
+
 type PanelPhase = "closed" | "opening" | "open" | "closing";
 
 function restPose(): Pose {
@@ -129,6 +148,24 @@ export function Frame3() {
       frame.style.setProperty("--caption-top", `${mapRect.bottom - frameRect.top + frame3.captionOffset}px`);
     };
 
+    const fitCopy = (height: number) => {
+      const copy = textRef.current;
+      if (!copy) return;
+      const room = height * (1 - 2 * frame3.copyMargin);
+      const scale = (fit: number) => {
+        for (const [name, value] of FIT_SIZES) {
+          if (fit >= 1) copy.style.removeProperty(name);
+          else copy.style.setProperty(name, `calc(${value} * ${fit.toFixed(3)})`);
+        }
+      };
+      let fit = 1;
+      scale(fit);
+      while (copy.offsetHeight > room && fit > frame3.copyMinFit) {
+        fit = Math.max(frame3.copyMinFit, fit - 0.02);
+        scale(fit);
+      }
+    };
+
     const placeMap = () => {
       const rect = frame.getBoundingClientRect();
       const columnW = rect.width * (frame3.mapEnd - frame3.mapStart);
@@ -138,6 +175,7 @@ export function Frame3() {
       const x = rect.width - right - mapW;
       frame.style.setProperty("--text-width", `${rect.width * (frame3.textEnd - frame3.textStart)}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
+      fitCopy(rect.height);
       const textH = textRef.current?.offsetHeight ?? mapH;
       const top = Math.max(0, (rect.height - Math.max(textH, mapH)) / 2);
       const y = top;
@@ -175,6 +213,9 @@ export function Frame3() {
     const observer = new ResizeObserver(resize);
     observer.observe(frame);
     if (mapRef.current) observer.observe(mapRef.current);
+    document.fonts?.ready.then(() => {
+      if (!stopped) resize();
+    });
 
     const tick = (now: number) => {
       if (stopped) return;
@@ -362,6 +403,9 @@ export function Frame3() {
     "--column-gap": frame3.columnGap,
     "--refs-right": frame3.refsRight,
     "--refs-bottom": frame3.refsBottom,
+    "--eyebrow-size": frame3.eyebrowSize,
+    "--eyebrow-weight": String(frame3.eyebrowWeight),
+    "--eyebrow-gap": frame3.eyebrowGap,
     "--title-size": frame3.titleSize,
     "--title-weight": String(frame3.titleWeight),
     "--title-line": String(frame3.titleLine),
@@ -418,7 +462,7 @@ export function Frame3() {
       style={style}
       data-step={pose.step}
       data-vision={watch ?? ""}
-      aria-label="Upgraded PressurePlate"
+      aria-label={COPY.title}
     >
       <div className="frame3-world" aria-hidden="true" />
 
@@ -470,9 +514,7 @@ export function Frame3() {
       <canvas className="frame3-grain" ref={grainRef} aria-hidden="true" />
 
       <div className="frame3-below">
-        <p className="frame3-caption">
-          Illustration: a solved run of the level, played back with the level's own rules.
-        </p>
+        <p className="frame3-caption">{COPY.caption}</p>
         {reduced && (
           <button className="frame3-play" type="button" onClick={playOnce} disabled={playing}>
             Play
@@ -481,26 +523,22 @@ export function Frame3() {
       </div>
 
       <div className="frame3-copy" ref={textRef}>
-        <h2 className="frame3-title">Upgraded PressurePlate</h2>
-        <p className="frame3-intro">
-          A cooperative puzzle where AI agents must open doors for each other to reach the treasure.
-        </p>
-        <p className="frame3-label">What I did</p>
+        <p className="frame3-eyebrow">{COPY.eyebrow}</p>
+        <h2 className="frame3-title">{COPY.title}</h2>
+        <p className="frame3-intro">{COPY.intro}</p>
+        <p className="frame3-label">{COPY.didLabel}</p>
         <ul className="frame3-list">
-          <li>
-            Built what each agent sees: one compact layer of the map around it, its position and how long it
-            can keep a door open.
-          </li>
-          <li>Redesigned the map around how the agents learned: a 28×14 level with five doors.</li>
+          {COPY.did.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
         </ul>
-        <p className="frame3-label">Result</p>
-        <p className="frame3-result">
-          After training, the two agents finished the evaluation run in about 25 steps instead of hitting the
-          100-step limit.
-        </p>
-        <p className="frame3-stack">Python, PyTorch, MADDPG</p>
+        <p className="frame3-label">{COPY.trainedLabel}</p>
+        <p className="frame3-result">{COPY.trained}</p>
+        <p className="frame3-label">{COPY.resultLabel}</p>
+        <p className="frame3-result">{COPY.result}</p>
+        <p className="frame3-stack">{COPY.stack}</p>
         <a className="frame3-project" href={frame3.projectUrl} target="_blank" rel="noreferrer">
-          View the project <span className="frame3-arrow">→</span>
+          {COPY.project} <span className="frame3-arrow">→</span>
         </a>
       </div>
 
