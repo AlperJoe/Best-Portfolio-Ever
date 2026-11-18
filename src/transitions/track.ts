@@ -14,7 +14,7 @@ export class Track {
 
   constructor(
     stage: HTMLElement,
-    count: number,
+    private readonly count: number,
     onPick: (index: number) => void,
   ) {
     const cfg = transitionConfig.track;
@@ -57,8 +57,7 @@ export class Track {
   }
 
   private fraction(index: number) {
-    const last = this.stations.length > 0 ? Math.max(1, this.stations.length - 1) : 1;
-    return index / last;
+    return index / Math.max(1, this.count - 1);
   }
 
   setActive(index: number) {
