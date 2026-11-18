@@ -13,6 +13,7 @@ type Shown = {
 };
 
 type ResearchPose = "from" | "open" | "back";
+type DetailSide = "buas" | "bilkent";
 
 type Metrics = {
   startH: number;
@@ -86,11 +87,25 @@ function applyProgress(element: HTMLElement, p: number, metrics: Metrics, reduce
   element.dataset.icons = on;
   element.dataset.line = line > 0.004 ? "1" : "0";
   element.dataset.hint = hint > 0.004 ? "1" : "0";
+  refreshPanelMasks(element);
 }
 
 function frameMargin(height: number) {
   const layout = frame1Config.layout;
   return Math.round(Math.min(layout.marginMax, Math.max(layout.marginMin, height * layout.margin)));
+}
+
+function portraitAspect(element: HTMLElement) {
+  const image = element.querySelector<HTMLImageElement>("#frame1-main-image");
+  if (image && image.naturalWidth > 0 && image.naturalHeight > 0) {
+    return image.naturalWidth / image.naturalHeight;
+  }
+  return frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight;
+}
+
+/** Top of the photo box so the hair line sits at `hairY`. */
+function topForHair(hairY: number, height: number) {
+  return hairY - frame1Config.portraitLayout.hairTopY * height;
 }
 
 function equalizeTitles(left: HTMLElement | null, right: HTMLElement | null) {
@@ -118,22 +133,33 @@ function sizeRule(copy: HTMLElement | null, side: "left" | "right") {
 function copyFits(copy: HTMLElement, card: HTMLElement) {
   const box = card.getBoundingClientRect();
   const body = copy.getBoundingClientRect();
-  if (body.bottom > box.bottom - 4) return false;
-  const nodes = copy.querySelectorAll<HTMLElement>(".title, .label, .text, .research-open, .course, .rule");
+  if (body.height > 1 && body.bottom > box.bottom - 4) return false;
+  const nodes = copy.querySelectorAll<HTMLElement>(".title, .label, .text, .invite, .course, .rule");
   for (const node of nodes) {
     const rect = node.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) continue;
-    if (rect.left < box.left + 4 || rect.right > box.right - 4) return false;
+    if (rect.left < box.left + 2 || rect.right > box.right - 2) return false;
   }
   return true;
 }
 
+function visibleCopy(frame: HTMLElement, side: "left" | "right") {
+  const stacked = frame.dataset.stack === "1";
+  const selector = stacked ? ".card-compact" : ".card-copy-full";
+  return frame.querySelector<HTMLElement>(`.card-${side} ${selector}`);
+}
+
 function fitCopies(frame: HTMLElement) {
-  const left = frame.querySelector<HTMLElement>(".card-left .card-copy");
-  const right = frame.querySelector<HTMLElement>(".card-right .card-copy");
+  const left = visibleCopy(frame, "left");
+  const right = visibleCopy(frame, "right");
   const leftCard = frame.querySelector<HTMLElement>(".card-left");
   const rightCard = frame.querySelector<HTMLElement>(".card-right");
   if (!left || !right || !leftCard || !rightCard) return;
+  const floor = frame1Config.layout.minText / Math.min(
+    frame1Config.text.bodySize,
+    frame1Config.text.labelSize,
+    frame1Config.text.courseSize,
+  );
   const apply = (fit: number) => {
     frame.style.setProperty("--copy-fit", fit.toFixed(3));
     equalizeTitles(left, right);
@@ -142,9 +168,9 @@ function fitCopies(frame: HTMLElement) {
     return copyFits(left, leftCard) && copyFits(right, rightCard);
   };
   if (apply(1)) return;
-  let low = 0.62;
+  let low = floor;
   let high = 1;
-  let best = 0.62;
+  let best = floor;
   for (let step = 0; step < 10; step += 1) {
     const mid = (low + high) / 2;
     if (apply(mid)) {
@@ -157,9 +183,10 @@ function fitCopies(frame: HTMLElement) {
   apply(best);
 }
 
-function fitCenter(frame: HTMLElement, width: number, column: number) {
+function fitCenter(frame: HTMLElement, width: number, limitLeft: number, limitRight: number) {
   const name = frame.querySelector<HTMLElement>(".middle-name");
   if (!name) return;
+  const minFit = frame1Config.layout.minText / frame1Config.middle.lineSize;
   const apply = (fit: number) => {
     frame.style.setProperty("--name-fit", fit.toFixed(3));
     const icon = Math.max(26, Math.round(frame1Config.icons.size * fit));
@@ -168,15 +195,14 @@ function fitCenter(frame: HTMLElement, width: number, column: number) {
     const nameW = name.getBoundingClientRect().width;
     const rowLeft = width / 2 - nameW / 2 - gap - icon;
     const rowRight = width / 2 + nameW / 2 + gap + icon;
-    const columnLeft = (width - column) / 2;
-    const inside = rowLeft >= columnLeft - 0.5 && rowRight <= columnLeft + column + 0.5;
-    return { inside, icon, gap, nameW };
+    const inside = rowLeft >= limitLeft - 0.5 && rowRight <= limitRight + 0.5;
+    return { inside, icon, gap, nameW, rowLeft, rowRight };
   };
   let fit = 1;
   if (!apply(1).inside) {
-    let low = 0.45;
+    let low = minFit;
     let high = 1;
-    fit = 0.45;
+    fit = minFit;
     for (let step = 0; step < 12; step += 1) {
       const mid = (low + high) / 2;
       if (apply(mid).inside) {
@@ -194,6 +220,96 @@ function fitCenter(frame: HTMLElement, width: number, column: number) {
   frame.style.setProperty("--name-h", `${name.offsetHeight}px`);
   frame.style.setProperty("--icon-github-x", `${width / 2 - nameW / 2 - placed.gap - icon}px`);
   frame.style.setProperty("--icon-linkedin-x", `${width / 2 + nameW / 2 + placed.gap}px`);
+}
+
+/**
+ * Sloped panel mask. The inner edge leans toward the center, and the fade
+ * runs along that slope. White is visible. The outer corners stay rounded.
+ */
+function panelMask(side: "left" | "right", width: number, height: number, lean: number, radius: number, fade: number) {
+  const w = Math.max(1, Math.round(width));
+  const h = Math.max(1, Math.round(height));
+  const leanPx = Math.max(0, Math.min(lean, w - 2));
+  const r = Math.max(0, Math.min(radius, h / 2 - 1, (w - leanPx) / 2 - 1));
+  const length = Math.hypot(leanPx, h) || 1;
+  const band = Math.max(10, fade);
+  let x1: number;
+  let y1: number;
+  let x2: number;
+  let y2: number;
+  let d: string;
+  if (side === "left") {
+    const mx = w - leanPx / 2;
+    const my = h / 2;
+    x2 = mx;
+    y2 = my;
+    x1 = mx - (h / length) * band;
+    y1 = my - (leanPx / length) * band;
+    d = [
+      `M ${r.toFixed(2)} 0`,
+      `H ${w}`,
+      `L ${(w - leanPx).toFixed(2)} ${h}`,
+      `H ${r.toFixed(2)}`,
+      `A ${r} ${r} 0 0 1 0 ${(h - r).toFixed(2)}`,
+      `V ${r.toFixed(2)}`,
+      `A ${r} ${r} 0 0 1 ${r.toFixed(2)} 0`,
+      "Z",
+    ].join(" ");
+  } else {
+    const mx = leanPx / 2;
+    const my = h / 2;
+    x2 = mx;
+    y2 = my;
+    x1 = mx + (h / length) * band;
+    y1 = my - (leanPx / length) * band;
+    d = [
+      "M 0 0",
+      `H ${(w - r).toFixed(2)}`,
+      `A ${r} ${r} 0 0 1 ${w} ${r.toFixed(2)}`,
+      `V ${(h - r).toFixed(2)}`,
+      `A ${r} ${r} 0 0 1 ${(w - r).toFixed(2)} ${h}`,
+      `H ${leanPx.toFixed(2)}`,
+      "Z",
+    ].join(" ");
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="${d}" fill="url(#g)"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/**
+ * Drops the campus photo just enough that its landmark starts below the text.
+ * A scale of 1 shows the whole photo. Anything larger crops a little foreground.
+ */
+function placePhoto(frame: HTMLElement, side: "left" | "right", mark: number) {
+  const card = frame.querySelector<HTMLElement>(`.card-${side}`);
+  const copy = visibleCopy(frame, side);
+  if (!card || !copy) return;
+  const cardRect = card.getBoundingClientRect();
+  const copyRect = copy.getBoundingClientRect();
+  if (cardRect.height < 2 || copyRect.height < 2) return;
+  const need = copyRect.bottom - cardRect.top + 16;
+  const markPx = Math.max(1, mark * cardRect.height);
+  const scale = need <= markPx ? 1 : Math.min(1.08, need / markPx);
+  frame.style.setProperty(side === "left" ? "--buas-scale" : "--bilkent-scale", scale.toFixed(3));
+}
+
+/** Rebuilds each panel mask from the card's live box, so the slope follows a resize or the opening. */
+function refreshPanelMasks(element: HTMLElement) {
+  const lean = Number.parseFloat(getComputedStyle(element).getPropertyValue("--lean")) || 0;
+  const fade = Number.parseFloat(getComputedStyle(element).getPropertyValue("--edge-fade")) || 24;
+  const radius = frame1Config.layout.radius;
+  for (const side of ["left", "right"] as const) {
+    const card = element.querySelector<HTMLElement>(`.card-${side}`);
+    if (!card) continue;
+    const rect = card.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) continue;
+    const key = `${Math.round(rect.width)}x${Math.round(rect.height)}:${Math.round(lean)}`;
+    if (card.dataset.maskKey === key) continue;
+    card.dataset.maskKey = key;
+    card.style.setProperty("--panel-w", `${rect.width.toFixed(1)}px`);
+    card.style.setProperty("--panel-h", `${rect.height.toFixed(1)}px`);
+    card.style.setProperty("--panel-mask", panelMask(side, rect.width, rect.height, lean, radius, fade));
+  }
 }
 
 function Asset({
@@ -287,20 +403,124 @@ function LinkedInIcon() {
   );
 }
 
-function CampusPhoto({ src }: { src: string }) {
+function InviteLine() {
+  const ref = useRef<SVGSVGElement>(null);
+  useLayoutEffect(() => {
+    const svg = ref.current;
+    const path = svg?.querySelector("path");
+    if (!svg || !path) return;
+    const fit = () => {
+      const view = svg.viewBox.baseVal.width || 120;
+      const width = svg.getBoundingClientRect().width;
+      const scale = width > 0 ? width / view : 1;
+      const rendered = Math.max(1, path.getTotalLength() * scale);
+      svg.style.setProperty("--invite-length", `${rendered.toFixed(2)}`);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <svg ref={ref} className="invite-line" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        d="M1 4.2 C 14 2.6, 24 5.4, 38 3.7 S 62 2.5, 78 4.4 S 100 2.8, 119 3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+function InviteArrow({ direction }: { direction: "right" | "down" }) {
+  if (direction === "down") {
+    return (
+      <svg className="invite-arrow invite-arrow-down" viewBox="0 0 14 16" aria-hidden="true">
+        <path
+          d="M7.1 1.6 C 6.6 5.2, 7.5 8.4, 6.8 11.4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinecap="round"
+        />
+        <path
+          d="M3.2 8.7 C 4.9 10.5, 6.1 11.7, 7 12.8 C 8.1 11.3, 9.7 10.1, 11.3 8.6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg className="invite-arrow" viewBox="0 0 20 12" aria-hidden="true">
+      <path
+        d="M1.4 6.2 C 6.2 5.4, 10.4 6.8, 15.2 5.7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <path
+        d="M11.2 2.1 C 13.4 3.6, 14.8 4.8, 16.4 6.1 C 14.6 7.3, 12.8 8.8, 11.1 10.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Invite({
+  children,
+  arrow,
+  className,
+}: {
+  children: string;
+  arrow?: "right" | "down";
+  className?: string;
+}) {
+  return (
+    <span className={className ? `invite ${className}` : "invite"}>
+      <span className="invite-text">{children}</span>
+      {arrow ? <InviteArrow direction={arrow} /> : null}
+      <InviteLine />
+    </span>
+  );
+}
+
+function CampusPhoto({ src, side }: { src: string; side: "buas" | "bilkent" }) {
   return (
     <div className="duotone">
-      <Asset src={src} alt="" className="campus" />
+      <Asset src={src} alt="" className={side === "buas" ? "campus campus-buas" : "campus campus-bilkent"} />
       <div className="tone-hue fill" />
       <div className="tone-lift fill" />
     </div>
   );
 }
 
-function Campus({ src }: { src: string }) {
+function Courses() {
   return (
-    <div className="card-face">
-      <CampusPhoto src={src} />
+    <div className="courses">
+      {frame1Config.courses.map((course) => (
+        <a
+          key={course.href}
+          className="course"
+          href={course.href}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          <span className="course-code">{course.code}</span>{" "}
+          <span className="course-name">{course.name}</span>
+        </a>
+      ))}
     </div>
   );
 }
@@ -314,14 +534,21 @@ export function Frame1() {
   const reducedRef = useRef(reduced);
   reducedRef.current = reduced;
   const [shown, setShown] = useState<Shown>(playOpening ? NONE_SHOWN : ALL_SHOWN);
+  const [stacked, setStacked] = useState(false);
 
   const frameRef = useRef<HTMLDivElement>(null);
   const researchButtonRef = useRef<HTMLButtonElement>(null);
   const researchCloseRef = useRef<HTMLButtonElement>(null);
-  const whyButtonRef = useRef<HTMLButtonElement>(null);
+  const whyDesktopRef = useRef<HTMLButtonElement>(null);
+  const whyDetailRef = useRef<HTMLButtonElement>(null);
+  const detailReturnRef = useRef<HTMLButtonElement | null>(null);
   const [research, setResearch] = useState<ResearchPose | null>(null);
+  const [detail, setDetail] = useState<DetailSide | null>(null);
+  const [detailPose, setDetailPose] = useState<ResearchPose>("from");
   const [cueOn, setCueOn] = useState(true);
   const researchWasOpen = useRef(false);
+  const detailWasOpen = useRef(false);
+  const measureRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!playOpening) {
@@ -346,33 +573,120 @@ export function Frame1() {
       const width = element.clientWidth;
       const height = element.clientHeight;
       if (width < 2 || height < 2) return;
+      const stack = width < layout.stackBelow || height > width;
+      element.dataset.stack = stack ? "1" : "0";
+      setStacked((current) => (current === stack ? current : stack));
       const margin = frameMargin(height);
-      const cardW = width * layout.cardWidth;
-      const column = Math.max(160, width - 2 * (margin + cardW) - 2 * layout.columnGutter);
-      const fullH = height * layout.portrait;
-      const fullTop = margin;
+      const hair = frame1Config.portraitLayout.hairTopY;
+      const aspect = portraitAspect(element);
+      element.style.setProperty("--portrait-aspect", String(aspect));
       element.style.setProperty("--margin", `${margin}px`);
+
+      const name = element.querySelector<HTMLElement>(".middle-name");
+      const under = element.querySelector<HTMLElement>(".under-name");
+      const nameH = name?.offsetHeight ?? 48;
+      const underH = under?.offsetHeight ?? 28;
+
+      let cardW: number;
+      let lean: number;
+      let panelH: number;
+      let fullH: number;
+      let fullTop: number;
+      let limitLeft: number;
+      let limitRight: number;
+
+      if (stack) {
+        const pad = Math.max(14, Math.round(Math.min(28, width * 0.04)));
+        const leanWanted = layout.lean * width;
+        const gap = leanWanted * 2 + 16;
+        const roomW = width - pad * 2 - gap;
+        cardW = Math.max(120, roomW / 2);
+        const topGap = gap - leanWanted * 2;
+        lean = topGap < 12 ? Math.max(0, (gap - 12) / 2) : leanWanted;
+        const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + 18 + pad;
+        const roomH = Math.max(220, height - chrome);
+        fullH = Math.min(height * 0.32, Math.max(140, roomH * 0.38));
+        panelH = Math.max(168, roomH - fullH);
+        const hairY = pad + 2;
+        fullTop = topForHair(hairY, fullH);
+        element.style.setProperty("--stack-pad", `${pad}px`);
+        element.style.setProperty("--stack-bottom", `${pad}px`);
+        element.style.setProperty("--stack-card-w", `${cardW}px`);
+        limitLeft = pad;
+        limitRight = width - pad;
+      } else {
+        cardW = width * layout.cardWidth;
+        lean = layout.lean * width;
+        panelH = Math.max(1, height - margin * 2);
+        const aspectNow = portraitAspect(element);
+        const textInner = margin + cardW + lean * 0.58 - 20;
+        const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
+        const wantedW = height * layout.portrait * aspectNow;
+        fullH = Math.min(wantedW, maxW) / aspectNow;
+        fullTop = topForHair(layout.hairFrame * height, fullH);
+        const gutter = layout.columnGutter;
+        limitLeft = margin + gutter;
+        limitRight = width - margin - gutter;
+      }
+
+      const fade = layout.edgeFade * cardW;
+      const panelW = cardW + lean;
       element.style.setProperty("--card-w", `${cardW}px`);
+      element.style.setProperty("--lean", `${lean}px`);
+      element.style.setProperty("--edge-fade", `${fade}px`);
+      element.style.setProperty("--panel-w", `${panelW}px`);
+      element.style.setProperty("--panel-h", `${panelH}px`);
+      const leftCard = element.querySelector<HTMLElement>(".card-left");
+      const rightCard = element.querySelector<HTMLElement>(".card-right");
+      const radius = layout.radius;
+      if (leftCard) {
+        leftCard.style.setProperty("--panel-mask", panelMask("left", panelW, panelH, lean, radius, fade));
+      }
+      if (rightCard) {
+        rightCard.style.setProperty("--panel-mask", panelMask("right", panelW, panelH, lean, radius, fade));
+      }
+
+      const column = Math.max(160, stack ? width - 32 : width - 2 * (margin + cardW) - 2 * layout.columnGutter);
       element.style.setProperty("--column", `${column}px`);
       element.style.setProperty("--portrait-h", `${fullH}px`);
       element.style.setProperty("--portrait-top", `${fullTop}px`);
       fitCopies(element);
-      fitCenter(element, width, column);
-
-      const identity = element.querySelector<HTMLElement>(".identity");
-      const block = identity?.offsetHeight ?? 80;
+      fitCenter(element, width, limitLeft, limitRight);
+      const block = (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH);
       const chrome = layout.nameGap + block;
-      const pad = 28;
-      const available = height - pad * 2 - chrome;
-      const startH = Math.min(height * layout.portraitStart, Math.max(fullH, available));
-      const stack = startH + chrome;
-      const startTop = Math.max(pad, (height - stack) / 2);
+      const pad = stack ? Math.max(14, Math.round(Math.min(28, width * 0.04))) : 28;
+      let startH: number;
+      let startTop: number;
+      if (stack) {
+        const cardsTop = fullTop + fullH + chrome + 14;
+        element.style.setProperty("--stack-below", `${chrome}px`);
+        element.style.setProperty("--stack-cards-top", `${cardsTop}px`);
+        const startCap = height * layout.portraitStart;
+        const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+        startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
+        const stackHeight = (1 - hair) * startH + chrome;
+        const hairY = Math.max(pad, (height - stackHeight) / 2);
+        startTop = topForHair(hairY, startH);
+        const startIdentity = startTop + startH + chrome;
+        const slide = Math.max(24, Math.round(startIdentity - cardsTop + 16));
+        element.style.setProperty("--stack-slide", `${slide}px`);
+      } else {
+        const startCap = height * layout.portraitStart;
+        const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+        startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
+        const stackHeight = (1 - hair) * startH + chrome;
+        const hairY = Math.max(pad, (height - stackHeight) / 2);
+        startTop = topForHair(hairY, startH);
+      }
+      placePhoto(element, "left", frame1Config.photos.buasMark);
+      placePhoto(element, "right", frame1Config.photos.bilkentMark);
       const metrics = { startH, startTop, fullH, fullTop };
       metricsRef.current = metrics;
       const progress = scrollOpening ? progressRef.current : 1;
       applyProgress(element, progress, metrics, scrollOpening && reducedRef.current);
     };
 
+    measureRef.current = measure;
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -385,6 +699,10 @@ export function Frame1() {
       observer.disconnect();
     };
   }, [scrollOpening]);
+
+  useLayoutEffect(() => {
+    measureRef.current();
+  }, [stacked]);
 
   useLayoutEffect(() => {
     const element = frameRef.current;
@@ -450,6 +768,7 @@ export function Frame1() {
     return () => observer.disconnect();
   }, []);
 
+  const mask = frame1Config.portraitLayout.mask;
   const style = {
     "--buas-tone": frame1Config.colors.buasTone,
     "--bilkent-tone": frame1Config.colors.bilkentTone,
@@ -460,10 +779,17 @@ export function Frame1() {
     "--portrait-grade": frame1Config.portraitGrade,
     "--focus": frame1Config.focus,
     "--radius": `${frame1Config.layout.radius}px`,
-    "--edge-fade": `${frame1Config.layout.edgeFade * 100}%`,
     "--name-gap": `${frame1Config.layout.nameGap}px`,
     "--line-gap": `${frame1Config.layout.lineGap}px`,
     "--mark-h": `${frame1Config.layout.mark}px`,
+    "--min-text": `${frame1Config.layout.minText}px`,
+    "--mask-cx": `${mask.cx * 100}%`,
+    "--mask-cy": `${mask.cy * 100}%`,
+    "--mask-rx": `${mask.rx * 100}%`,
+    "--mask-ry": `${mask.ry * 100}%`,
+    "--mask-solid": `${mask.solid * 100}%`,
+    "--buas-photo": frame1Config.photos.buas,
+    "--bilkent-photo": frame1Config.photos.bilkent,
     "--portrait-aspect": String(
       frame1Config.portraitLayout.naturalWidth / frame1Config.portraitLayout.naturalHeight,
     ),
@@ -472,10 +798,6 @@ export function Frame1() {
     "--space-body": `${frame1Config.text.spaceBody}px`,
     "--space-button": `${frame1Config.text.spaceButton}px`,
     "--rule-opacity": String(frame1Config.text.ruleOpacity),
-    "--button-pad-y": `${frame1Config.text.buttonPadY}px`,
-    "--button-pad-x": `${frame1Config.text.buttonPadX}px`,
-    "--button-radius": `${frame1Config.text.buttonRadius}px`,
-    "--button-border": frame1Config.text.buttonBorder,
     "--title-line": String(frame1Config.text.titleLine),
     "--buas-title-size": frame1Config.text.buasTitleSize,
     "--buas-title-weight": String(frame1Config.text.buasTitleWeight),
@@ -490,9 +812,6 @@ export function Frame1() {
     "--body-weight": String(frame1Config.text.bodyWeight),
     "--body-line": String(frame1Config.text.bodyLine),
     "--body-opacity": String(frame1Config.text.bodyOpacity),
-    "--button-size": `${frame1Config.text.buttonSize}px`,
-    "--button-weight": String(frame1Config.text.buttonWeight),
-    "--arrow-shift": `${frame1Config.text.arrowShift}px`,
     "--course-size": `${frame1Config.text.courseSize}px`,
     "--course-code-weight": String(frame1Config.text.courseCodeWeight),
     "--course-code-opacity": String(frame1Config.text.courseCodeOpacity),
@@ -510,6 +829,9 @@ export function Frame1() {
     "--icon-lift": `${frame1Config.icons.lift}px`,
     "--icon-linkedin": frame1Config.icons.linkedin,
     "--icon-radius": `${frame1Config.icons.radius}px`,
+    "--invite-color": frame1Config.invite.color,
+    "--invite-size": `${frame1Config.invite.size}px`,
+    "--invite-draw": `${frame1Config.invite.draw}s`,
     "--research-time": `${frame1Config.research.duration}s`,
     "--research-dim": String(frame1Config.research.dim),
     "--research-blur": `${frame1Config.research.blur}px`,
@@ -552,34 +874,102 @@ export function Frame1() {
   }, [research, reduced]);
 
   useEffect(() => {
-    const button = whyButtonRef.current;
+    if (!detail) {
+      if (detailWasOpen.current) detailReturnRef.current?.focus();
+      return;
+    }
+    detailWasOpen.current = true;
+    if (detailPose === "from") {
+      const id = window.requestAnimationFrame(() => {
+        setDetailPose((current) => (current === "from" ? "open" : current));
+      });
+      return () => window.cancelAnimationFrame(id);
+    }
+    if (detailPose !== "back") return;
+    const timer = window.setTimeout(
+      () => {
+        setDetail(null);
+        setDetailPose("from");
+      },
+      (reduced ? 0.32 : frame1Config.research.duration + 0.08) * 1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [detail, detailPose, reduced]);
+
+  useEffect(() => {
+    if (!stacked && detail) {
+      setDetail(null);
+      setDetailPose("from");
+    }
+  }, [stacked, detail]);
+
+  useEffect(() => {
+    const button = detail ? whyDetailRef.current : whyDesktopRef.current;
     const frame = frameRef.current;
     if (!button || !frame) return;
     const why = frame1Config.bilkentWhy;
     const note = attachWhyNote(button, frame, { note: why.note, label: why.label, hover: true });
     return () => note.destroy();
-  }, []);
+  }, [detail, stacked]);
 
   useEffect(() => {
-    if (!research) return;
+    if (!research && !detail) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      event.preventDefault();
-      setResearch((current) => (current && current !== "back" ? "back" : current));
+      if (research && research !== "back") {
+        event.preventDefault();
+        setResearch("back");
+        return;
+      }
+      if (detail && detailPose !== "back") {
+        event.preventDefault();
+        setDetailPose("back");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [research]);
+  }, [research, detail, detailPose]);
+
+  const openResearch = (button: HTMLButtonElement) => {
+    researchButtonRef.current = button;
+    setResearch("from");
+  };
+
+  const openDetail = (side: DetailSide, button: HTMLButtonElement) => {
+    detailReturnRef.current = button;
+    setDetailPose("from");
+    setDetail(side);
+  };
 
   const researchShift = (() => {
     const button = researchButtonRef.current?.getBoundingClientRect();
     const frame = frameRef.current?.getBoundingClientRect();
-    if (!button || !frame) return { x: 0, y: 0 };
+    if (!button || !frame || button.width < 1) return { x: 0, y: 0 };
     return {
       x: button.left + button.width / 2 - (frame.left + frame.width / 2),
       y: button.top + button.height / 2 - (frame.top + frame.height / 2),
     };
   })();
+
+  const detailShift = (() => {
+    const button = detailReturnRef.current?.getBoundingClientRect();
+    const frame = frameRef.current?.getBoundingClientRect();
+    if (!button || !frame || button.width < 1) return { x: 0, y: 0 };
+    return {
+      x: button.left + button.width / 2 - (frame.left + frame.width / 2),
+      y: button.top + button.height / 2 - (frame.top + frame.height / 2),
+    };
+  })();
+
+  const sheetMotion = (pose: ResearchPose, shift: { x: number; y: number }) => {
+    if (reduced) return undefined;
+    return {
+      transform:
+        pose === "open"
+          ? "translate(-50%, -50%)"
+          : `translate(-50%, -50%) translate(${shift.x}px, ${shift.y}px) scale(${frame1Config.research.fromScale})`,
+    };
+  };
 
   return (
     <main
@@ -589,7 +979,7 @@ export function Frame1() {
         playOpening ? "is-opening" : "",
         scrollOpening ? "is-scroll-opening" : "",
         reduced ? "is-reduced" : "",
-        research ? "is-research" : "",
+        research || detail ? "is-research" : "",
       ].filter(Boolean).join(" ")}
       style={style}
       data-bilkent={shown.bilkent ? "1" : "0"}
@@ -597,53 +987,66 @@ export function Frame1() {
       data-middle={shown.middle ? "1" : "0"}
       data-content={shown.content ? "1" : "0"}
       data-name={shown.name ? "1" : "0"}
+      data-stack={stacked ? "1" : "0"}
     >
       <div className="frame-world">
         <section className="card card-left" aria-label="Breda University of Applied Sciences">
-          <Campus src={frame1Config.assets.buasCampus} />
-          <div className="card-copy">
+          <div className="card-face">
+            <CampusPhoto src={frame1Config.assets.buasCampus} side="buas" />
+          </div>
+          <div className="card-copy card-copy-full">
             <p className="title title-buas">Master Game Technology</p>
             <div className="rule" />
             <p className="label">AI & Procedural Generation</p>
-            <p className="text">{frame1Config.buasText}</p>
+            <p className="text">
+              {frame1Config.buasLead} {frame1Config.buasRest}
+            </p>
             <button
-              ref={researchButtonRef}
               type="button"
-              className="research-open"
-              onClick={() => setResearch("from")}
+              className="invite research-open"
+              onClick={(event) => openResearch(event.currentTarget)}
             >
-              Explore my research <span className="research-arrow">→</span>
+              <span className="invite-text">Explore my research</span>
+              <InviteArrow direction="right" />
+              <InviteLine />
             </button>
           </div>
+          <button
+            type="button"
+            className="card-copy card-compact"
+            onClick={(event) => openDetail("buas", event.currentTarget)}
+          >
+            <span className="title title-buas">Master Game Technology</span>
+            <span className="label">AI & Procedural Generation</span>
+            <span className="text">{frame1Config.buasLead}</span>
+          </button>
         </section>
 
         <section className="card card-right" aria-label="Bilkent University">
-          <Campus src={frame1Config.assets.bilkentCampus} />
-          <div className="card-copy">
+          <div className="card-face">
+            <CampusPhoto src={frame1Config.assets.bilkentCampus} side="bilkent" />
+          </div>
+          <div className="card-copy card-copy-full">
             <p className="title title-bilkent">BSc Computer Engineering</p>
             <div className="rule" />
             <p className="text why-line">
               {frame1Config.bilkentWhy.line}{" "}
-              <button ref={whyButtonRef} type="button" className="why-button">
+              <button ref={whyDesktopRef} type="button" className="why-button">
                 {frame1Config.bilkentWhy.label}
               </button>
             </p>
             <p className="label">Favorite courses</p>
-            <div className="courses">
-              {frame1Config.courses.map((course) => (
-                <a
-                  key={course.href}
-                  className="course"
-                  href={course.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  <span className="course-code">{course.code}</span>{" "}
-                  <span className="course-name">{course.name}</span>
-                </a>
-              ))}
-            </div>
+            <Courses />
           </div>
+          <button
+            type="button"
+            className="card-copy card-compact"
+            onClick={(event) => openDetail("bilkent", event.currentTarget)}
+          >
+            <span className="title title-bilkent">BSc Computer Engineering</span>
+            <span className="label">Favorite courses</span>
+            <span className="text">{frame1Config.bilkentWhy.line}</span>
+          </button>
         </section>
 
         <img
@@ -652,13 +1055,18 @@ export function Frame1() {
           src={frame1Config.assets.portrait}
           alt="Portrait of Alper Bozkurt"
           draggable={false}
+          onLoad={() => measureRef.current()}
         />
 
         <div className="identity">
           <p className="middle-name">Alper Bozkurt</p>
           <div className="under-name">
             <p className="middle-line">{frame1Config.tagline}</p>
-            {scrollOpening ? <p className="middle-hint">{frame1Config.scrollOpening.hint}</p> : null}
+            {scrollOpening ? (
+              <p className="middle-hint">
+                <Invite arrow="down">{frame1Config.scrollOpening.hint}</Invite>
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -717,6 +1125,73 @@ export function Frame1() {
         )}
       </div>
 
+      {detail ? (
+        <div
+          className="research-layer card-detail-layer"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && detailPose !== "back") setDetailPose("back");
+          }}
+        >
+          <div
+            className={
+              reduced
+                ? detailPose === "open"
+                  ? "research-panel card-detail is-shown"
+                  : "research-panel card-detail"
+                : "research-panel card-detail"
+            }
+            role="dialog"
+            aria-modal="true"
+            aria-label={detail === "buas" ? "Master Game Technology" : "BSc Computer Engineering"}
+            style={sheetMotion(detailPose, detailShift)}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="research-close"
+              aria-label="Close"
+              onClick={() => setDetailPose("back")}
+            >
+              ×
+            </button>
+            <div className="research-scroll card-detail-copy">
+              {detail === "buas" ? (
+                <>
+                  <p className="title title-buas">Master Game Technology</p>
+                  <div className="rule" />
+                  <p className="label">AI & Procedural Generation</p>
+                  <p className="text">
+                    {frame1Config.buasLead} {frame1Config.buasRest}
+                  </p>
+                  <button
+                    type="button"
+                    className="invite research-open"
+                    onClick={(event) => openResearch(event.currentTarget)}
+                  >
+                    <span className="invite-text">Explore my research</span>
+                    <InviteArrow direction="right" />
+                    <InviteLine />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="title title-bilkent">BSc Computer Engineering</p>
+                  <div className="rule" />
+                  <p className="text why-line">
+                    {frame1Config.bilkentWhy.line}{" "}
+                    <button ref={whyDetailRef} type="button" className="why-button">
+                      {frame1Config.bilkentWhy.label}
+                    </button>
+                  </p>
+                  <p className="label">Favorite courses</p>
+                  <Courses />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {research ? (
         <div
           className="research-layer"
@@ -731,16 +1206,7 @@ export function Frame1() {
             role="dialog"
             aria-modal="true"
             aria-label="Research plan"
-            style={
-              reduced
-                ? undefined
-                : {
-                    transform:
-                      research === "open"
-                        ? "translate(-50%, -50%)"
-                        : `translate(-50%, -50%) translate(${researchShift.x}px, ${researchShift.y}px) scale(${frame1Config.research.fromScale})`,
-                  }
-            }
+            style={sheetMotion(research, researchShift)}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button

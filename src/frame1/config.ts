@@ -26,21 +26,27 @@ export const frame1Config = {
   /**
    * Full frame: portrait at the top, a card on each side.
    * The three card margins (top, bottom, outer) are one length.
+   * The portrait is placed from the top of the hair, not from the photo edge.
    */
   layout: {
-    /** Each card, as a fraction of the frame width. */
+    /** Each card at its bottom edge, as a fraction of the frame width. */
     cardWidth: 0.3,
     /** Portrait height in the full frame, as a fraction of the frame height. */
-    portrait: 0.34,
+    portrait: 0.48,
     /** Largest the portrait gets in the start state, as a fraction of the frame height. */
-    portraitStart: 0.66,
+    portraitStart: 0.62,
     /** Top, bottom and outer margins, as a fraction of the frame height. */
     margin: 0.056,
-    marginMin: 52,
+    marginMin: 48,
     marginMax: 72,
     radius: 12,
-    /** Soft fade at the inner edge, as a fraction of the card width. */
+    /** Soft fade at the inner edge, as a fraction of the card's bottom width. */
     edgeFade: 0.15,
+    /**
+     * The inner edge leans toward the center. At the top it is this much
+     * further in than at the bottom, as a fraction of the frame width.
+     */
+    lean: 0.06,
     /** Gap between the portrait and the name, in pixels. */
     nameGap: 14,
     /** Gap between the name and the line under it, in pixels. */
@@ -49,10 +55,57 @@ export const frame1Config = {
     columnGutter: 16,
     /** School marks, in pixels. They sit in the bottom margin. */
     mark: 22,
+    /** Stacked cards when the frame is narrower than this, or taller than it is wide. */
+    stackBelow: 1000,
+    /** No text on this frame goes below this size, in pixels. */
+    minText: 13,
+    /** Where the top of the hair sits in the full frame, as a fraction of the frame height. */
+    hairFrame: 0.048,
   },
   portraitLayout: {
-    naturalWidth: 1024,
-    naturalHeight: 1026,
+    naturalWidth: 1254,
+    naturalHeight: 1254,
+    /**
+     * Top of the hair, as a fraction of the photo height.
+     * The portrait is anchored on this line.
+     */
+    hairTopY: 0.2,
+    /**
+     * Soft oval. The face, hair and shoulders stay solid.
+     * The black photo background falls away before the straight edges,
+     * so no square edge or black box sits on the panels.
+     */
+    mask: {
+      cx: 0.5,
+      cy: 0.55,
+      rx: 0.46,
+      ry: 0.48,
+      /** Opaque through this share of the oval. The rest fades to clear. */
+      solid: 0.78,
+    },
+  },
+  /**
+   * Campus photos are framed for the sloped panels: sky behind the text,
+   * the BUas tower and the Bilkent building whole in the lower part.
+   * object-position, as percentages of each photo.
+   */
+  photos: {
+    /** Horizontal anchor. The vertical place follows the text, so the landmark stays below it. */
+    buas: "22%",
+    bilkent: "82%",
+    /** Where the landmark starts in each photo. The photo shifts down if the text would cover it. */
+    buasMark: 0.5,
+    bilkentMark: 0.58,
+  },
+  /**
+   * Invitations to act. Instrument Serif italic, gold, with a hand-drawn
+   * underline that draws on hover and keyboard focus. Nothing moves on its own.
+   */
+  invite: {
+    color: "#EFC785",
+    size: 20,
+    /** Draw time of the underline, in seconds. */
+    draw: 0.2,
   },
   middle: {
     nameSize: "clamp(40px, 4.4vw, 80px)",
@@ -95,8 +148,6 @@ export const frame1Config = {
     buttonRadius: 6,
     buttonBorder: "rgba(255, 255, 255, 0.4)",
     buttonWeight: 600,
-    /** How far the research arrow travels on hover and focus, in pixels. */
-    arrowShift: 4,
     courseSize: 16,
     courseCodeWeight: 600,
     courseCodeOpacity: 0.7,
@@ -126,8 +177,11 @@ export const frame1Config = {
   },
   /** Line under the name in the full frame. */
   tagline: "I'm a game programmer. I build gameplay systems and game AI.",
-  buasText:
-    "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals. Agents with different play styles play every new level, so each level is already playtested when the designer sees it.",
+  /** First sentence, shown alone on a compact card. The rest follows in the full text. */
+  buasLead:
+    "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals.",
+  buasRest:
+    "Agents with different play styles play every new level, so each level is already playtested when the designer sees it.",
   /** Line between the Bilkent divider and the course label, with its "Why I say this" note. */
   bilkentWhy: {
     line: "These courses made me love this work.",
@@ -160,7 +214,7 @@ export const frame1Config = {
     buasLogo: `${import.meta.env.BASE_URL}assets/buas-logo.png`,
     bilkentCampus: `${import.meta.env.BASE_URL}assets/frame1/bilkent-campus.jpg`,
     bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
-    portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
+    portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait-nocrown.jpg`,
     research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
