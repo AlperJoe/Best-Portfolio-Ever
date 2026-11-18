@@ -87,7 +87,7 @@ export const frame5 = {
 
   endingA: {
     label: "Ending A",
-    line: "You pushed all the way here. I think we should talk.",
+    line: "You scrolled all the way here. I think we should talk.",
     left: 0.06,
     maxWidth: 0.36,
     /**
@@ -245,7 +245,7 @@ export const frame5 = {
       ["Cards dealt by", "Pedro"],
       ["Doors held open by", "Agent A and Agent B"],
       ["Levels tested by", "Behavioural agents"],
-      ["Wagon pushed by", "You"],
+      ["Scrolled by", "You"],
     ] as const,
     /** Space between the last credit and "End of the line.", in pixels. */
     endGap: 34,

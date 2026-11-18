@@ -235,6 +235,33 @@
   text-rendering: geometricPrecision;
 }
 
+.txd-why {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+
+.txd-why.is-on {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 160ms ease, visibility 0s linear 0s;
+}
+
+.tx-stage > .why-layer {
+  z-index: 45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .txd-why,
+  .txd-why.is-on {
+    transition: none;
+  }
+}
+
 .txd-cover {
   position: absolute;
   inset: 0;

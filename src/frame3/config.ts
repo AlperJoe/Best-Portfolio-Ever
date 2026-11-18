@@ -52,6 +52,16 @@ export const frame3 = {
   arrowShift: "4px",
   refsBottom: "4%",
 
+  /**
+   * When the text column is taller than the frame minus this share at the top
+   * and the bottom, its type and gaps shrink together, down to copyMinFit.
+   */
+  copyMargin: 0.04,
+  copyMinFit: 0.72,
+  /** Small label above the title. */
+  eyebrowSize: "14px",
+  eyebrowWeight: 500,
+  eyebrowGap: "8px",
   titleSize: "clamp(28px, 2.6vw, 44px)",
   titleWeight: 700,
   titleLine: 1.15,
@@ -123,4 +133,25 @@ export const frame3 = {
   noteColor: "rgba(255, 255, 255, 0.92)",
 
   projectUrl: "https://github.com/AlperJoe/Reinforcement_Learning",
+
+  copy: {
+    eyebrow: "PressurePlate · Bilkent course project, 2023",
+    title: "Teaching two AI agents to work together",
+    intro:
+      "In this puzzle, a door opens only while an agent stands on its pressure plate. One agent has to hold the door so the other can pass, and neither can reach the treasure alone.",
+    didLabel: "What I did",
+    did: [
+      "I rebuilt what each agent sees. Five map layers became one small grid around the agent, plus its position and how long it can still hold a door open.",
+      "I redesigned the level to make it harder than the original, with a 28×14 map and five doors.",
+    ],
+    trainedLabel: "How we trained",
+    trained:
+      "We trained both agents with MADDPG. Each agent acts only on what it sees, but during training it learns from what both agents see.",
+    resultLabel: "Result",
+    result:
+      "After training, the two agents finished the evaluation run in about 25 steps instead of hitting the 100-step limit.",
+    stack: "Python, PyTorch, MADDPG",
+    project: "View the project",
+    caption: "Illustration: a solved run of the level, played back with the level's own rules.",
+  },
 } as const;

@@ -17,10 +17,10 @@ export type InterludeLine = {
 };
 
 export type Interlude = {
-  /** True while the copy is a stand-in. */
-  placeholder?: boolean;
   /** One or two lines. The next frame shows through the focus word of the last one. */
   lines: InterludeLine[];
+  /** Opens from the "Why I say this" control under the last line. */
+  note?: string;
   /**
    * Letter of the last focus word to zoom into, counted from 0. Leave it out
    * to pick the letter with the thickest stroke automatically.
@@ -31,27 +31,38 @@ export type Interlude = {
 export type FramePair = `${FrameId}>${FrameId}`;
 
 export const interludes: Partial<Record<FramePair, Interlude>> = {
-  // PLACEHOLDER: final copy still to be written.
   "frame1>frame2": {
-    placeholder: true,
     lines: [
-      { text: "I'm really adaptable.", focus: "adaptable" },
-      { text: "And open to feedback.", focus: "feedback" },
+      { text: "I love problems I have never seen before.", focus: "problems" },
+      { text: "I break them into the right parts, then I act.", focus: "parts" },
     ],
+    note: "Information is easy to reach today. That lets me jump into a problem I know nothing about, commit to it and learn on the way. I felt this when I worked part time as a network engineer, and again when I built a system in a low-level language for an industry that was new to me. To me, a problem is now a task. I split it into the right parts, and then I act on each part. My passion for this work comes from that. I am someone who loves solving problems.",
   },
-  // PLACEHOLDER: final copy still to be written.
   "frame2>frame3": {
-    placeholder: true,
     lines: [
       { text: "I work ego-free.", focus: "ego-free" },
-      { text: "So I take in what's around me more objectively.", focus: "objectively" },
+      { text: "I take feedback as it is, and I use it.", focus: "feedback" },
     ],
+    note: "Group projects only work when people work together, and I believe communication matters a lot. Working ego-free is a state I try to reach through Buddhism. At work, it lets me hear feedback as it is. I do not take it personally, so I can use it in the best way.",
   },
-  // PLACEHOLDER: final copy still to be written.
   "frame3>frame5": {
-    placeholder: true,
-    lines: [{ text: "A planner and a solver.", focus: "solver" }],
+    lines: [
+      { text: "Happiness comes from perspective.", focus: "perspective" },
+      { text: "So I plan time to grow it.", focus: "plan" },
+    ],
+    note: "I wrote a thesis on the idea that a person's happiness comes from their perspective, and it changed my life. I believe in self-confidence and self-actualization, so I spend time on things that make me happy and widen my perspective. With a busy work schedule, that only happens with a plan. Luckily, I love planning.",
   },
+};
+
+/** The control under the last line of an interlude that opens its note. */
+export const interludeWhy = {
+  label: "Why I say this",
+  /** Same color as the interlude text, softened like the small text on the frames. */
+  color: "rgba(242, 238, 230, 0.7)",
+  /** Space between the bottom of the last line and the control, in pixels. */
+  gap: 18,
+  /** The control shows only while the last line is fully on screen and no larger than this. */
+  maxScale: 1.04,
 };
 
 /** Main color of each frame. The interlude background takes on a tint of the next frame's color. */

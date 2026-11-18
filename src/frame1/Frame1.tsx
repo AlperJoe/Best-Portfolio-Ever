@@ -4,6 +4,7 @@ import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsC
 import { applySeamVariables } from "./geometry";
 import { buildSeamMasks, paintPortraitMask } from "./seamMask";
 import { OPENING_EVENT, readVariant } from "../transitions/config";
+import { attachWhyNote } from "../whyNote/whyNote";
 import "./Frame1.css";
 
 type OpeningPart = (typeof frame1Config.scrollOpening.order)[number]["part"];
@@ -342,6 +343,7 @@ export function Frame1() {
   const rightCopyRef = useRef<HTMLDivElement>(null);
   const researchButtonRef = useRef<HTMLButtonElement>(null);
   const researchCloseRef = useRef<HTMLButtonElement>(null);
+  const whyButtonRef = useRef<HTMLButtonElement>(null);
   const effectsRef = useRef<FrameEffects | null>(null);
   const [research, setResearch] = useState<ResearchPose | null>(null);
   const [cueOn, setCueOn] = useState(true);
@@ -873,6 +875,7 @@ export function Frame1() {
     "--cue-nudge": `${frame1Config.scrollCue.nudge}px`,
     "--cue-every": `${frame1Config.scrollCue.every}s`,
     "--cue-fade": `${frame1Config.scrollCue.fade}s`,
+    "--why-color": frame1Config.why.color,
   } as React.CSSProperties;
 
   useEffect(() => {
@@ -895,6 +898,15 @@ export function Frame1() {
     );
     return () => window.clearTimeout(timer);
   }, [research, reduced]);
+
+  useEffect(() => {
+    const button = whyButtonRef.current;
+    const frame = frameRef.current;
+    if (!button || !frame) return;
+    const why = frame1Config.bilkentWhy;
+    const note = attachWhyNote(button, frame, { note: why.note, label: why.label, hover: true });
+    return () => note.destroy();
+  }, []);
 
   useEffect(() => {
     if (!research) return;
@@ -1006,11 +1018,7 @@ export function Frame1() {
         <p className="title title-buas">Master Game Technology</p>
         <div className="rule" />
         <p className="label">AI & Procedural Generation</p>
-        <p className="text">
-          Exploring how AI agents can help generate dungeon levels that match a designer's goals.
-          Behavioural agents with different play styles play every generated level, so each level that
-          comes back has already been played and checked.
-        </p>
+        <p className="text">{frame1Config.buasText}</p>
         <button
           ref={researchButtonRef}
           type="button"
@@ -1034,6 +1042,12 @@ export function Frame1() {
         <div className="copy-shape" />
         <p className="title title-bilkent">BSc Computer Engineering</p>
         <div className="rule" />
+        <p className="text why-line">
+          {frame1Config.bilkentWhy.line}{" "}
+          <button ref={whyButtonRef} type="button" className="why-button">
+            {frame1Config.bilkentWhy.label}
+          </button>
+        </p>
         <p className="label">Favorite courses</p>
         <div className="courses">
           {frame1Config.courses.map((course) => (
@@ -1062,10 +1076,7 @@ export function Frame1() {
 
       <div className="middle-copy hud">
         <p className="middle-name">Alper Bozkurt</p>
-        <p className="middle-line">
-          Game programmer. I shipped my own multiplayer game from the ground up, and now I research AI
-          that builds and tests levels.
-        </p>
+        <p className="middle-line">{frame1Config.tagline}</p>
         {scrollOpening ? <p className="middle-hint">{frame1Config.scrollOpening.hint}</p> : null}
       </div>
       {scrollOpening ? null : (

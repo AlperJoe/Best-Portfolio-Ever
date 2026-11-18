@@ -42,7 +42,7 @@ export const frame2Config = {
     logoGap: 18,
     hairGap: 16,
     headline: {
-      text: "I programmed Pedro from the ground up, on a bare-bones framework.",
+      text: "Pedro is an online card game. I programmed all of it on a framework with no game tools.",
       color: "#F5EEE4",
       weight: 800,
       stretch: 80,
@@ -53,7 +53,7 @@ export const frame2Config = {
       maxWidth: 0.46,
     },
     lead: {
-      text: "Pedro runs on LÖVE, the lightweight Lua framework behind Balatro. LÖVE gives you drawing, sound and input. I wrote everything else myself in about 18,000 lines of Lua: card motion and layout, the rules, the bots and a multiplayer server. Pedro is live on iOS and Android.",
+      text: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. I wrote everything else myself in about 18,000 lines of Lua, including card motion and layout, the rules, the bots and an online server. Pedro is live on iOS and Android.",
       size: 19,
       weight: 400,
       line: 1.5,
@@ -155,7 +155,7 @@ export const frame2Config = {
     items: [
       {
         id: "play" as const,
-        title: "Built from scratch",
+        title: "Card motion and layout",
         points: [
           [0.4977, 0.6439],
           [0.5518, 0.6101],
@@ -178,7 +178,7 @@ export const frame2Config = {
       },
       {
         id: "multiplayer" as const,
-        title: "The server",
+        title: "The online server",
         points: [
           [0.5349, 0.5909],
           [0.631, 0.5682],

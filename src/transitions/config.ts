@@ -392,7 +392,7 @@ export const transitionConfig = {
   variants: { a: variantA, b: variantB, c: variantC } satisfies Record<TransitionVariant, VariantConfig>,
 
   /** While any of these is open, scrolling stays inside the frame. */
-  overlays: ".research-layer, .frame2-open, .frame3-panel, .frame5-overlay",
+  overlays: ".research-layer, .frame2-open, .frame3-panel, .frame5-overlay, .why-layer",
 
   /**
    * Per frame: its main object, and the blurred colors the transition mixes.
