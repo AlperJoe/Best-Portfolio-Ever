@@ -6,8 +6,7 @@
   --op-world: 1;
   --margin: 52px;
   --card-w: 30vw;
-  --spill: 120px;
-  --edge-fade: 72px;
+  --edge-fade: 15%;
   --radius: 12px;
   --mark-h: 22px;
   --column: 40vw;
@@ -77,32 +76,23 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #000;
+  background: transparent;
 }
 
 .card-left .card-face {
   border-radius: var(--radius) 0 0 var(--radius);
+  -webkit-mask-image: linear-gradient(to right, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  mask-image: linear-gradient(to right, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
 }
 
 .card-right .card-face {
   border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.card-spill {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--spill);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.card-left .card-spill {
-  left: 100%;
-}
-
-.card-right .card-spill {
-  right: 100%;
+  -webkit-mask-image: linear-gradient(to left, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  mask-image: linear-gradient(to left, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
 }
 
 .duotone {
@@ -110,102 +100,45 @@
   inset: 0;
   overflow: hidden;
   isolation: isolate;
-  background: #000;
 }
 
 .card-left {
   --region-tone: var(--buas-tone);
-  --tone-highlight: color-mix(in srgb, var(--buas-tone) var(--buas-highlight), white);
-  --tone-shadow: color-mix(in srgb, var(--buas-tone) var(--buas-shadow), black);
 }
 
 .card-right {
   --region-tone: var(--bilkent-tone);
-  --tone-highlight: color-mix(in srgb, var(--bilkent-tone) var(--bilkent-highlight), white);
-  --tone-shadow: color-mix(in srgb, var(--bilkent-tone) var(--bilkent-shadow), black);
 }
 
 .campus {
   position: absolute;
-  width: calc(var(--card-w) * 3.2);
+  width: calc(var(--card-w) * 2.08);
   height: auto;
   max-width: none;
-  top: calc(var(--card-w) * -1.73);
-  filter: grayscale(1) contrast(var(--photo-contrast));
+  filter: brightness(var(--photo-brightness, 0.9)) saturate(0.96);
 }
 
-/* Both copies share one crop, so the photo continues past the inner edge. */
 .card-left .card-face .campus {
-  left: calc(var(--card-w) * -0.66);
-}
-
-.card-left .card-spill .campus {
-  left: calc(var(--card-w) * -1.66);
+  left: calc(var(--card-w) * -0.042);
+  top: calc(var(--card-w) * -0.29);
 }
 
 .card-right .card-face .campus {
-  left: calc(var(--card-w) * -1.54);
-}
-
-.card-right .card-spill .campus {
-  left: calc(var(--card-w) * -1.12);
+  left: calc(var(--card-w) * -0.874);
+  top: calc(var(--card-w) * -0.44);
 }
 
 .tone-hue {
   background: var(--region-tone);
   mix-blend-mode: color;
+  opacity: var(--photo-tint, 0.18);
   pointer-events: none;
 }
 
 .tone-lift {
-  background: var(--tone-shadow);
-  mix-blend-mode: lighten;
+  background: #000;
+  opacity: var(--photo-darken, 0.2);
   pointer-events: none;
-}
-
-.card-shade {
-  background: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 0.84) 0%,
-    rgb(0 0 0 / 0.62) 22%,
-    rgb(0 0 0 / 0.28) 46%,
-    rgb(0 0 0 / 0.08) 70%,
-    rgb(0 0 0 / 0.22) 100%
-  );
-  pointer-events: none;
-}
-
-.card-left .card-shade {
-  -webkit-mask-image: linear-gradient(to right, #000 58%, transparent 100%);
-  mask-image: linear-gradient(to right, #000 58%, transparent 100%);
-}
-
-.card-right .card-shade {
-  -webkit-mask-image: linear-gradient(to left, #000 58%, transparent 100%);
-  mask-image: linear-gradient(to left, #000 58%, transparent 100%);
-}
-
-/* The inner edge fades to nothing. Trees may cross it; they are gone before the name. */
-.card-left .card-spill {
-  -webkit-mask-image:
-    linear-gradient(to right, #000 0%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 20%, transparent 36%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to right, #000 0%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 20%, transparent 36%);
-  mask-composite: intersect;
-}
-
-.card-right .card-spill {
-  -webkit-mask-image:
-    linear-gradient(to left, #000 0%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 20%, transparent 36%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to left, #000 0%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 20%, transparent 36%);
-  mask-composite: intersect;
 }
 
 .portrait-sharp {
@@ -227,6 +160,38 @@
   max-height: 100%;
   color: #fff;
   pointer-events: none;
+}
+
+.card-copy::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 56px);
+  background: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.78) 0%,
+    rgb(0 0 0 / 0.62) 46%,
+    rgb(0 0 0 / 0.22) 78%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.card-left .card-copy::before {
+  -webkit-mask-image: linear-gradient(to right, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  mask-image: linear-gradient(to right, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
+}
+
+.card-right .card-copy::before {
+  -webkit-mask-image: linear-gradient(to left, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  mask-image: linear-gradient(to left, #fff calc(100% - var(--edge-fade)), transparent 100%);
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
 }
 
 .card-copy a,

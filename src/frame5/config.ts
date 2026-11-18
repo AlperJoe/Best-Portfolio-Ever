@@ -64,8 +64,8 @@ export const frame5 = {
     headAngle: 30,
     stroke: 1.25,
     color: "rgba(242, 238, 230, 0.55)",
-    /** Seconds to draw, once, when the frame locks. */
-    drawSeconds: 0.6,
+    /** Seconds to draw, once, when the frame arrives. */
+    drawSeconds: 0.3,
     /** Share of the draw time the line takes before the head appears. */
     lineShare: 0.8,
   },
@@ -150,7 +150,32 @@ export const frame5 = {
       textSize: "13px",
       /** Space between the contact block and this heading, in pixels. */
       topGap: "12px",
-      iconSize: "14px",
+      iconSize: "28px",
+      /** Each hobby is a small ticket stub, pinned beside the photo. */
+      ticket: {
+        paper: "#F3EADB",
+        ink: "#2B211A",
+        textSize: "11.5px",
+        /** Widest the label may run before it wraps, in pixels. */
+        labelWidth: 104,
+        band: "5px",
+        /** Radius of the half circles along the torn edge, and their spacing, in pixels. */
+        tearRadius: 2.6,
+        tearStep: 8,
+        gap: "10px",
+        shadow: "drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35))",
+        /** Band color, tilt in degrees and a small vertical nudge in pixels, per hobby. */
+        look: {
+          piano: { band: "#ED7624", tilt: -3, lift: 2 },
+          ticket: { band: "#C8452E", tilt: 2.5, lift: -2 },
+          ball: { band: "#E3A23B", tilt: -1.5, lift: 3 },
+          mat: { band: "#B9704A", tilt: 3.5, lift: -1 },
+          piece: { band: "#D9622B", tilt: -2.5, lift: 1 },
+        } satisfies Record<HobbyIcon, { band: string; tilt: number; lift: number }>,
+        stamp: { on: "ticket" as HobbyIcon, text: "up to 3×", color: "#B23A26", size: 34, tilt: -14 },
+      },
+      /** The small arrow from the heading down to the first ticket, in pixels. */
+      arrow: { width: 40, height: 46 },
     },
   },
 
@@ -253,11 +278,7 @@ export const frame5 = {
     endSize: "22px",
     backLabel: "Back to the beginning ↑",
     backSize: "13px",
-    /** Roll speed, in pixels per second. */
-    speed: 22,
-    /** Milliseconds after the lock before the roll starts. */
-    delay: 300,
-    ease: "cubic-bezier(0.3, 0.1, 0.55, 1)",
+    /** The roll follows the scroll past this frame, set by scrollConfig.tail in transitions/config.ts. */
     /** Reduced motion: line height of the still list. */
     stillLineHeight: 1.5,
   },

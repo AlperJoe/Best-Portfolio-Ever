@@ -14,12 +14,14 @@ export const frame1Config = {
   portraitGrade: "saturate(1.08)",
   /** Focus ring used by every keyboard-focusable control. */
   focus: "#F2EEE6",
+  /**
+   * Campus photos stay close to their own color: darker overall, with a light
+   * wash of the school color.
+   */
   duotone: {
-    contrast: 1.35,
-    buasHighlight: 0.52,
-    buasShadow: 0.4,
-    bilkentHighlight: 0.3,
-    bilkentShadow: 1,
+    brightness: 0.9,
+    tint: 0.12,
+    darken: 0,
   },
   /**
    * Full frame: portrait at the top, a card on each side.
@@ -37,10 +39,8 @@ export const frame1Config = {
     marginMin: 52,
     marginMax: 72,
     radius: 12,
-    /** How far a photo may cross the inner edge, as a fraction of the card width. */
-    spill: 0.42,
-    /** Soft fade at the inner edge of a card, in pixels. */
-    edgeFade: 72,
+    /** Soft fade at the inner edge, as a fraction of the card width. */
+    edgeFade: 0.15,
     /** Gap between the portrait and the name, in pixels. */
     nameGap: 14,
     /** Gap between the name and the line under it, in pixels. */
@@ -176,8 +176,8 @@ export const frame1Config = {
     fade: 0.6,
   },
   /**
-   * Opening driven by the scroll, used only with ?transition=d.
-   * The window event is 0 at the start state and 1 at the full frame.
+   * Opening driven by the scroll. It replaces the timed opening below and
+   * the scroll cue. The window event is 0 at the start state and 1 at the full frame.
    * Every part reads that value directly.
    */
   scrollOpening: {

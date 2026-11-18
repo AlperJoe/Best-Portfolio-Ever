@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { frame1Config } from "./config";
-import { OPENING_EVENT, readVariant } from "../transitions/config";
+import { OPENING_EVENT } from "../transitions/config";
 import { attachWhyNote } from "../whyNote/whyNote";
 import "./Frame1.css";
 
@@ -299,21 +299,15 @@ function CampusPhoto({ src }: { src: string }) {
 
 function Campus({ src }: { src: string }) {
   return (
-    <>
-      <div className="card-face">
-        <CampusPhoto src={src} />
-        <div className="card-shade fill" />
-      </div>
-      <div className="card-spill" aria-hidden="true">
-        <CampusPhoto src={src} />
-      </div>
-    </>
+    <div className="card-face">
+      <CampusPhoto src={src} />
+    </div>
   );
 }
 
 export function Frame1() {
   const reduced = usePrefersReducedMotion();
-  const [scrollOpening] = useState(() => readVariant() === "d");
+  const scrollOpening = true;
   const playOpening = !scrollOpening && frame1Config.effects.OPENING_SEQUENCE && !reduced;
   const progressRef = useRef(0);
   const metricsRef = useRef<Metrics>({ startH: 0, startTop: 0, fullH: 0, fullTop: 0 });
@@ -354,13 +348,11 @@ export function Frame1() {
       if (width < 2 || height < 2) return;
       const margin = frameMargin(height);
       const cardW = width * layout.cardWidth;
-      const spill = Math.round(cardW * layout.spill);
       const column = Math.max(160, width - 2 * (margin + cardW) - 2 * layout.columnGutter);
       const fullH = height * layout.portrait;
       const fullTop = margin;
       element.style.setProperty("--margin", `${margin}px`);
       element.style.setProperty("--card-w", `${cardW}px`);
-      element.style.setProperty("--spill", `${spill}px`);
       element.style.setProperty("--column", `${column}px`);
       element.style.setProperty("--portrait-h", `${fullH}px`);
       element.style.setProperty("--portrait-top", `${fullTop}px`);
@@ -462,15 +454,13 @@ export function Frame1() {
     "--buas-tone": frame1Config.colors.buasTone,
     "--bilkent-tone": frame1Config.colors.bilkentTone,
     "--middle-tone": frame1Config.colors.middleTone,
-    "--photo-contrast": String(frame1Config.duotone.contrast),
-    "--buas-highlight": `${frame1Config.duotone.buasHighlight * 100}%`,
-    "--buas-shadow": `${frame1Config.duotone.buasShadow * 100}%`,
-    "--bilkent-highlight": `${frame1Config.duotone.bilkentHighlight * 100}%`,
-    "--bilkent-shadow": `${frame1Config.duotone.bilkentShadow * 100}%`,
+    "--photo-brightness": String(frame1Config.duotone.brightness),
+    "--photo-tint": String(frame1Config.duotone.tint),
+    "--photo-darken": String(frame1Config.duotone.darken),
     "--portrait-grade": frame1Config.portraitGrade,
     "--focus": frame1Config.focus,
     "--radius": `${frame1Config.layout.radius}px`,
-    "--edge-fade": `${frame1Config.layout.edgeFade}px`,
+    "--edge-fade": `${frame1Config.layout.edgeFade * 100}%`,
     "--name-gap": `${frame1Config.layout.nameGap}px`,
     "--line-gap": `${frame1Config.layout.lineGap}px`,
     "--mark-h": `${frame1Config.layout.mark}px`,
