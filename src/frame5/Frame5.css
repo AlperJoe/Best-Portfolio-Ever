@@ -1,0 +1,719 @@
+.frame5 {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--f5-bg);
+  color: var(--f5-white);
+  font-family: var(--font-text), sans-serif;
+}
+
+.frame5-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    var(--f5-warm) 0%,
+    var(--f5-warm) calc(50% - var(--f5-blend) / 2),
+    var(--f5-cool) calc(50% + var(--f5-blend) / 2),
+    var(--f5-cool) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 var(--f5-tint-top),
+    #000 var(--f5-tint-bottom),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 var(--f5-tint-top),
+    #000 var(--f5-tint-bottom),
+    transparent 100%
+  );
+}
+
+.frame5-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Title and the two pointing lines. */
+
+.frame5-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--f5-title-top);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--f5-arrow-gap);
+  pointer-events: none;
+}
+
+.frame5-title {
+  margin: 0;
+  font-family: var(--font-frame5), serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--f5-title-size);
+  line-height: var(--f5-title-line);
+  color: var(--f5-white);
+  white-space: nowrap;
+}
+
+.frame5-arrow {
+  display: block;
+  flex: none;
+  overflow: visible;
+  fill: none;
+  stroke: var(--f5-arrow-color);
+  stroke-width: var(--f5-arrow-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frame5-arrow-left {
+  transform: scaleX(-1);
+}
+
+.frame5-arrow-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.frame5-arrow-head {
+  opacity: 0;
+}
+
+.frame5.is-locked .frame5-arrow-line {
+  animation: frame5-draw var(--f5-arrow-line-ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.frame5.is-locked .frame5-arrow-head {
+  animation: frame5-appear var(--f5-arrow-head-ms) ease-out var(--f5-arrow-line-ms) forwards;
+}
+
+@keyframes frame5-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes frame5-appear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* The two endings share one row between the title and the credits. */
+
+.frame5-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--f5-content-top);
+  bottom: calc(var(--f5-band-bottom) + var(--band-h, 160px) + var(--f5-content-gap));
+  z-index: 3;
+  display: grid;
+  grid-template-columns: var(--f5-a-left) minmax(0, var(--f5-a-max)) 1fr minmax(0, calc(100% - var(--f5-b-left) - var(--f5-b-right))) var(--f5-b-right);
+  grid-template-areas: ". a . b .";
+  align-content: center;
+  align-items: start;
+}
+
+.frame5-ending-a {
+  grid-area: a;
+  min-width: 0;
+}
+
+.frame5-ending-b {
+  grid-area: b;
+  min-width: 0;
+}
+
+.frame5-label {
+  margin: 0 0 var(--f5-label-gap);
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--f5-label-size);
+  font-weight: var(--f5-label-weight);
+  letter-spacing: var(--f5-label-tracking);
+  line-height: 1.2;
+  color: var(--f5-white-55);
+}
+
+.frame5-line-a,
+.frame5-line-b {
+  margin: 0;
+  font-family: var(--font-frame5), serif;
+  font-weight: 400;
+  color: var(--f5-white);
+  text-wrap: pretty;
+}
+
+.frame5-line-a {
+  font-size: var(--f5-a-size);
+  line-height: var(--f5-a-line);
+}
+
+.frame5-line-b {
+  font-size: var(--f5-b-size);
+  line-height: var(--f5-b-line);
+}
+
+/* Ending A: the photo and the contact lines. */
+
+.frame5-contact {
+  display: flex;
+  margin-top: var(--f5-a-gap);
+  gap: var(--f5-contact-gap);
+}
+
+.frame5.is-photo-above .frame5-contact {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.frame5.is-photo-right .frame5-contact {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--f5-photo-gap);
+}
+
+.frame5-photo {
+  flex: none;
+  margin: 0;
+  padding: var(--f5-photo-border);
+  background: var(--f5-photo-border-color);
+  box-shadow: var(--f5-photo-shadow);
+  transform: rotate(var(--f5-photo-rotate));
+  line-height: 0;
+}
+
+.frame5.is-photo-above .frame5-photo {
+  margin-left: calc(var(--f5-photo-border) / 2);
+}
+
+.frame5-photo img {
+  display: block;
+  width: var(--f5-photo-w);
+  height: var(--f5-photo-w);
+  object-fit: cover;
+  background: #fff;
+}
+
+.frame5-lines {
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--f5-contact-gap);
+  font-size: var(--f5-contact-size);
+  line-height: 1.3;
+}
+
+.frame5-lines li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.frame5-icon {
+  flex: none;
+  width: var(--f5-icon-size);
+  height: var(--f5-icon-size);
+  fill: none;
+  stroke: var(--f5-icon-color);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frame5-email,
+.frame5-link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--f5-white);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.frame5-email {
+  min-width: 1ch;
+  text-decoration: underline;
+  text-decoration-color: rgba(242, 238, 230, 0.25);
+  text-underline-offset: 4px;
+}
+
+.frame5-email:hover,
+.frame5-link:hover,
+.frame5-email:focus-visible,
+.frame5-link:focus-visible {
+  color: var(--f5-link-hover);
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 4px;
+}
+
+.frame5-write {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--f5-white-55);
+  text-decoration: none;
+}
+
+.frame5-write:hover,
+.frame5-write:focus-visible {
+  color: var(--f5-white);
+}
+
+.frame5-copied {
+  position: relative;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--f5-white-70);
+}
+
+.frame5-copied-room {
+  visibility: hidden;
+}
+
+.frame5-copied-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.frame5-social {
+  margin-top: 4px;
+  gap: var(--f5-social-gap) !important;
+}
+
+.frame5-brand {
+  display: grid;
+  place-items: center;
+  width: var(--f5-social-size);
+  height: var(--f5-social-size);
+  transition: transform 180ms ease;
+}
+
+.frame5-brand svg {
+  display: block;
+  width: 60%;
+  height: 60%;
+}
+
+.frame5-github {
+  border-radius: 50%;
+  background: var(--f5-github-bg);
+  color: var(--f5-github-color);
+}
+
+.frame5-linkedin {
+  border-radius: 6px;
+  background: var(--f5-linkedin-bg);
+  color: var(--f5-linkedin-color);
+}
+
+.frame5-brand:hover,
+.frame5-brand:focus-visible {
+  transform: translateY(-2px);
+}
+
+.frame5 a:focus-visible,
+.frame5 button:focus-visible,
+.frame5-cover:focus-visible {
+  outline: 2px solid var(--f5-focus);
+  outline-offset: 3px;
+}
+
+/* Ending B: the film covers. Top-level selectors, so the transition copy keeps its look. */
+
+.frame5-covers,
+.frame5-film-texts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--f5-card-gap);
+}
+
+.frame5-covers {
+  margin-top: var(--f5-b-gap);
+}
+
+.frame5-cover {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--f5-cover-radius);
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+  transition: transform var(--f5-cover-ms) ease;
+}
+
+.frame5-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame5-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: var(--f5-play-size);
+  height: var(--f5-play-size);
+  border-radius: 50%;
+  background: var(--f5-play-bg);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  opacity: var(--f5-play-opacity);
+  transform: translate(-50%, -50%);
+  transition: opacity var(--f5-cover-ms) ease, background-color var(--f5-cover-ms) ease;
+}
+
+.frame5-play svg {
+  width: 50%;
+  height: 50%;
+  margin-left: 6%;
+}
+
+.frame5-cover.is-hot,
+.frame5-cover:hover,
+.frame5-cover:focus-visible {
+  transform: scale(var(--f5-cover-scale));
+}
+
+.frame5-cover.is-hot .frame5-play,
+.frame5-cover:hover .frame5-play,
+.frame5-cover:focus-visible .frame5-play {
+  opacity: 1;
+  background: var(--f5-play-bg-hot);
+  border-color: #fff;
+}
+
+.frame5-film-text {
+  padding-top: var(--f5-card-text-gap);
+  font-size: var(--f5-card-size);
+  line-height: var(--f5-card-line);
+  cursor: pointer;
+}
+
+.frame5-film-title,
+.frame5-film-summary {
+  margin: 0;
+}
+
+.frame5-film-title {
+  font-weight: var(--f5-card-title-weight);
+  color: var(--f5-white);
+}
+
+.frame5-film-year {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--f5-white-55);
+}
+
+.frame5-film-summary {
+  margin-top: 2px;
+  color: var(--f5-white-70);
+}
+
+/* End credits. */
+
+.frame5-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--f5-band-bottom);
+  z-index: 4;
+  height: var(--band-h, 160px);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 var(--f5-band-fade),
+    #000 calc(100% - var(--f5-band-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 var(--f5-band-fade),
+    #000 calc(100% - var(--f5-band-fade)),
+    transparent 100%
+  );
+}
+
+.frame5-roll {
+  transform: translateY(var(--roll-from, 200px));
+  will-change: transform;
+}
+
+.frame5.is-locked .frame5-roll {
+  animation: frame5-roll var(--roll-ms, 12000ms) var(--f5-roll-ease) var(--f5-roll-delay) forwards;
+}
+
+.frame5.is-rolled .frame5-roll {
+  animation: none;
+  transform: translateY(var(--roll-to, 0px));
+}
+
+@keyframes frame5-roll {
+  from {
+    transform: translateY(var(--roll-from, 200px));
+  }
+  to {
+    transform: translateY(var(--roll-to, 0px));
+  }
+}
+
+.frame5-credits {
+  margin: 0;
+  font-size: var(--f5-credit-size);
+  letter-spacing: var(--f5-credit-tracking);
+  line-height: var(--f5-credit-line);
+  color: var(--f5-credit-color);
+}
+
+.frame5-credit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--f5-credit-gap);
+}
+
+.frame5-credit dt {
+  text-align: right;
+}
+
+.frame5-credit dd {
+  margin: 0;
+  text-align: left;
+}
+
+.frame5-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: var(--f5-end-gap);
+}
+
+.frame5-end-line {
+  margin: 0;
+  font-family: var(--font-frame5), serif;
+  font-style: italic;
+  font-size: var(--f5-end-size);
+  line-height: 1.2;
+  color: var(--f5-white);
+}
+
+.frame5-back {
+  margin: 0;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--f5-back-size);
+  letter-spacing: 0.04em;
+  color: var(--f5-white-55);
+  cursor: pointer;
+}
+
+.frame5-back:hover,
+.frame5-back:focus-visible {
+  color: var(--f5-white);
+}
+
+.frame5.is-reduced .frame5-band {
+  -webkit-mask-image: none;
+  mask-image: none;
+  height: auto;
+  min-height: var(--band-h, 160px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.frame5.is-reduced .frame5-roll {
+  animation: none;
+  transform: none;
+}
+
+.frame5.is-reduced .frame5-credits {
+  line-height: var(--f5-credit-still-line);
+}
+
+.frame5.is-reduced .frame5-end {
+  padding-top: 12px;
+}
+
+.frame5.is-reduced .frame5-arrow-line {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+
+.frame5.is-reduced .frame5-arrow-head {
+  animation: none;
+  opacity: 1;
+}
+
+/* Film overlay. */
+
+.frame5-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  background: var(--f5-ov-backdrop);
+  opacity: 0;
+  transition: opacity var(--f5-ov-fade) ease;
+}
+
+.frame5-overlay[data-open="1"] {
+  opacity: 1;
+}
+
+.frame5-dialog {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--f5-ov-video) 1fr;
+  gap: var(--f5-ov-gap);
+  align-items: start;
+  width: min(var(--f5-ov-width), var(--f5-ov-max-width));
+  max-height: var(--f5-ov-max-height);
+  padding: var(--f5-ov-pad);
+  background: var(--f5-ov-panel);
+  border: 1px solid var(--f5-ov-border);
+  border-radius: var(--f5-ov-radius);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: auto;
+  transform: scale(var(--f5-ov-from));
+  transition: transform var(--f5-ov-fade) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.frame5-overlay[data-open="1"] .frame5-dialog {
+  transform: none;
+}
+
+.frame5-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+
+.frame5-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.frame5-dialog-text {
+  padding-right: calc(var(--f5-ov-close) - 6px);
+}
+
+.frame5-dialog-text h3 {
+  margin: 0;
+  font-family: var(--font-frame5), serif;
+  font-weight: 400;
+  font-size: var(--f5-ov-title);
+  line-height: 1.1;
+  color: var(--f5-white);
+}
+
+.frame5-dialog-year {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--f5-white-55);
+}
+
+.frame5-dialog-body {
+  margin: 14px 0 0;
+  font-size: var(--f5-ov-body);
+  line-height: var(--f5-ov-line);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.frame5-watch {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+
+.frame5-watch:hover,
+.frame5-watch:focus-visible {
+  border-color: #fff;
+}
+
+.frame5-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: var(--f5-ov-close);
+  height: var(--f5-ov-close);
+  border: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-aspect-ratio: 4 / 3) {
+  .frame5-dialog {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame5-cover,
+  .frame5-play,
+  .frame5-brand,
+  .frame5-overlay,
+  .frame5-dialog {
+    transition: none;
+  }
+
+  .frame5-dialog {
+    transform: none;
+  }
+}

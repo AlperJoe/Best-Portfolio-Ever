@@ -18,6 +18,8 @@ export const fonts = {
   pedroLine: "Instrument Serif",
   /** Frame 3 title. */
   mono: "JetBrains Mono",
+  /** Frame 5 title, the two ending lines and the end of the credits. */
+  frame5Display: "Instrument Serif",
 } as const;
 
 function stack(name: string, fallback: string) {
@@ -34,4 +36,5 @@ export function applyFonts() {
   root.style.setProperty("--font-frame2", stack(fonts.frame2Display, "sans-serif"));
   root.style.setProperty("--font-pedro", stack(fonts.pedroLine, "serif"));
   root.style.setProperty("--font-mono", stack(fonts.mono, "monospace"));
+  root.style.setProperty("--font-frame5", stack(fonts.frame5Display, "serif"));
 }
