@@ -183,26 +183,64 @@ function fitCopies(frame: HTMLElement) {
   apply(best);
 }
 
-function fitCenter(frame: HTMLElement, width: number, limitLeft: number, limitRight: number) {
+function placeNameRow(
+  frame: HTMLElement,
+  name: HTMLElement,
+  width: number,
+  limitLeft: number,
+  limitRight: number,
+  scale: number,
+) {
+  const icon = Math.max(26, Math.round(frame1Config.icons.size * scale));
+  const gap = Math.max(8, Math.round(frame1Config.icons.nameGap * scale));
+  frame.style.setProperty("--icon-size", `${icon}px`);
+  const nameW = name.getBoundingClientRect().width;
+  const rowLeft = width / 2 - nameW / 2 - gap - icon;
+  const rowRight = width / 2 + nameW / 2 + gap + icon;
+  const inside = rowLeft >= limitLeft - 0.5 && rowRight <= limitRight + 0.5;
+  return { inside, icon, gap, nameW };
+}
+
+/**
+ * Shrinks the name until the name and its icons sit inside the limits.
+ * "fit" scales the name and the line under it together. "scale" only
+ * scales the name, and keeps the line at its normal size.
+ * Returns false when the row still sticks out at the smallest size.
+ */
+function fitCenter(
+  frame: HTMLElement,
+  width: number,
+  limitLeft: number,
+  limitRight: number,
+  mode: "fit" | "scale" = "fit",
+) {
   const name = frame.querySelector<HTMLElement>(".middle-name");
-  if (!name) return;
+  if (!name) return true;
   const minFit = frame1Config.layout.minText / frame1Config.middle.lineSize;
-  const apply = (fit: number) => {
-    frame.style.setProperty("--name-fit", fit.toFixed(3));
-    const icon = Math.max(26, Math.round(frame1Config.icons.size * fit));
-    const gap = Math.max(8, Math.round(frame1Config.icons.nameGap * fit));
-    frame.style.setProperty("--icon-size", `${icon}px`);
-    const nameW = name.getBoundingClientRect().width;
-    const rowLeft = width / 2 - nameW / 2 - gap - icon;
-    const rowRight = width / 2 + nameW / 2 + gap + icon;
-    const inside = rowLeft >= limitLeft - 0.5 && rowRight <= limitRight + 0.5;
-    return { inside, icon, gap, nameW, rowLeft, rowRight };
+  let floor = minFit;
+  let ceiling = 1;
+  if (mode === "scale") {
+    frame.style.setProperty("--name-fit", "1");
+    frame.style.setProperty("--name-scale", "1");
+    const base = Number.parseFloat(getComputedStyle(name).fontSize) || 40;
+    floor = Math.min(1, frame1Config.layout.mediumNameMin / base);
+    ceiling = Math.max(floor, frame1Config.layout.mediumNameScale);
+  }
+  const apply = (value: number) => {
+    if (mode === "scale") {
+      frame.style.setProperty("--name-fit", "1");
+      frame.style.setProperty("--name-scale", value.toFixed(3));
+    } else {
+      frame.style.setProperty("--name-fit", value.toFixed(3));
+      frame.style.setProperty("--name-scale", "1");
+    }
+    return placeNameRow(frame, name, width, limitLeft, limitRight, value);
   };
-  let fit = 1;
-  if (!apply(1).inside) {
-    let low = minFit;
-    let high = 1;
-    fit = minFit;
+  let fit = ceiling;
+  if (!apply(ceiling).inside) {
+    let low = floor;
+    let high = ceiling;
+    fit = floor;
     for (let step = 0; step < 12; step += 1) {
       const mid = (low + high) / 2;
       if (apply(mid).inside) {
@@ -220,6 +258,30 @@ function fitCenter(frame: HTMLElement, width: number, limitLeft: number, limitRi
   frame.style.setProperty("--name-h", `${name.offsetHeight}px`);
   frame.style.setProperty("--icon-github-x", `${width / 2 - nameW / 2 - placed.gap - icon}px`);
   frame.style.setProperty("--icon-linkedin-x", `${width / 2 + nameW / 2 + placed.gap}px`);
+  return placed.inside;
+}
+
+/** True when the name, the line under it, or an icon meets the panel text. */
+function centerHitsCopy(frame: HTMLElement) {
+  const centers = [".middle-name", ".middle-line", ".icon-github", ".icon-linkedin"]
+    .map((selector) => frame.querySelector<HTMLElement>(selector))
+    .filter((node): node is HTMLElement => Boolean(node));
+  const copies = frame.querySelectorAll<HTMLElement>(
+    ".card-copy-full .title, .card-copy-full .label, .card-copy-full .text, .card-copy-full .invite, .card-copy-full .course",
+  );
+  const gap = 4;
+  for (const center of centers) {
+    const a = center.getBoundingClientRect();
+    if (a.width < 1 || a.height < 1) continue;
+    for (const copy of copies) {
+      const b = copy.getBoundingClientRect();
+      if (b.width < 1 || b.height < 1) continue;
+      const clear =
+        a.right < b.left - gap || a.left > b.right + gap || a.bottom < b.top - gap || a.top > b.bottom + gap;
+      if (!clear) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -506,6 +568,26 @@ function CampusPhoto({ src, side }: { src: string; side: "buas" | "bilkent" }) {
   );
 }
 
+function ResearchPlan() {
+  const plan = frame1Config.researchPlan;
+  return (
+    <article className="research-plan">
+      <h2 id="research-plan-title">{plan.title}</h2>
+      <p className="research-intro">{plan.intro}</p>
+      <ol className="research-steps">
+        {plan.steps.map((step) => (
+          <li key={step.title} className="research-step">
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+            <p className="research-result">{step.result}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="research-footer">{plan.footer}</p>
+    </article>
+  );
+}
+
 function Courses() {
   return (
     <div className="courses">
@@ -573,117 +655,141 @@ export function Frame1() {
       const width = element.clientWidth;
       const height = element.clientHeight;
       if (width < 2 || height < 2) return;
-      const stack = width < layout.stackBelow || height > width;
-      element.dataset.stack = stack ? "1" : "0";
+
+      const layoutAt = (stack: boolean, medium: boolean) => {
+        element.dataset.stack = stack ? "1" : "0";
+        element.dataset.medium = medium ? "1" : "0";
+        element.style.setProperty("--name-fit", "1");
+        element.style.setProperty("--name-scale", medium ? layout.mediumNameScale.toFixed(3) : "1");
+        const margin = frameMargin(height);
+        const hair = frame1Config.portraitLayout.hairTopY;
+        const aspect = portraitAspect(element);
+        element.style.setProperty("--portrait-aspect", String(aspect));
+        element.style.setProperty("--margin", `${margin}px`);
+
+        const name = element.querySelector<HTMLElement>(".middle-name");
+        const under = element.querySelector<HTMLElement>(".under-name");
+        const nameH = name?.offsetHeight ?? 48;
+        const underH = under?.offsetHeight ?? 28;
+
+        let cardW: number;
+        let lean: number;
+        let panelH: number;
+        let fullH: number;
+        let fullTop: number;
+        let limitLeft: number;
+        let limitRight: number;
+
+        if (stack) {
+          const pad = Math.max(14, Math.round(Math.min(28, width * 0.04)));
+          const leanWanted = layout.lean * width;
+          const gap = leanWanted * 2 + 16;
+          const roomW = width - pad * 2 - gap;
+          cardW = Math.max(120, roomW / 2);
+          const topGap = gap - leanWanted * 2;
+          lean = topGap < 12 ? Math.max(0, (gap - 12) / 2) : leanWanted;
+          const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + 18 + pad;
+          const roomH = Math.max(220, height - chrome);
+          fullH = Math.min(height * 0.32, Math.max(140, roomH * 0.38));
+          panelH = Math.max(168, roomH - fullH);
+          const hairY = pad + 2;
+          fullTop = topForHair(hairY, fullH);
+          element.style.setProperty("--stack-pad", `${pad}px`);
+          element.style.setProperty("--stack-bottom", `${pad}px`);
+          element.style.setProperty("--stack-card-w", `${cardW}px`);
+          limitLeft = pad;
+          limitRight = width - pad;
+        } else {
+          cardW = width * layout.cardWidth;
+          lean = layout.lean * width;
+          panelH = Math.max(1, height - margin * 2);
+          const aspectNow = portraitAspect(element);
+          const textInner = margin + cardW + lean * 0.58 - 20;
+          const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
+          const wantedW = height * layout.portrait * aspectNow;
+          fullH = Math.min(wantedW, maxW) / aspectNow;
+          fullTop = topForHair(layout.hairFrame * height, fullH);
+          if (medium) {
+            limitLeft = textInner + layout.mediumClearance;
+            limitRight = width - textInner - layout.mediumClearance;
+          } else {
+            const gutter = layout.columnGutter;
+            limitLeft = margin + gutter;
+            limitRight = width - margin - gutter;
+          }
+        }
+
+        const fade = layout.edgeFade * cardW;
+        const panelW = cardW + lean;
+        element.style.setProperty("--card-w", `${cardW}px`);
+        element.style.setProperty("--lean", `${lean}px`);
+        element.style.setProperty("--edge-fade", `${fade}px`);
+        element.style.setProperty("--panel-w", `${panelW}px`);
+        element.style.setProperty("--panel-h", `${panelH}px`);
+        const leftCard = element.querySelector<HTMLElement>(".card-left");
+        const rightCard = element.querySelector<HTMLElement>(".card-right");
+        const radius = layout.radius;
+        if (leftCard) {
+          leftCard.style.setProperty("--panel-mask", panelMask("left", panelW, panelH, lean, radius, fade));
+        }
+        if (rightCard) {
+          rightCard.style.setProperty("--panel-mask", panelMask("right", panelW, panelH, lean, radius, fade));
+        }
+
+        const betweenCards = width - 2 * (margin + cardW) - 2 * layout.columnGutter;
+        const column = Math.max(160, stack ? width - 32 : medium ? limitRight - limitLeft : betweenCards);
+        element.style.setProperty("--column", `${column}px`);
+        element.style.setProperty("--portrait-h", `${fullH}px`);
+        element.style.setProperty("--portrait-top", `${fullTop}px`);
+        fitCopies(element);
+        const inside = fitCenter(element, width, limitLeft, limitRight, medium ? "scale" : "fit");
+        const block = (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH);
+        const chrome = layout.nameGap + block;
+        const pad = stack ? Math.max(14, Math.round(Math.min(28, width * 0.04))) : 28;
+        let startH: number;
+        let startTop: number;
+        if (stack) {
+          const cardsTop = fullTop + fullH + chrome + 14;
+          element.style.setProperty("--stack-below", `${chrome}px`);
+          element.style.setProperty("--stack-cards-top", `${cardsTop}px`);
+          const startCap = height * layout.portraitStart;
+          const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+          startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
+          const stackHeight = (1 - hair) * startH + chrome;
+          const hairY = Math.max(pad, (height - stackHeight) / 2);
+          startTop = topForHair(hairY, startH);
+          const startIdentity = startTop + startH + chrome;
+          const slide = Math.max(24, Math.round(startIdentity - cardsTop + 16));
+          element.style.setProperty("--stack-slide", `${slide}px`);
+        } else {
+          const startCap = height * layout.portraitStart;
+          const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+          startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
+          const stackHeight = (1 - hair) * startH + chrome;
+          const hairY = Math.max(pad, (height - stackHeight) / 2);
+          startTop = topForHair(hairY, startH);
+        }
+        placePhoto(element, "left", frame1Config.photos.buasMark);
+        placePhoto(element, "right", frame1Config.photos.bilkentMark);
+        return { inside, metrics: { startH, startTop, fullH, fullTop } };
+      };
+
+      const baseStack = width < layout.stackBelow || height > width;
+      let stack = baseStack;
+      let medium = !stack && width <= layout.mediumUntil;
+      let laid = layoutAt(stack, medium);
+      if (medium) {
+        element.style.setProperty("--op", "1");
+        if (!laid.inside || centerHitsCopy(element)) {
+          stack = true;
+          medium = false;
+          laid = layoutAt(true, false);
+        }
+      }
       setStacked((current) => (current === stack ? current : stack));
-      const margin = frameMargin(height);
-      const hair = frame1Config.portraitLayout.hairTopY;
-      const aspect = portraitAspect(element);
-      element.style.setProperty("--portrait-aspect", String(aspect));
-      element.style.setProperty("--margin", `${margin}px`);
-
-      const name = element.querySelector<HTMLElement>(".middle-name");
-      const under = element.querySelector<HTMLElement>(".under-name");
-      const nameH = name?.offsetHeight ?? 48;
-      const underH = under?.offsetHeight ?? 28;
-
-      let cardW: number;
-      let lean: number;
-      let panelH: number;
-      let fullH: number;
-      let fullTop: number;
-      let limitLeft: number;
-      let limitRight: number;
-
-      if (stack) {
-        const pad = Math.max(14, Math.round(Math.min(28, width * 0.04)));
-        const leanWanted = layout.lean * width;
-        const gap = leanWanted * 2 + 16;
-        const roomW = width - pad * 2 - gap;
-        cardW = Math.max(120, roomW / 2);
-        const topGap = gap - leanWanted * 2;
-        lean = topGap < 12 ? Math.max(0, (gap - 12) / 2) : leanWanted;
-        const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + 18 + pad;
-        const roomH = Math.max(220, height - chrome);
-        fullH = Math.min(height * 0.32, Math.max(140, roomH * 0.38));
-        panelH = Math.max(168, roomH - fullH);
-        const hairY = pad + 2;
-        fullTop = topForHair(hairY, fullH);
-        element.style.setProperty("--stack-pad", `${pad}px`);
-        element.style.setProperty("--stack-bottom", `${pad}px`);
-        element.style.setProperty("--stack-card-w", `${cardW}px`);
-        limitLeft = pad;
-        limitRight = width - pad;
-      } else {
-        cardW = width * layout.cardWidth;
-        lean = layout.lean * width;
-        panelH = Math.max(1, height - margin * 2);
-        const aspectNow = portraitAspect(element);
-        const textInner = margin + cardW + lean * 0.58 - 20;
-        const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
-        const wantedW = height * layout.portrait * aspectNow;
-        fullH = Math.min(wantedW, maxW) / aspectNow;
-        fullTop = topForHair(layout.hairFrame * height, fullH);
-        const gutter = layout.columnGutter;
-        limitLeft = margin + gutter;
-        limitRight = width - margin - gutter;
-      }
-
-      const fade = layout.edgeFade * cardW;
-      const panelW = cardW + lean;
-      element.style.setProperty("--card-w", `${cardW}px`);
-      element.style.setProperty("--lean", `${lean}px`);
-      element.style.setProperty("--edge-fade", `${fade}px`);
-      element.style.setProperty("--panel-w", `${panelW}px`);
-      element.style.setProperty("--panel-h", `${panelH}px`);
-      const leftCard = element.querySelector<HTMLElement>(".card-left");
-      const rightCard = element.querySelector<HTMLElement>(".card-right");
-      const radius = layout.radius;
-      if (leftCard) {
-        leftCard.style.setProperty("--panel-mask", panelMask("left", panelW, panelH, lean, radius, fade));
-      }
-      if (rightCard) {
-        rightCard.style.setProperty("--panel-mask", panelMask("right", panelW, panelH, lean, radius, fade));
-      }
-
-      const column = Math.max(160, stack ? width - 32 : width - 2 * (margin + cardW) - 2 * layout.columnGutter);
-      element.style.setProperty("--column", `${column}px`);
-      element.style.setProperty("--portrait-h", `${fullH}px`);
-      element.style.setProperty("--portrait-top", `${fullTop}px`);
-      fitCopies(element);
-      fitCenter(element, width, limitLeft, limitRight);
-      const block = (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH);
-      const chrome = layout.nameGap + block;
-      const pad = stack ? Math.max(14, Math.round(Math.min(28, width * 0.04))) : 28;
-      let startH: number;
-      let startTop: number;
-      if (stack) {
-        const cardsTop = fullTop + fullH + chrome + 14;
-        element.style.setProperty("--stack-below", `${chrome}px`);
-        element.style.setProperty("--stack-cards-top", `${cardsTop}px`);
-        const startCap = height * layout.portraitStart;
-        const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
-        startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
-        const stackHeight = (1 - hair) * startH + chrome;
-        const hairY = Math.max(pad, (height - stackHeight) / 2);
-        startTop = topForHair(hairY, startH);
-        const startIdentity = startTop + startH + chrome;
-        const slide = Math.max(24, Math.round(startIdentity - cardsTop + 16));
-        element.style.setProperty("--stack-slide", `${slide}px`);
-      } else {
-        const startCap = height * layout.portraitStart;
-        const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
-        startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
-        const stackHeight = (1 - hair) * startH + chrome;
-        const hairY = Math.max(pad, (height - stackHeight) / 2);
-        startTop = topForHair(hairY, startH);
-      }
-      placePhoto(element, "left", frame1Config.photos.buasMark);
-      placePhoto(element, "right", frame1Config.photos.bilkentMark);
-      const metrics = { startH, startTop, fullH, fullTop };
-      metricsRef.current = metrics;
+      metricsRef.current = laid.metrics;
       const progress = scrollOpening ? progressRef.current : 1;
-      applyProgress(element, progress, metrics, scrollOpening && reducedRef.current);
+      applyProgress(element, progress, laid.metrics, scrollOpening && reducedRef.current);
     };
 
     measureRef.current = measure;
@@ -1205,7 +1311,7 @@ export function Frame1() {
             className={reduced ? (research === "open" ? "research-panel is-shown" : "research-panel") : "research-panel"}
             role="dialog"
             aria-modal="true"
-            aria-label="Research plan"
+            aria-labelledby="research-plan-title"
             style={sheetMotion(research, researchShift)}
             onMouseDown={(event) => event.stopPropagation()}
           >
@@ -1218,9 +1324,8 @@ export function Frame1() {
             >
               ×
             </button>
-            <div className="research-scroll">
-              <img src={frame1Config.assets.research1} alt="Page 1 of the research plan" />
-              <img src={frame1Config.assets.research2} alt="Page 2 of the research plan" />
+            <div className="research-scroll" tabIndex={0}>
+              <ResearchPlan />
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@
   --portrait-aspect: 1;
   --name-h: 1.05em;
   --name-fit: 1;
+  --name-scale: 1;
   --copy-fit: 1;
   --icon-size: 40px;
   --min-text: 13px;
@@ -468,10 +469,16 @@ button.invite {
   margin: 0 auto;
   font-family: var(--font-name), serif;
   font-weight: 400;
-  font-size: max(var(--min-text), calc(var(--name-size, 64px) * var(--name-fit, 1)));
+  font-size: max(var(--min-text), calc(var(--name-size, 64px) * var(--name-fit, 1) * var(--name-scale, 1)));
   line-height: var(--name-line, 1.05);
   color: var(--name-color, #f2eee6);
   text-wrap: balance;
+}
+
+.frame[data-medium="1"] .middle-name {
+  white-space: nowrap;
+  width: max-content;
+  max-width: none;
 }
 
 .under-name {
@@ -686,13 +693,121 @@ button.invite {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 238, 230, 0.4) transparent;
 }
 
-.research-scroll img {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
+.research-scroll:focus-visible {
+  outline: 2px solid var(--focus, #f2eee6);
+  outline-offset: -6px;
+}
+
+.research-plan {
+  padding: 28px 72px 40px 36px;
+  color: #fff;
+  text-align: left;
+}
+
+@media (max-width: 700px) {
+  .research-plan {
+    padding: 22px 62px 32px 22px;
+  }
+}
+
+.research-plan h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-name), "Instrument Serif", serif;
+  font-weight: 400;
+  font-size: max(var(--min-text), clamp(28px, 4vw, 36px));
+  line-height: 1.15;
+  color: var(--name-color, #f2eee6);
+  text-wrap: balance;
+}
+
+.research-intro {
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: 400;
+  font-size: max(var(--min-text), 17px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+  text-wrap: pretty;
+}
+
+.research-steps {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: research-step;
+}
+
+.research-step {
+  counter-increment: research-step;
+  display: grid;
+  grid-template-columns: 1.8rem 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  margin: 0;
+  padding: 16px 0 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.research-step::before {
+  content: counter(research-step);
+  grid-column: 1;
+  grid-row: 1;
+  font-family: var(--font-name), "Instrument Serif", serif;
+  font-size: max(var(--min-text), 22px);
+  line-height: 1.15;
+  color: var(--name-color, #f2eee6);
+}
+
+.research-step h3,
+.research-step p {
+  grid-column: 2;
+}
+
+.research-step h3 {
+  grid-row: 1;
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: 600;
+  font-size: max(var(--min-text), 18px);
+  line-height: 1.3;
+  color: #fff;
+  text-wrap: balance;
+}
+
+.research-step p {
+  margin: 0;
+  font-family: var(--font-text), sans-serif;
+  font-weight: 400;
+  font-size: max(var(--min-text), 16px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  text-wrap: pretty;
+}
+
+.research-step .research-result {
+  margin-top: 2px;
+  font-family: var(--font-name), "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: max(var(--min-text), 18px);
+  line-height: 1.35;
+  color: var(--invite-color, #efc785);
+}
+
+.research-footer {
+  margin: 8px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-family: var(--font-text), sans-serif;
+  font-weight: 400;
+  font-size: max(var(--min-text), 14px);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .card-detail-copy {
