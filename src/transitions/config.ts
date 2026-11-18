@@ -1,3 +1,5 @@
+import { frame5 } from "../frame5/config";
+import { frameOrder, type FrameId } from "../frameOrder";
 import type { Bezier } from "./math";
 
 export type TransitionVariant = "a" | "b" | "c";
@@ -386,40 +388,54 @@ export const transitionConfig = {
   defaultVariant: "a" as TransitionVariant,
   variants: { a: variantA, b: variantB, c: variantC } satisfies Record<TransitionVariant, VariantConfig>,
 
-  /** Main object of each frame, in frame order. */
-  mainObjects: ["#frame1-main-image", "#frame2-main-image", "#frame3-main-image"],
   /** While any of these is open, scrolling stays inside the frame. */
-  overlays: ".research-layer, .frame2-open, .frame3-panel",
+  overlays: ".research-layer, .frame2-open, .frame3-panel, .frame5-overlay",
 
-  /** Blurred color of each frame, in frame order. The transition mixes two of them. */
-  palettes: [
-    {
-      base: "#0b0a0f",
-      blobs: [
-        { x: 0.5, y: 0.42, r: 0.4, color: "rgba(4, 4, 6, 0.95)" },
-        { x: 0.04, y: 0.62, r: 0.6, color: "rgba(237, 118, 36, 0.6)" },
-        { x: 0.96, y: 0.58, r: 0.6, color: "rgba(0, 20, 137, 0.85)" },
-        { x: 0.5, y: 0.12, r: 0.22, color: "rgba(196, 64, 48, 0.22)" },
-      ],
+  /**
+   * Per frame: its main object, and the blurred colors the transition mixes.
+   * The order of the frames lives in src/frameOrder.ts.
+   */
+  frames: {
+    frame1: {
+      main: "#frame1-main-image",
+      palette: {
+        base: "#0b0a0f",
+        blobs: [
+          { x: 0.5, y: 0.42, r: 0.4, color: "rgba(4, 4, 6, 0.95)" },
+          { x: 0.04, y: 0.62, r: 0.6, color: "rgba(237, 118, 36, 0.6)" },
+          { x: 0.96, y: 0.58, r: 0.6, color: "rgba(0, 20, 137, 0.85)" },
+          { x: 0.5, y: 0.12, r: 0.22, color: "rgba(196, 64, 48, 0.22)" },
+        ],
+      },
     },
-    {
-      base: "#220806",
-      blobs: [
-        { x: 0.3, y: 0.3, r: 0.7, color: "rgba(112, 26, 18, 0.75)" },
-        { x: 0.78, y: 0.36, r: 0.42, color: "rgba(176, 120, 78, 0.55)" },
-        { x: 0.2, y: 0.82, r: 0.45, color: "rgba(196, 146, 66, 0.42)" },
-        { x: 0.88, y: 0.9, r: 0.35, color: "rgba(36, 52, 92, 0.6)" },
-      ],
+    frame2: {
+      main: "#frame2-main-image",
+      palette: {
+        base: "#220806",
+        blobs: [
+          { x: 0.3, y: 0.3, r: 0.7, color: "rgba(112, 26, 18, 0.75)" },
+          { x: 0.78, y: 0.36, r: 0.42, color: "rgba(176, 120, 78, 0.55)" },
+          { x: 0.2, y: 0.82, r: 0.45, color: "rgba(196, 146, 66, 0.42)" },
+          { x: 0.88, y: 0.9, r: 0.35, color: "rgba(36, 52, 92, 0.6)" },
+        ],
+      },
     },
-    {
-      base: "#12151a",
-      blobs: [
-        { x: 0.66, y: 0.46, r: 0.55, color: "rgba(52, 60, 74, 0.8)" },
-        { x: 0.22, y: 0.4, r: 0.4, color: "rgba(28, 34, 44, 0.7)" },
-        { x: 0.6, y: 0.62, r: 0.3, color: "rgba(54, 170, 150, 0.16)" },
-      ],
+    frame3: {
+      main: "#frame3-main-image",
+      palette: {
+        base: "#12151a",
+        blobs: [
+          { x: 0.66, y: 0.46, r: 0.55, color: "rgba(52, 60, 74, 0.8)" },
+          { x: 0.22, y: 0.4, r: 0.4, color: "rgba(28, 34, 44, 0.7)" },
+          { x: 0.6, y: 0.62, r: 0.3, color: "rgba(54, 170, 150, 0.16)" },
+        ],
+      },
     },
-  ] satisfies FramePalette[],
+    frame5: {
+      main: `#${frame5.mainId}`,
+      palette: frame5.palette,
+    },
+  } satisfies Record<FrameId, { main: string; palette: FramePalette }>,
 
   input: {
     /** Pixels per line when a wheel reports lines (Firefox with a mouse). */
@@ -478,6 +494,14 @@ export const transitionConfig = {
     chainPauseMs: 120,
   },
 };
+
+export function frameIndex(id: FrameId) {
+  return frameOrder.indexOf(id as (typeof frameOrder)[number]);
+}
+
+export function frameAt(index: number) {
+  return transitionConfig.frames[frameOrder[index]];
+}
 
 export function readVariant(search = window.location.search): TransitionVariant {
   const value = new URLSearchParams(search).get("transition")?.toLowerCase();

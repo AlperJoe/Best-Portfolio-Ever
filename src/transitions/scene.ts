@@ -1,4 +1,4 @@
-import { transitionConfig, type FramePalette, type VariantConfig } from "./config";
+import { frameAt, type FramePalette, type VariantConfig } from "./config";
 import { clamp, cubicBezier, latchHump, lerp, smoothstep } from "./math";
 
 function paletteCss(palette: FramePalette, softness: number) {
@@ -165,11 +165,12 @@ export class Scene {
     this.source = source;
     this.dest = dest;
     this.revealCurve = cubicBezier(cfg.reveal.curve);
-    const palettes = transitionConfig.palettes;
-    this.fieldFrom.style.background = paletteCss(palettes[fromIndex], cfg.field.softness);
-    this.fieldTo.style.background = paletteCss(palettes[toIndex], cfg.field.softness);
+    const fromPalette = frameAt(fromIndex).palette;
+    const toPalette = frameAt(toIndex).palette;
+    this.fieldFrom.style.background = paletteCss(fromPalette, cfg.field.softness);
+    this.fieldTo.style.background = paletteCss(toPalette, cfg.field.softness);
     this.print.style.background = cfg.print.enabled
-      ? paletteCss(palettes[toIndex], cfg.field.softness)
+      ? paletteCss(toPalette, cfg.field.softness)
       : "none";
     this.plane.classList.toggle("is-print", cfg.print.enabled);
     this.buildBlurFilters(cfg);
@@ -181,7 +182,7 @@ export class Scene {
       path.setAttribute("stroke-linecap", "round");
     }
 
-    const main = dest.querySelector<HTMLElement>(transitionConfig.mainObjects[toIndex]);
+    const main = dest.querySelector<HTMLElement>(frameAt(toIndex).main);
     this.destMain = main;
     this.clone?.remove();
     this.clone = main ? cloneMain(main) : null;

@@ -1,4 +1,5 @@
-import { transitionConfig, type TransitionVariant, type VariantConfig } from "./config";
+import type { FrameId } from "../frameOrder";
+import { frameIndex, transitionConfig, type TransitionVariant, type VariantConfig } from "./config";
 import { clamp } from "./math";
 import { createMotion, keyRate, type Motion } from "./motion";
 import { Scene } from "./scene";
@@ -75,6 +76,7 @@ export class TransitionEngine {
     window.addEventListener("touchend", this.onTouchEnd);
     window.addEventListener("touchcancel", this.onTouchEnd);
     window.addEventListener("resize", this.onResize);
+    window.addEventListener("tx:goto", this.onGoto);
     this.media.addEventListener("change", this.onMotionPreference);
     this.slots.forEach((slot) => this.overlays.observe(slot, { childList: true, subtree: true }));
   }
@@ -87,6 +89,7 @@ export class TransitionEngine {
     window.removeEventListener("touchend", this.onTouchEnd);
     window.removeEventListener("touchcancel", this.onTouchEnd);
     window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("tx:goto", this.onGoto);
     this.media.removeEventListener("change", this.onMotionPreference);
     this.overlays.disconnect();
     if (this.frameId) cancelAnimationFrame(this.frameId);
@@ -147,6 +150,20 @@ export class TransitionEngine {
       this.fling = 0;
       this.lastInput = -Infinity;
     }
+  };
+
+  /** A frame asked for another frame: one direct push, however far away it is. */
+  private onGoto = (event: Event) => {
+    const index = frameIndex((event as CustomEvent<FrameId>).detail);
+    if (index < 0 || index === this.active || this.phase !== "idle" || this.overlayOpen()) return;
+    this.clearGoal();
+    const now = performance.now();
+    if (this.fadeFor()) {
+      this.startFade(index, transitionConfig.reduced.ms, now);
+      return;
+    }
+    this.startPush(Math.sign(index - this.active), now, index);
+    this.keyDrive = true;
   };
 
   /** Starts the next push toward the clicked station, if there is one. */
@@ -265,9 +282,9 @@ export class TransitionEngine {
     }
   }
 
-  private startPush(dir: number, now: number) {
+  private startPush(dir: number, now: number, target = this.active + dir) {
     this.dir = dir;
-    this.target = this.active + dir;
+    this.target = target;
     this.motion = createMotion(this.cfg);
     this.keyDrive = false;
     this.phase = "push";
