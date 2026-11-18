@@ -64,8 +64,8 @@ export const frame5 = {
     headAngle: 30,
     stroke: 1.25,
     color: "rgba(242, 238, 230, 0.55)",
-    /** Seconds to draw, once, when the frame locks. */
-    drawSeconds: 0.6,
+    /** Seconds to draw, once, when the frame arrives. */
+    drawSeconds: 0.3,
     /** Share of the draw time the line takes before the head appears. */
     lineShare: 0.8,
   },
@@ -253,11 +253,7 @@ export const frame5 = {
     endSize: "22px",
     backLabel: "Back to the beginning ↑",
     backSize: "13px",
-    /** Roll speed, in pixels per second. */
-    speed: 22,
-    /** Milliseconds after the lock before the roll starts. */
-    delay: 300,
-    ease: "cubic-bezier(0.3, 0.1, 0.55, 1)",
+    /** The roll follows the scroll past this frame, set by scrollConfig.tail in transitions/config.ts. */
     /** Reduced motion: line height of the still list. */
     stillLineHeight: 1.5,
   },

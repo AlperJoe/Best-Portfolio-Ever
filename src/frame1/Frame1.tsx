@@ -3,7 +3,7 @@ import { frame1Config } from "./config";
 import { FrameEffects, type EffectsFrame, type EffectsOptions } from "./effectsCanvas";
 import { applySeamVariables } from "./geometry";
 import { buildSeamMasks, paintPortraitMask } from "./seamMask";
-import { OPENING_EVENT, readVariant } from "../transitions/config";
+import { OPENING_EVENT } from "../transitions/config";
 import { attachWhyNote } from "../whyNote/whyNote";
 import "./Frame1.css";
 
@@ -330,7 +330,7 @@ function paintMotion(
 
 export function Frame1() {
   const reduced = usePrefersReducedMotion();
-  const [scrollOpening] = useState(() => readVariant() === "d");
+  const scrollOpening = true;
   const playOpening = !scrollOpening && frame1Config.effects.OPENING_SEQUENCE && !reduced;
   const openingRef = useRef<OpeningState>({ p: 0, startScale: 1, startShift: 0, nameSpan: 0 });
   const reducedRef = useRef(reduced);

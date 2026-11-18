@@ -105,10 +105,10 @@ export const frame2Config = {
     faceGap: 18,
     /** Image fraction where Pedro's face begins beside the line. */
     faceX: 0.63,
-    fade: 0.45,
+    fade: 0.3,
     /** Gold curve from the line down to the middle card. Its length comes from the layout. */
     arrow: {
-      draw: 0.6,
+      draw: 0.3,
       /** Room kept under the text inside the line block, which sets where the text sits. */
       room: 58,
       stroke: 2.5,

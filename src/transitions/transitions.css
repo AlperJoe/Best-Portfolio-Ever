@@ -18,202 +18,17 @@
   transform: translate3d(0, 300vh, 0);
 }
 
-.tx-slot.is-leaving {
-  will-change: transform, filter, opacity;
-  backface-visibility: hidden;
-}
-
-.tx-slot.is-revealing,
-.tx-slot.is-fading {
+/* The frame ahead opens over the interlude. */
+.tx-slot.is-revealing {
   z-index: 30;
-  will-change: opacity;
+  will-change: clip-path, opacity;
 }
 
-.tx-backdrop {
-  position: absolute;
-  inset: -6%;
-  z-index: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.tx-backdrop.is-on {
-  visibility: visible;
-}
-
-.tx-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  overflow: hidden;
-  visibility: hidden;
-  pointer-events: none;
-  contain: strict;
-}
-
-.tx-layer.is-on {
-  visibility: visible;
-}
-
-.tx-field-from,
-.tx-field-to {
-  position: absolute;
-  inset: 0;
-}
-
-.tx-field-to {
-  will-change: opacity;
-}
-
-.tx-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.tx-rails {
-  position: absolute;
-  left: 0;
-  top: 0;
-  overflow: visible;
-  will-change: opacity;
-}
-
-.tx-plane {
-  position: absolute;
-  left: 0;
-  top: 0;
-  will-change: transform, opacity;
-}
-
-.tx-shadow {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.45) 40%, transparent 72%);
-  will-change: opacity;
-}
-
-.tx-paper {
-  position: absolute;
-}
-
-.tx-print {
-  position: absolute;
-  inset: 0;
-}
-
-.tx-clone {
-  position: absolute;
-  display: block;
-  max-width: none;
-  margin: 0;
-}
-
-.tx-shade {
-  position: absolute;
-  inset: -6%;
-  opacity: 0;
-  background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.9) 100%);
-}
-
-.tx-track {
-  position: absolute;
-  right: var(--track-right);
-  top: 50%;
-  z-index: 40;
-  width: var(--track-hit);
-  height: var(--track-length);
-  margin-right: calc(var(--track-hit) / -2);
-  transform: translateY(-50%);
-  opacity: var(--track-idle);
-  transition: opacity var(--track-fade) ease, visibility 0s linear 0s;
-  pointer-events: none;
-}
-
-.tx-track.is-busy {
-  opacity: var(--track-busy);
-}
-
-.tx-track.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity var(--track-fade) ease, visibility 0s linear var(--track-fade);
-}
-
-.tx-track-line {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  margin-left: -0.5px;
-  background: var(--track-color);
-  opacity: var(--track-line);
-}
-
-.tx-track-station {
-  position: absolute;
-  left: 50%;
-  width: var(--track-hit);
-  height: var(--track-hit);
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.tx-track-station::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--track-station);
-  height: var(--track-station);
-  box-sizing: border-box;
-  border: 1px solid var(--track-color);
-  border-radius: 50%;
-  background: transparent;
-  transform: translate(-50%, -50%);
-  opacity: 0.8;
-  transition: opacity var(--track-fade) ease, background-color var(--track-fade) ease;
-}
-
-.tx-track-station:hover::before {
-  opacity: 1;
-}
-
-.tx-track-station[aria-current]::before {
-  background: var(--track-color);
-  opacity: 1;
-}
-
-.tx-track-station:focus-visible {
-  outline: 1px solid var(--track-color);
-  outline-offset: -4px;
-  border-radius: 50%;
-}
-
-.tx-track-carriage {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: var(--track-carriage-w);
-  height: var(--track-carriage-h);
-  border-radius: var(--track-carriage-w);
-  background: var(--track-color);
-  will-change: transform;
-  pointer-events: none;
-}
-
-/* Variant d: the text interludes and the cover for jumps. */
+/* The interlude: dark background, centered lines, gold line and its note control. */
 .txd-layer {
   position: absolute;
   inset: 0;
-  z-index: 36;
+  z-index: 20;
   visibility: hidden;
   pointer-events: none;
   contain: strict;
@@ -223,25 +38,77 @@
   visibility: visible;
 }
 
-.txd-svg {
+.txd-bg {
   position: absolute;
-  left: 0;
-  top: 0;
-  display: block;
-  overflow: hidden;
+  inset: 0;
+  background: var(--txd-bg);
+}
+
+.txd-stack {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+}
+
+.txd-text {
+  font-family: var(--txd-font);
+  font-weight: 400;
+  line-height: var(--txd-line);
+  color: var(--txd-text);
+  text-align: center;
 }
 
 .txd-line {
+  width: max-content;
+  margin: 0 auto;
+  white-space: nowrap;
   text-rendering: geometricPrecision;
 }
 
-.txd-why {
+.txd-word {
+  opacity: 0.15;
+}
+
+.txd-word.is-focus {
+  font-style: italic;
+}
+
+.txd-rule {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--txd-rule-w);
+}
+
+.txd-rule-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--txd-rule);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.txd-tip {
   position: absolute;
   left: 0;
-  top: 0;
-  z-index: 40;
+  top: 50%;
+  width: var(--txd-tip);
+  height: var(--txd-tip);
+  border-radius: 50%;
+  background: var(--txd-rule);
+  box-shadow: var(--txd-glow);
+}
+
+.txd-why {
+  margin-top: var(--txd-why-gap);
+  text-decoration-style: solid;
+  text-decoration-thickness: 1px;
   visibility: hidden;
   opacity: 0;
+  pointer-events: auto;
   transition: opacity 160ms ease, visibility 0s linear 160ms;
 }
 
@@ -249,6 +116,27 @@
   visibility: visible;
   opacity: 1;
   transition: opacity 160ms ease, visibility 0s linear 0s;
+}
+
+/* The gold line splits into the top and bottom edges of the frame that opens. */
+.txd-edges {
+  position: absolute;
+  inset: 0;
+  z-index: 32;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.txd-edges.is-on {
+  visibility: visible;
+}
+
+.txd-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: var(--txd-rule-w);
+  background: var(--txd-rule);
 }
 
 .tx-stage > .why-layer {

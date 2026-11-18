@@ -43,7 +43,7 @@ function useReducedMotion() {
 
 /**
  * Follows the stage slot around this frame. `shown` is true while the frame
- * is on screen at all; `locked` once the push has fully seated it.
+ * is on screen at all; `locked` once it has fully arrived.
  */
 function useSlotState(ref: RefObject<HTMLElement | null>) {
   const [state, setState] = useState({ shown: false, locked: false });
@@ -296,7 +296,6 @@ export function Frame5() {
       const to = (band - end.offsetHeight) / 2 - end.offsetTop;
       frame.style.setProperty("--roll-from", `${band}px`);
       frame.style.setProperty("--roll-to", `${to}px`);
-      frame.style.setProperty("--roll-ms", `${Math.round(((band - to) / CREDITS.speed) * 1000)}ms`);
     }
   }, []);
 
@@ -531,8 +530,6 @@ export function Frame5() {
     "--f5-end-gap": `${CREDITS.endGap}px`,
     "--f5-end-size": CREDITS.endSize,
     "--f5-back-size": CREDITS.backSize,
-    "--f5-roll-delay": `${CREDITS.delay}ms`,
-    "--f5-roll-ease": CREDITS.ease,
   } as CSSProperties;
 
   const classes = [
