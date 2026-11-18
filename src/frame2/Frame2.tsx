@@ -54,55 +54,49 @@ function cardBox(points: CardPoint[], image: HeroPlacement): CSSProperties {
   };
 }
 
-function seenMark(points: CardPoint[], image: HeroPlacement): CSSProperties {
-  const xs = points.map((point) => point[0]);
-  const ys = points.map((point) => point[1]);
+/** Gold dash centered on the card's painted top edge, in the card button's box. */
+function seenMark(card: Frame2Card, image: HeroPlacement): CSSProperties {
+  const xs = card.points.map((point) => point[0]);
+  const ys = card.points.map((point) => point[1]);
   const minX = Math.min(...xs);
   const minY = Math.min(...ys);
-  const local = points.map(([x, y]) => ({
-    x: (x - minX) * image.width,
-    y: (y - minY) * image.height,
-  }));
-  let edge = 0;
-  let best = Number.POSITIVE_INFINITY;
-  for (let index = 0; index < local.length; index += 1) {
-    const a = local[index];
-    const b = local[(index + 1) % local.length];
-    const y = (a.y + b.y) / 2;
-    if (y < best) {
-      best = y;
-      edge = index;
-    }
-  }
-  const a = local[edge];
-  const b = local[(edge + 1) % local.length];
-  const mx = (a.x + b.x) / 2;
-  const my = (a.y + b.y) / 2;
-  const cx = local.reduce((sum, point) => sum + point.x, 0) / local.length;
-  const cy = local.reduce((sum, point) => sum + point.y, 0) / local.length;
-  const dx = cx - mx;
-  const dy = cy - my;
-  const span = Math.hypot(dx, dy) || 1;
-  const inset = frame2Config.line.mark.inset;
-  const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+  const [start, end] = card.topEdge;
+  const ax = (start[0] - minX) * image.width;
+  const ay = (start[1] - minY) * image.height;
+  const bx = (end[0] - minX) * image.width;
+  const by = (end[1] - minY) * image.height;
+  const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
   return {
-    left: `${mx + (dx / span) * inset}px`,
-    top: `${my + (dy / span) * inset}px`,
+    left: `${(ax + bx) / 2}px`,
+    top: `${(ay + by) / 2}px`,
     width: `${frame2Config.line.mark.length}px`,
     height: `${frame2Config.line.mark.thickness}px`,
     transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+    transformOrigin: "center",
   };
 }
 
 type Point = { x: number; y: number };
 
+type LineMode = "above" | "side";
+
+type ArrowDraw = {
+  d: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
 /**
  * One quadratic curve, so it has a single bend, then an open V head along its final direction.
- * One path, so the draw-on runs down the shaft and out along both arms.
+ * Above the cards the bend is the small hand-drawn hook. From the left, the curve runs right
+ * and then down onto the card.
  */
-function arrowPath(start: Point, tip: Point) {
+function arrowDraw(start: Point, tip: Point, mode: LineMode): ArrowDraw {
   const { bend, head } = frame2Config.line.arrow;
-  const control = { x: tip.x + bend, y: (start.y + tip.y) / 2 };
+  const control =
+    mode === "side" ? { x: tip.x, y: start.y } : { x: tip.x + bend, y: (start.y + tip.y) / 2 };
   const ex = tip.x - control.x;
   const ey = tip.y - control.y;
   const end = Math.hypot(ex, ey) || 1;
@@ -120,13 +114,134 @@ function arrowPath(start: Point, tip: Point) {
   const a = arm(1);
   const b = arm(-1);
   const f = (value: number) => value.toFixed(2);
-  return [
+  const d = [
     `M ${f(start.x)} ${f(start.y)}`,
     `Q ${f(control.x)} ${f(control.y)} ${f(tip.x)} ${f(tip.y)}`,
     `L ${f(a.x)} ${f(a.y)}`,
     `M ${f(tip.x)} ${f(tip.y)}`,
     `L ${f(b.x)} ${f(b.y)}`,
   ].join(" ");
+  const points = [start, tip, control, a, b];
+  const pad = head.length;
+  const minX = Math.min(...points.map((point) => point.x)) - pad;
+  const minY = Math.min(...points.map((point) => point.y)) - pad;
+  const maxX = Math.max(...points.map((point) => point.x)) + pad;
+  const maxY = Math.max(...points.map((point) => point.y)) + pad;
+  return { d, left: minX, top: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+}
+
+type Box = { left: number; top: number; right: number; bottom: number };
+
+function boxesOverlap(a: Box, b: Box, pad = 0) {
+  return a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad;
+}
+
+function textBox(left: number, top: number, width: number, height: number): Box {
+  return { left, top, right: left + width, bottom: top + height };
+}
+
+function hitsCards(left: number, top: number, width: number, height: number, cards: Box[]) {
+  const box = textBox(left, top, width, height);
+  return cards.some((card) => boxesOverlap(box, card, 1));
+}
+
+function sharesX(left: number, width: number, box: Box) {
+  return left < box.right && left + width > box.left;
+}
+
+/**
+ * Keeps today's place when the curve already has room. Otherwise lifts the line.
+ * When the intro is in the way, parks the line left of the cards.
+ */
+function placeLine(input: {
+  intro: Box;
+  textWidth: number;
+  textHeight: number;
+  lineHeight: number;
+  cards: Box[];
+  cardMidY: number;
+  faceLeft: number;
+}): { left: number; top: number; mode: LineMode } {
+  const { intro, textWidth, textHeight, lineHeight, cards, cardMidY, faceLeft } = input;
+  const { min, startGap, cardGap } = frame2Config.line.arrow;
+  const { blockGap, sideGap, cardGap: belowCards } = frame2Config.line;
+  const margin = 8;
+  const cardTop = Math.min(cards[0].top, cards[1].top);
+  const pocketRight = faceLeft;
+  const pocketLeft = cards[0].left;
+  let left = pocketLeft + Math.max(0, pocketRight - pocketLeft - textWidth) / 2;
+  if (left + textWidth > pocketRight) left = Math.max(margin, pocketRight - textWidth);
+
+  const spanAt = (top: number) => cardMidY - cardGap - (top + textHeight) - startGap;
+  let top = cardTop - belowCards - lineHeight;
+  const belowIntro = intro.bottom + blockGap;
+  if (top < belowIntro) top = belowIntro;
+
+  const ceiling = sharesX(left, textWidth, intro) ? belowIntro : margin;
+  const needsMove = spanAt(top) < min || hitsCards(left, top, textWidth, textHeight, cards);
+  if (!needsMove) return { left, top, mode: "above" };
+
+  let next = cardMidY - cardGap - textHeight - startGap - min;
+  for (const card of cards) {
+    if (sharesX(left, textWidth, card)) next = Math.min(next, card.top - 2 - textHeight);
+  }
+  if (next >= ceiling - 0.5 && !hitsCards(left, Math.max(next, ceiling), textWidth, textHeight, cards)) {
+    return { left, top: Math.max(next, ceiling), mode: "above" };
+  }
+  if (
+    spanAt(ceiling) >= min &&
+    !hitsCards(left, ceiling, textWidth, textHeight, cards)
+  ) {
+    return { left, top: ceiling, mode: "above" };
+  }
+
+  const cardsLeft = Math.min(...cards.map((card) => card.left));
+  const sideLeft = Math.max(margin, cardsLeft - sideGap - textWidth);
+  const sideCeiling = sharesX(sideLeft, textWidth, intro) ? belowIntro : margin;
+  let sideTop = cardMidY - cardGap - textHeight - startGap - min;
+  for (const card of cards) {
+    if (sharesX(sideLeft, textWidth, card)) sideTop = Math.min(sideTop, card.top - 2 - textHeight);
+  }
+  if (sideTop < sideCeiling) sideTop = sideCeiling;
+  if (hitsCards(sideLeft, sideTop, textWidth, textHeight, cards)) {
+    sideTop = Math.max(margin, Math.min(...cards.map((card) => card.top)) - sideGap - textHeight);
+    if (boxesOverlap(textBox(sideLeft, sideTop, textWidth, textHeight), intro, 0)) {
+      sideTop = belowIntro;
+    }
+  }
+  return { left: sideLeft, top: Math.max(margin, sideTop), mode: "side" };
+}
+
+/** Top-edge midpoint of a card button, measured from its live box. */
+function liveTopMid(card: Frame2Card, node: HTMLElement, frameRect: DOMRect): Point {
+  const rect = node.getBoundingClientRect();
+  const xs = card.points.map((point) => point[0]);
+  const ys = card.points.map((point) => point[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = Math.max(0.0001, maxX - minX);
+  const height = Math.max(0.0001, maxY - minY);
+  const local = card.points.map(([x, y]) => ({
+    x: (x - minX) / width,
+    y: (y - minY) / height,
+  }));
+  let edge = 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < local.length; index += 1) {
+    const y = (local[index].y + local[(index + 1) % local.length].y) / 2;
+    if (y < best) {
+      best = y;
+      edge = index;
+    }
+  }
+  const a = local[edge];
+  const b = local[(edge + 1) % local.length];
+  return {
+    x: rect.left - frameRect.left + ((a.x + b.x) / 2) * rect.width,
+    y: rect.top - frameRect.top + ((a.y + b.y) / 2) * rect.height,
+  };
 }
 
 /** Midpoint of a card's top edge, in frame pixels. */
@@ -195,6 +310,9 @@ export function Frame2() {
     top: number;
     width: number;
     textBottom: number;
+    mode: LineMode;
+    tipX: number;
+    tipY: number;
   } | null>(null);
   placeRef.current = place;
 
@@ -226,7 +344,6 @@ export function Frame2() {
       const cardTop = Math.min(
         ...frame2Config.cards.items.slice(0, 2).map((card) => cardBounds(card.points, place).top),
       );
-      const leftCard = cardBounds(frame2Config.cards.items[0].points, place);
       const faceLeft = place.left + frame2Config.line.faceX * place.width - frame2Config.line.faceGap;
       const frameRect = frame.getBoundingClientRect();
       let fit = 1;
@@ -250,26 +367,66 @@ export function Frame2() {
 
       const lineWidth = line.offsetWidth;
       const lineHeight = line.offsetHeight;
-      const pocketRight = faceLeft;
-      const pocketLeft = leftCard.left;
-      let left = pocketLeft + Math.max(0, pocketRight - pocketLeft - lineWidth) / 2;
-      if (left + lineWidth > pocketRight) left = Math.max(8, pocketRight - lineWidth);
-      let top = cardTop - frame2Config.line.cardGap - lineHeight;
-      const introBottom = intro.getBoundingClientRect().bottom - frameRect.top;
-      const minTop = introBottom + frame2Config.line.blockGap;
-      if (top < minTop) top = minTop;
-      const lastText = line.querySelector<HTMLElement>(".frame2-line-help") ?? line.querySelector<HTMLElement>(".frame2-line-text");
+      const introRect = intro.getBoundingClientRect();
+      const introBox = {
+        left: introRect.left - frameRect.left,
+        top: introRect.top - frameRect.top,
+        right: introRect.right - frameRect.left,
+        bottom: introRect.bottom - frameRect.top,
+      };
+      const cardBoxes = frame2Config.cards.items.map((card) => {
+        const node = buttonRefs.current[card.id];
+        if (!node) {
+          const box = cardBounds(card.points, place);
+          return { left: box.left, top: box.top, right: box.left + box.width, bottom: box.top + box.height };
+        }
+        const rect = node.getBoundingClientRect();
+        return {
+          left: rect.left - frameRect.left,
+          top: rect.top - frameRect.top,
+          right: rect.right - frameRect.left,
+          bottom: rect.bottom - frameRect.top,
+        };
+      });
+      const middleCard = frame2Config.cards.items[1];
+      const middleNode = buttonRefs.current[middleCard.id];
+      const cardMid = middleNode
+        ? liveTopMid(middleCard, middleNode, frameRect)
+        : cardTopMid(middleCard.points, place);
+      const lastText =
+        line.querySelector<HTMLElement>(".frame2-line-help") ??
+        line.querySelector<HTMLElement>(".frame2-line-text");
       const textBottom = lastText ? lastText.offsetTop + lastText.offsetHeight : 0;
+      const placed = placeLine({
+        intro: introBox,
+        textWidth: lineWidth,
+        textHeight: textBottom,
+        lineHeight,
+        cards: cardBoxes,
+        cardMidY: cardMid.y,
+        faceLeft,
+      });
 
       setIntroFit((current) => (Math.abs(current - fit) < 0.001 ? current : fit));
       setLineBox((current) =>
         current &&
-        Math.abs(current.left - left) < 0.5 &&
-        Math.abs(current.top - top) < 0.5 &&
+        current.mode === placed.mode &&
+        Math.abs(current.left - placed.left) < 0.5 &&
+        Math.abs(current.top - placed.top) < 0.5 &&
         Math.abs(current.width - lineWidth) < 0.5 &&
-        Math.abs(current.textBottom - textBottom) < 0.5
+        Math.abs(current.textBottom - textBottom) < 0.5 &&
+        Math.abs(current.tipX - cardMid.x) < 0.5 &&
+        Math.abs(current.tipY - cardMid.y) < 0.5
           ? current
-          : { left, top, width: lineWidth, textBottom },
+          : {
+              left: placed.left,
+              top: placed.top,
+              width: lineWidth,
+              textBottom,
+              mode: placed.mode,
+              tipX: cardMid.x,
+              tipY: cardMid.y,
+            },
       );
     };
 
@@ -676,11 +833,30 @@ export function Frame2() {
   const showHelper = seen.length === 0;
   const arrow = (() => {
     if (!lineBox || lineBox.width <= 0 || lineBox.textBottom <= 0) return null;
-    const card = cardTopMid(frame2Config.cards.items[1].points, place);
-    const start = { x: lineBox.width / 2, y: lineBox.textBottom + frame2Config.line.arrow.startGap };
-    const tip = { x: card.x - lineBox.left, y: card.y - lineBox.top - frame2Config.line.arrow.cardGap };
-    if (tip.y - start.y < frame2Config.line.arrow.head.length) return null;
-    return { start, tip };
+    const { startGap, cardGap } = frame2Config.line.arrow;
+    const edgeY = lineBox.tipY - lineBox.top;
+    if (lineBox.mode === "above") {
+      return arrowDraw(
+        { x: lineBox.width / 2, y: lineBox.textBottom + startGap },
+        { x: lineBox.tipX - lineBox.left, y: edgeY - cardGap },
+        "above",
+      );
+    }
+    // Leave from under the words when that still sits above the card.
+    // On a short frame the words sit beside the cards, so the curve leaves
+    // from their top-right and still turns down onto the middle card.
+    const under = lineBox.textBottom + startGap;
+    const landed = edgeY - cardGap;
+    const aboveCard = under + 12 <= landed;
+    const start = aboveCard
+      ? { x: lineBox.width, y: under }
+      : { x: lineBox.width + startGap, y: Math.min(startGap, edgeY - 10) };
+    const tipY = aboveCard ? landed : Math.min(edgeY - 2, start.y + 12);
+    return arrowDraw(
+      start,
+      { x: lineBox.tipX - lineBox.left, y: tipY > start.y ? tipY : edgeY - 2 },
+      "side",
+    );
   })();
   const sectionClass = [
     "frame2",
@@ -726,9 +902,7 @@ export function Frame2() {
               setOpen({ id: card.id, pose: "from" });
             }}
           >
-            {seen.includes(card.id) ? (
-              <span className="frame2-seen" style={seenMark(card.points, place)} />
-            ) : null}
+            {seen.includes(card.id) ? <span className="frame2-seen" style={seenMark(card, place)} /> : null}
           </button>
         ))}
         {middle ? (
@@ -790,12 +964,13 @@ export function Frame2() {
           <svg
             key={arrowKey}
             className="frame2-arrow"
-            width={lineBox.width}
-            height={arrow.tip.y}
-            viewBox={`0 0 ${lineBox.width} ${arrow.tip.y}`}
+            width={arrow.width}
+            height={arrow.height}
+            viewBox={`${arrow.left} ${arrow.top} ${arrow.width} ${arrow.height}`}
+            style={{ left: arrow.left, top: arrow.top }}
             aria-hidden="true"
           >
-            <path d={arrowPath(arrow.start, arrow.tip)} pathLength={1} />
+            <path d={arrow.d} pathLength={1} />
           </svg>
         ) : null}
       </div>

@@ -99,6 +99,8 @@ export const frame2Config = {
     /** How long that shine itself takes, inside each cycle. */
     shineTravel: 2.2,
     cardGap: 16,
+    /** Gap kept between the line and the cards when the line sits to their left. */
+    sideGap: 20,
     blockGap: 14,
     faceGap: 18,
     /** Image fraction where Pedro's face begins beside the line. */
@@ -114,6 +116,8 @@ export const frame2Config = {
       startGap: 6,
       /** Space between the tip and the top edge of the middle card. */
       cardGap: 14,
+      /** Shortest curve kept between the text and the middle card, in px. */
+      min: 48,
       /**
        * Sideways pull on the curve's control point, past the tip, in px. Positive pulls right.
        * Near 0 the curve lands straight down; larger values swing the end in at more of an angle.
@@ -125,11 +129,13 @@ export const frame2Config = {
         angle: 35,
       },
     },
-    /** Short gold dash on the top edge of a card that has been opened. */
+    /**
+     * Short gold dash centered on the painted top edge of a card that has been opened.
+     * `topEdge` on each card is that edge, in image fractions, left point then right point.
+     */
     mark: {
       length: 16,
       thickness: 2,
-      inset: 5,
     },
   },
   light: {
@@ -156,6 +162,10 @@ export const frame2Config = {
           [0.578, 0.8537],
           [0.5224, 0.8906],
         ] satisfies CardPoint[],
+        topEdge: [
+          [0.5063, 0.6699],
+          [0.5297, 0.6429],
+        ] satisfies CardPoint[],
         video: true,
         image: null,
         body: "LÖVE has no cards, no tables and no animations. I wrote my own animation system for dealing, dragging and flipping cards, a layout service that places the whole table from one set of coordinates on any screen size, and an input manager that sends every tap to the right layer.",
@@ -174,6 +184,10 @@ export const frame2Config = {
           [0.631, 0.5682],
           [0.6619, 0.8623],
           [0.5586, 0.8853],
+        ] satisfies CardPoint[],
+        topEdge: [
+          [0.5367, 0.6062],
+          [0.6188, 0.5941],
         ] satisfies CardPoint[],
         video: false,
         image: {
@@ -196,6 +210,10 @@ export const frame2Config = {
           [0.6964, 0.6107],
           [0.7068, 0.942],
           [0.6302, 0.9155],
+        ] satisfies CardPoint[],
+        topEdge: [
+          [0.6516, 0.6054],
+          [0.7031, 0.6504],
         ] satisfies CardPoint[],
         video: false,
         image: {
