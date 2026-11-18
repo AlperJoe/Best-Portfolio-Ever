@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject, type TransitionEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject, type TransitionEvent } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
 import { frame2Config, type CardPoint, type Frame2Card, type Frame2CardId } from "./config";
 import { createEmbers, drawEmbers, stepEmbers, type Ember } from "./embers";
@@ -264,94 +264,148 @@ function cardTopMid(points: CardPoint[], image: HeroPlacement): Point {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
-type OpenBox = {
-  width: number;
-  height: number;
-  pictureHeight: number | null;
+type OpenLayout = {
+  mode: "wide" | "narrow";
+  picW: number;
+  picH: number;
+  panelW: number;
+  panelH: number;
+  gap: number;
+  layoutW: number;
+  layoutH: number;
+  originX: number;
+  originY: number;
+  restDx: number;
+  restDy: number;
+  frameOuter: number;
+  frameGold: number;
+  radius: number;
+  gem: number;
+  gemAt: number;
 };
 
-function sameBox(current: OpenBox | null, next: OpenBox) {
-  return (
-    !!current &&
-    current.width === next.width &&
-    current.height === next.height &&
-    current.pictureHeight === next.pictureHeight
-  );
+function cardFrame(picW: number) {
+  const frameOuter = Math.max(4, Math.round(picW * 0.015));
+  const frameGold = Math.max(6, Math.round(picW * 0.02));
+  const radius = Math.max(12, Math.round(picW * 0.038));
+  const gem = Math.max(7, Math.round(picW * 0.016));
+  return {
+    frameOuter,
+    frameGold,
+    radius,
+    gem,
+    gemAt: frameOuter + frameGold / 2,
+  };
 }
 
-/** Largest card that stays within the frame, with the picture shown at its own aspect ratio. */
-function measureOpenCard(face: HTMLElement, frameW: number, frameH: number): OpenBox {
-  const { height, sideInset, widthCap, minWidth, mediaAspect } = frame2Config.open;
-  const maxH = Math.max(120, Math.floor(frameH * height) - 2);
-  const maxW = Math.max(280, Math.min(Math.floor(frameW - sideInset * 2), widthCap));
-  const floorW = Math.min(maxW, minWidth);
-  const picture = face.querySelector<HTMLElement>(".frame2-picture");
+/**
+ * Picture card at about 5:7, with the text beside it when the frame is wide
+ * and under it when the frame is narrow. The whole group stays inside the frame.
+ */
+function layoutOpenCard(frameW: number, frameH: number, textNeed: number): OpenLayout {
+  const open = frame2Config.open;
+  const need = Math.max(160, textNeed || open.textEstimate);
+  const aspect = open.pictureAspect;
 
-  const read = (width: number, pictureHeight: number | null) => {
-    face.style.width = `${width}px`;
-    face.style.maxHeight = "none";
-    if (!picture) return face.offsetHeight;
-    if (pictureHeight == null) {
-      picture.style.height = "";
-      picture.style.width = "";
-      picture.style.maxWidth = "";
-      picture.style.alignSelf = "";
-    } else {
-      const style = getComputedStyle(face);
-      const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-      const available = Math.max(80, face.clientWidth - padX);
-      let nextH = pictureHeight;
-      let nextW = pictureHeight * mediaAspect;
-      if (nextW > available) {
-        nextW = available;
-        nextH = nextW / mediaAspect;
-      }
-      picture.style.height = `${nextH}px`;
-      picture.style.width = `${nextW}px`;
-      picture.style.maxWidth = "100%";
-      picture.style.alignSelf = "center";
-    }
-    return face.offsetHeight;
+  const pack = (
+    mode: "wide" | "narrow",
+    picW: number,
+    picH: number,
+    panelW: number,
+    panelH: number,
+    gap: number,
+  ): OpenLayout => {
+    const layoutW = mode === "wide" ? picW + gap + panelW : Math.max(picW, panelW);
+    const layoutH = mode === "wide" ? Math.max(picH, panelH) : picH + gap + panelH;
+    const originX = mode === "wide" ? picW / 2 : (layoutW - picW) / 2 + picW / 2;
+    const originY = mode === "wide" ? layoutH / 2 : picH / 2;
+    return {
+      mode,
+      picW,
+      picH,
+      panelW,
+      panelH,
+      gap,
+      layoutW,
+      layoutH,
+      originX,
+      originY,
+      restDx: originX - layoutW / 2,
+      restDy: originY - layoutH / 2,
+      ...cardFrame(picW),
+    };
   };
 
-  let pictureHeight: number | null = null;
-  let width = maxW;
-  let measured = read(width, null);
-  if (measured > maxH) {
-    let lo = floorW;
-    let hi = maxW;
-    width = floorW;
-    for (let step = 0; step < 14; step += 1) {
-      const mid = Math.round((lo + hi) / 2);
-      const next = read(mid, null);
-      if (next <= maxH) {
-        width = mid;
-        measured = next;
-        lo = mid;
-      } else {
-        hi = mid;
-      }
-    }
-    measured = read(width, null);
-    if (measured > maxH && picture) {
-      const overflow = measured - maxH;
-      pictureHeight = Math.max(72, Math.round(picture.offsetHeight - overflow));
-      measured = read(width, pictureHeight);
-      let guard = 0;
-      while (measured > maxH && width > floorW && guard < 8) {
-        width = Math.max(floorW, width - 24);
-        pictureHeight = null;
-        measured = read(width, null);
-        if (measured > maxH) {
-          pictureHeight = Math.max(72, Math.round(picture.offsetHeight - (measured - maxH)));
-          measured = read(width, pictureHeight);
-        }
-        guard += 1;
-      }
+  const margin = open.wideMargin;
+  const gap = open.wideGap;
+  const availW = frameW - margin * 2;
+  const availH = frameH - margin * 2;
+  let picH = Math.min(availH, open.pictureMax);
+  let picW = Math.round(picH * aspect);
+  let panelW = Math.min(open.panelMax, Math.max(open.panelMin, availW - gap - picW));
+  if (picW + gap + open.panelMin > availW) {
+    panelW = open.panelMin;
+    picW = Math.max(160, Math.floor(availW - gap - panelW));
+    picH = Math.round(picW / aspect);
+  } else if (picW + gap + panelW > availW) {
+    panelW = availW - gap - picW;
+  }
+  const wideFits =
+    frameW >= open.wideAt &&
+    picW >= 200 &&
+    picH >= 260 &&
+    picH <= availH &&
+    panelW >= open.panelMin &&
+    picW + gap + panelW <= availW + 1;
+  if (wideFits) return pack("wide", picW, picH, panelW, picH, gap);
+
+  const narrowMargin = open.narrowMargin;
+  const narrowGap = open.narrowGap;
+  const boxW = Math.max(160, frameW - narrowMargin * 2);
+  const boxH = Math.max(200, frameH - narrowMargin * 2);
+  const minPic = 150;
+  let narrowPicW = Math.min(boxW, Math.round(open.pictureMax * aspect));
+  let narrowPicH = Math.round(narrowPicW / aspect);
+  let panelH = need;
+  if (narrowPicH + narrowGap + panelH > boxH) {
+    const room = boxH - narrowGap - panelH;
+    if (room >= minPic) {
+      narrowPicH = Math.floor(room);
+      narrowPicW = Math.min(boxW, Math.round(narrowPicH * aspect));
+      narrowPicH = Math.round(narrowPicW / aspect);
+      if (narrowPicH + narrowGap + panelH > boxH) panelH = boxH - narrowGap - narrowPicH;
+    } else {
+      narrowPicH = minPic;
+      narrowPicW = Math.min(boxW, Math.round(narrowPicH * aspect));
+      panelH = Math.max(120, boxH - narrowGap - narrowPicH);
     }
   }
+  return pack("narrow", narrowPicW, narrowPicH, boxW, panelH, narrowGap);
+}
 
-  return { width, height: measured, pictureHeight };
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Gold on the given phrases. Every other word stays as it was written. */
+function MarkedCopy({ body, marks }: { body: string; marks: readonly string[] }) {
+  if (marks.length === 0) return <p>{body}</p>;
+  const source = [...marks].sort((a, b) => b.length - a.length);
+  const pattern = new RegExp(source.map(escapeRegExp).join("|"), "g");
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  for (const match of body.matchAll(pattern)) {
+    const at = match.index ?? 0;
+    if (at > cursor) parts.push(body.slice(cursor, at));
+    parts.push(
+      <span key={at} className="frame2-gold">
+        {match[0]}
+      </span>,
+    );
+    cursor = at + match[0].length;
+  }
+  if (cursor < body.length) parts.push(body.slice(cursor));
+  return <p>{parts}</p>;
 }
 
 function Headline({ text, gold }: { text: string; gold: string }) {
@@ -421,7 +475,7 @@ export function Frame2() {
     placeHero(window.innerWidth, window.innerHeight, frame2Config.image.bottomClear, heroOptions),
   );
   const [open, setOpen] = useState<OpenCard | null>(null);
-  const [openBox, setOpenBox] = useState<OpenBox | null>(null);
+  const [copyNeed, setCopyNeed] = useState(0);
   const [inView, setInView] = useState(false);
   const [seen, setSeen] = useState<Frame2CardId[]>([]);
   const lineOn = inView && !open;
@@ -794,23 +848,28 @@ export function Frame2() {
   }, [open, reduced]);
 
   useLayoutEffect(() => {
-    const face = dialogRef.current;
-    const frame = frameRef.current;
-    if (!open || !face || !frame) {
-      setOpenBox((current) => (current == null ? current : null));
+    const sheet = dialogRef.current;
+    if (!open || !sheet) {
+      setCopyNeed((current) => (current === 0 ? current : 0));
       return;
     }
     let cancelled = false;
-    const apply = () => {
+    const measure = () => {
       const node = dialogRef.current;
-      const box = frameRef.current;
-      if (cancelled || !node || !box) return;
-      const next = measureOpenCard(node, box.clientWidth, box.clientHeight);
-      setOpenBox((current) => (sameBox(current, next) ? current : next));
+      if (cancelled || !node) return;
+      const title = node.querySelector<HTMLElement>("#frame2-card-title");
+      const copy = node.querySelector<HTMLElement>(".frame2-copy");
+      const para = node.querySelector<HTMLElement>(".frame2-copy-main p");
+      const chips = node.querySelector<HTMLElement>(".frame2-card-links");
+      if (!title || !copy || !para) return;
+      const style = getComputedStyle(copy);
+      const pad = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const need = Math.ceil(title.offsetHeight + para.scrollHeight + (chips?.offsetHeight ?? 0) + pad + 32);
+      setCopyNeed((current) => (Math.abs(current - need) < 2 ? current : need));
     };
-    apply();
+    measure();
     document.fonts?.ready.then(() => {
-      if (!cancelled) apply();
+      if (!cancelled) measure();
     });
     return () => {
       cancelled = true;
@@ -831,8 +890,7 @@ export function Frame2() {
   const active = open ? frame2Config.cards.items.find((card) => card.id === open.id) : undefined;
   const frameHeight = frameRef.current?.clientHeight || window.innerHeight;
   const frameWidth = frameRef.current?.clientWidth || window.innerWidth;
-  const openMaxHeight = frameHeight * frame2Config.open.height;
-  const openWidth = openBox?.width ?? Math.min(frameWidth - frame2Config.open.sideInset * 2, frame2Config.open.widthCap);
+  const layout = layoutOpenCard(frameWidth, frameHeight, copyNeed);
   const boxes = frame2Config.cards.items.map((card) => cardBounds(card.points, place));
   const middle = boxes[1];
   const handSpan = boxes.reduce(
@@ -861,9 +919,8 @@ export function Frame2() {
             (frameRect.top + frameRect.height / 2),
         }
       : { dx: 0, dy: 0 };
-  const faceHeight = openBox?.height || openMaxHeight;
   const atHand = !!open && !reduced && (open.pose === "from" || open.pose === "shut");
-  const handScale = faceHeight > 0 ? Math.min(1, (buttonRect?.height || frameHeight * 0.18) / faceHeight) : 1;
+  const handScale = Math.min(1, (buttonRect?.height || frameHeight * 0.18) / Math.max(1, layout.picH));
   const closing = open?.pose === "shut";
   const motion = frame2Config.open;
   const playFile = frame2Config.intro.stores.playFile;
@@ -898,9 +955,10 @@ export function Frame2() {
     "--dim-out": `${motion.closeTime}s`,
     "--open-ease": motion.openEase,
     "--close-ease": motion.closeEase,
-    "--open-height": `${openMaxHeight}px`,
-    "--open-radius": `${motion.radius}px`,
-    "--open-navy": motion.navy,
+    "--open-panel": motion.panel,
+    "--open-bronze": motion.bronze,
+    "--open-well-top": motion.wellTop,
+    "--open-well-bottom": motion.wellBottom,
     "--open-title-size": `${motion.titleSize}px`,
     "--open-title-weight": String(motion.titleWeight),
     "--open-title-stretch": `${motion.titleStretch}%`,
@@ -910,8 +968,7 @@ export function Frame2() {
     "--open-body-line": String(motion.bodyLine),
     "--open-body-opacity": String(motion.bodyOpacity),
     "--close-size": `${motion.close}px`,
-    "--open-pad": `${motion.pad}px`,
-    "--open-gap": `${motion.gap}px`,
+    "--media-aspect": String(motion.mediaAspect),
     "--perspective": `${motion.perspective}px`,
     "--hero-position": `${frame2Config.image.positionX * 100}% ${frame2Config.image.positionY * 100}%`,
     "--intro-left": `${frame2Config.intro.left * 100}%`,
@@ -1119,18 +1176,15 @@ export function Frame2() {
         >
           <OpenCardView
             card={active}
-            dx={atHand ? handOffset.dx : 0}
-            dy={atHand ? handOffset.dy : 0}
+            dx={atHand ? handOffset.dx : layout.restDx}
+            dy={atHand ? handOffset.dy : layout.restDy}
             spin={atHand ? 0 : 180}
             scale={atHand ? handScale : 1}
             faceOpacity={atHand ? 0 : 1}
             flightOpacity={closing && !reduced ? 0 : 1}
             instant={open.pose === "from"}
             shown={reduced && open.pose === "open"}
-            backWidth={openWidth}
-            backHeight={faceHeight}
-            faceWidth={openWidth}
-            pictureHeight={openBox?.pictureHeight ?? null}
+            layout={layout}
             flightRef={flightRef}
             dialogRef={dialogRef}
             closeRef={closeRef}
@@ -1144,6 +1198,30 @@ export function Frame2() {
   );
 }
 
+function CardMedia({
+  card,
+  videoRef,
+}: {
+  card: Frame2Card;
+  videoRef: RefObject<HTMLVideoElement | null>;
+}) {
+  if (card.video) {
+    return (
+      <video
+        ref={videoRef}
+        className="frame2-picture"
+        src={frame2Config.assets.gameplay}
+        poster={frame2Config.assets.poster}
+        preload="none"
+        playsInline
+        controls
+      />
+    );
+  }
+  if (card.image) return <img className="frame2-picture" src={card.image.src} alt={card.image.alt} />;
+  return null;
+}
+
 function OpenCardView({
   card,
   dx,
@@ -1154,10 +1232,7 @@ function OpenCardView({
   flightOpacity,
   instant,
   shown,
-  backWidth,
-  backHeight,
-  faceWidth,
-  pictureHeight,
+  layout,
   flightRef,
   dialogRef,
   closeRef,
@@ -1174,10 +1249,7 @@ function OpenCardView({
   flightOpacity: number;
   instant: boolean;
   shown: boolean;
-  backWidth: number;
-  backHeight: number;
-  faceWidth: number;
-  pictureHeight: number | null;
+  layout: OpenLayout;
   flightRef: RefObject<HTMLDivElement | null>;
   dialogRef: RefObject<HTMLDivElement | null>;
   closeRef: RefObject<HTMLButtonElement | null>;
@@ -1187,15 +1259,6 @@ function OpenCardView({
 }) {
   const closing = flightOpacity === 0;
   const motion = frame2Config.open;
-  const pictureStyle: CSSProperties | undefined =
-    pictureHeight == null
-      ? undefined
-      : {
-          height: `${pictureHeight}px`,
-          width: `${pictureHeight * motion.mediaAspect}px`,
-          maxWidth: "100%",
-          alignSelf: "center",
-        };
   return (
     <div
       ref={flightRef}
@@ -1215,48 +1278,61 @@ function OpenCardView({
           "--face-delay": `${closing ? 0 : motion.openFaceDelay}s`,
           "--fade-time": `${closing ? motion.closeFade : 0.01}s`,
           "--fade-delay": `${closing ? motion.closeFadeDelay : 0}s`,
+          "--layout-w": `${layout.layoutW}px`,
+          "--layout-h": `${layout.layoutH}px`,
+          "--origin-x": `${layout.originX}px`,
+          "--origin-y": `${layout.originY}px`,
+          "--pic-w": `${layout.picW}px`,
+          "--pic-h": `${layout.picH}px`,
+          "--panel-w": `${layout.panelW}px`,
+          "--panel-h": `${layout.panelH}px`,
+          "--sheet-gap": `${layout.gap}px`,
+          "--frame-outer": `${layout.frameOuter}px`,
+          "--frame-gold": `${layout.frameGold}px`,
+          "--card-radius": `${layout.radius}px`,
+          "--gem": `${layout.gem}px`,
+          "--gem-at": `${layout.gemAt}px`,
         } as CSSProperties
       }
       onTransitionEnd={onTransition}
     >
-      <div className="frame2-flip">
-        <img
-          className="frame2-back"
-          src={frame2Config.assets.cardBack}
-          alt=""
-          width={frame2Config.cardBack.width}
-          height={frame2Config.cardBack.height}
-          style={{ width: `${backWidth}px`, height: `${backHeight}px` }}
-          draggable={false}
-        />
-        <div
-          ref={dialogRef}
-          className="frame2-face"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="frame2-card-title"
-          style={{ width: `${faceWidth}px` }}
-          onMouseDown={(event) => event.stopPropagation()}
-        >
+      <div
+        ref={dialogRef}
+        className={layout.mode === "narrow" ? "frame2-sheet is-narrow" : "frame2-sheet"}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="frame2-card-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="frame2-flip">
+          <img
+            className="frame2-back"
+            src={frame2Config.assets.cardBack}
+            alt=""
+            width={frame2Config.cardBack.width}
+            height={frame2Config.cardBack.height}
+            draggable={false}
+          />
+          <div className="frame2-picture-card">
+            <div className="frame2-picture-gold">
+              <div className="frame2-picture-well">
+                <CardMedia card={card} videoRef={videoRef} />
+              </div>
+            </div>
+            <span className="frame2-gem frame2-gem-tl" />
+            <span className="frame2-gem frame2-gem-tr" />
+            <span className="frame2-gem frame2-gem-bl" />
+            <span className="frame2-gem frame2-gem-br" />
+          </div>
+        </div>
+        <div className="frame2-copy">
           <button ref={closeRef} type="button" className="frame2-close" aria-label="Close" onClick={onClose}>
             ×
           </button>
           <h2 id="frame2-card-title">{card.title}</h2>
-          {card.video ? (
-            <video
-              ref={videoRef}
-              className="frame2-picture"
-              style={pictureStyle}
-              src={frame2Config.assets.gameplay}
-              poster={frame2Config.assets.poster}
-              preload="none"
-              playsInline
-              controls
-            />
-          ) : card.image ? (
-            <img className="frame2-picture" style={pictureStyle} src={card.image.src} alt={card.image.alt} />
-          ) : null}
-          <p>{card.body}</p>
+          <div className="frame2-copy-main">
+            <MarkedCopy body={card.body} marks={card.marks} />
+          </div>
           {card.links.length > 0 ? (
             <div className="frame2-card-links">
               {card.links.map((link) => (
@@ -1267,10 +1343,6 @@ function OpenCardView({
               ))}
             </div>
           ) : null}
-          <span className="frame2-gem frame2-gem-tl" />
-          <span className="frame2-gem frame2-gem-tr" />
-          <span className="frame2-gem frame2-gem-bl" />
-          <span className="frame2-gem frame2-gem-br" />
         </div>
       </div>
     </div>

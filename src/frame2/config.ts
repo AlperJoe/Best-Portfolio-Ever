@@ -169,6 +169,8 @@ export const frame2Config = {
       {
         id: "play" as const,
         title: "Card motion and layout",
+        /** Phrases drawn in gold. The body itself stays word for word. */
+        marks: ["animation system", "layout service", "input manager"],
         points: [
           [0.4977, 0.6439],
           [0.5518, 0.6101],
@@ -192,6 +194,7 @@ export const frame2Config = {
       {
         id: "multiplayer" as const,
         title: "The online server",
+        marks: ["plain TCP", "the only true copy of each game", "reconnect to their own seat", "bots take over"],
         points: [
           [0.5349, 0.5909],
           [0.631, 0.5682],
@@ -218,6 +221,7 @@ export const frame2Config = {
       {
         id: "rules" as const,
         title: "Rules and bots",
+        marks: ["one pure Lua module", "three memories", "no machine learning"],
         points: [
           [0.6139, 0.5909],
           [0.6964, 0.6107],
@@ -248,18 +252,25 @@ export const frame2Config = {
     ],
   },
   open: {
-    /** Cap for the open card, as a fraction of the frame height. */
-    height: 0.8,
-    /** Clear space on each side so the card stays inside the frame. */
-    sideInset: 32,
-    /** The card stops growing wider than this, in pixels. The height cap still wins. */
-    widthCap: 1720,
-    /** Narrowest width tried before the picture itself shrinks. */
-    minWidth: 400,
-    /** Gameplay, the join screen and the rule book are 16:9. Shown whole, never cropped. */
+    /** Picture side, width divided by height. The same shape as the card in Pedro's hand. */
+    pictureAspect: 5 / 7,
+    /** Gameplay, the join screen and the rule book are 16:9. Shown whole, inside the card. */
     mediaAspect: 16 / 9,
+    /** The picture card stops growing taller than this. The frame inset can make it shorter. */
+    pictureMax: 860,
+    /** Text panel beside the card. Below the minimum, the picture stacks on top. */
+    panelMin: 300,
+    panelMax: 440,
+    wideGap: 18,
+    narrowGap: 14,
+    wideMargin: 32,
+    narrowMargin: 14,
+    /** Copy height used on the first paint, before the real text is measured. */
+    textEstimate: 380,
+    /** Side-by-side starts at this frame width, when the panel still fits. */
+    wideAt: 880,
     /** Flight, turn and growth together, from the hand to the open card. */
-    openTime: 0.45,
+    openTime: 0.3,
     /** Return to the hand. The face fades out across this, and the card fades in the last third. */
     closeTime: 0.4,
     /** Soft ease-out. The card, the veil and the blur share it. */
@@ -269,16 +280,21 @@ export const frame2Config = {
     /** Keeps the back toward the camera until the face fades in. */
     openSpinEase: "cubic-bezier(0.45, 0, 0.2, 0.15)",
     closeSpinEase: "cubic-bezier(0.4, 0, 0.2, 1)",
-    /** Face fade during the last third of the open. */
-    openFace: 0.15,
-    openFaceDelay: 0.3,
+    /** Face fade during the last third of the 0.3s open. */
+    openFace: 0.1,
+    openFaceDelay: 0.2,
     /** Face fades into the back across the first part of the close. */
     closeFace: 0.26,
     /** Card fade during the last third of the close. */
     closeFade: 0.133,
     closeFadeDelay: 0.267,
-    radius: 14,
-    navy: "#111F2C",
+    /** Dark warm panel for the title, the body and the file chips. */
+    panel: "#2C1612",
+    /** Outer band of the picture card, the dark edge of the card back. */
+    bronze: "#6B3C12",
+    /** Card field behind the picture, in Frame 2's reds and browns. */
+    wellTop: "#8A4032",
+    wellBottom: "#3A1812",
     gold: "#EFC785",
     goldHover: "#FFE7B5",
     titleSize: 32,
@@ -290,9 +306,6 @@ export const frame2Config = {
     bodyLine: 1.55,
     bodyOpacity: 0.88,
     close: 40,
-    pad: 20,
-    /** Space between the title, picture, text and links. */
-    gap: 12,
     perspective: 1400,
     /** Warm dark veil behind an open card. */
     veil: "rgba(20, 6, 4, 0.72)",
