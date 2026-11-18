@@ -24,6 +24,22 @@
   will-change: clip-path, opacity;
 }
 
+/*
+  The clip changes on every sample of the opening. Frame 2's backdrop is a
+  wide blur, and the scene around it is filtered too. Painting either one
+  with the clip can block the page long enough to split a wheel gesture.
+  The sharp picture still opens. Both filters return when the frame has opened.
+*/
+.tx-slot.is-revealing .frame2-scene {
+  filter: none;
+  transition: none;
+}
+
+.tx-slot.is-revealing .frame2-fill {
+  filter: none;
+  visibility: hidden;
+}
+
 /* The interlude: dark background, centered lines, gold line and its note control. */
 .txd-layer {
   position: absolute;
