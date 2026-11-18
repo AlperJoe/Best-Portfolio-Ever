@@ -1,6 +1,6 @@
 const asset = (name: string) => `${import.meta.env.BASE_URL}assets/frame5/${name}`;
 
-export type HobbyIcon = "piano" | "ticket" | "ball" | "mat" | "piece";
+export type HobbyIcon = "piano" | "ticket" | "ball" | "mat" | "piece" | "pan";
 
 /** One block of the longer note. A heading is the small label above its paragraphs. */
 export type FilmPart = {
@@ -22,7 +22,7 @@ export type Film = {
   summary: string;
   /** Short note beside the video when the film opens. */
   personal: string;
-  /** Longer note, opened in place from "Want to understand it better?". */
+  /** Longer note, opened in place from "Do you want to understand more about the movie?". */
   long: readonly FilmPart[];
 };
 
@@ -161,7 +161,10 @@ export const frame5 = {
     writeLabel: "Write",
     copiedLabel: "Copied",
     copiedMs: 1500,
-    cvLabel: "Download my CV",
+    /** Short label on the button that sits with GitHub and LinkedIn. */
+    cvLabel: "CV",
+    /** Accessible name. The button itself only says "CV". */
+    cvName: "Download my CV",
     cv: asset("alper-bozkurt-cv.pdf"),
     /**
      * Built in the browser so the address and number never sit in the
@@ -184,10 +187,11 @@ export const frame5 = {
       items: [
         { id: "piano", label: "Piano and bass in a jam session" },
         { id: "ticket", label: "Cinema, up to three times a week" },
-        { id: "ball", label: "Basketball and volleyball" },
+        { id: "ball", label: "Basketball", detail: "and adaptable to any sport" },
         { id: "mat", label: "Yoga" },
         { id: "piece", label: "Board games" },
-      ] satisfies { id: HobbyIcon; label: string }[],
+        { id: "pan", label: "Cooking for myself, every day" },
+      ] satisfies { id: HobbyIcon; label: string; detail?: string }[],
       /** Display face, about 30px, under the ending line. */
       headingSize: "30px",
       /** Archivo, on its own line under the heading. */
@@ -214,6 +218,7 @@ export const frame5 = {
           ball: { band: "#E3A23B", tilt: -1.5, lift: 3 },
           mat: { band: "#B9704A", tilt: 3.5, lift: -1 },
           piece: { band: "#D9622B", tilt: -2.5, lift: 1 },
+          pan: { band: "#C46A3A", tilt: 2, lift: -2 },
         } satisfies Record<HobbyIcon, { band: string; tilt: number; lift: number }>,
         stamp: {
           on: "ticket" as HobbyIcon,
@@ -328,7 +333,7 @@ export const frame5 = {
     bodyLine: 1.55,
     closeSize: 40,
     watchLabel: "Watch on YouTube",
-    moreLabel: "Want to understand it better?",
+    moreLabel: "Do you want to understand more about the movie?",
     lessLabel: "Show less",
     fadeMs: 240,
     fromScale: 0.97,
@@ -350,7 +355,7 @@ export const frame5 = {
 
   /**
    * Screens narrower than 700px: one column, with the photo smaller beside
-   * the Ending A line and the tickets two to a row.
+   * the Ending A line and the tickets in three rows of two.
    */
   phone: {
     /** Side margins, in pixels. */

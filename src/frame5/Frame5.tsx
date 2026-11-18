@@ -153,12 +153,15 @@ const PhoneIcon = () => (
   </Icon>
 );
 
-const DocumentIcon = () => (
-  <Icon>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-    <path d="M14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5" />
-  </Icon>
-);
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 4v11" />
+      <path d="m7 11.5 5 5 5-5" />
+      <path d="M5 20h14" />
+    </svg>
+  );
+}
 
 function GitHubIcon() {
   return (
@@ -213,6 +216,15 @@ function HobbyIcon({ id }: { id: HobbyIcon }) {
       </Icon>
     );
   }
+  if (id === "pan") {
+    return (
+      <Icon>
+        <path d="M2.6 12.4h11.8" />
+        <path d="M3.2 12.4c.4 3.6 2.4 5.8 5.3 5.8s4.9-2.2 5.3-5.8" />
+        <path d="M14.4 11.5h6.4" />
+      </Icon>
+    );
+  }
   return (
     <Icon>
       <circle cx="7" cy="6.6" r="2.3" />
@@ -245,7 +257,7 @@ function CtaLabel({ children }: { children: ReactNode }) {
     const sync = () => {
       const frame = label.closest(".frame5");
       const scale = frame && frame.clientWidth ? frame.getBoundingClientRect().width / frame.clientWidth : 1;
-      const length = Math.ceil(path.getBoundingClientRect().width / (scale || 1)) + 2;
+      const length = Math.ceil(path.getBoundingClientRect().width / (scale || 1)) + 12;
       label.style.setProperty("--cta-len", `${length}px`);
     };
     sync();
@@ -671,12 +683,6 @@ export function Frame5() {
                   {contact?.phoneText}
                 </a>
               </li>
-              <li>
-                <DocumentIcon />
-                <a className="frame5-cta" href={A.cv} target="_blank" rel="noopener noreferrer">
-                  <CtaLabel>{A.cvLabel}</CtaLabel>
-                </a>
-              </li>
               <li className="frame5-social">
                 <a
                   className="frame5-brand frame5-github"
@@ -695,6 +701,16 @@ export function Frame5() {
                   aria-label="LinkedIn"
                 >
                   <LinkedInIcon />
+                </a>
+                <a
+                  className="frame5-cv"
+                  href={A.cv}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={A.cvName}
+                >
+                  <DownloadIcon />
+                  <span>{A.cvLabel}</span>
                 </a>
               </li>
             </ul>
@@ -723,7 +739,10 @@ export function Frame5() {
                   >
                     <div className="frame5-ticket-paper">
                       <HobbyIcon id={item.id} />
-                      <span className="frame5-ticket-label">{item.label}</span>
+                      <span className="frame5-ticket-copy">
+                        <span className="frame5-ticket-label">{item.label}</span>
+                        {item.detail ? <span className="frame5-ticket-detail">{item.detail}</span> : null}
+                      </span>
                       {stamped ? (
                         <span className="frame5-stamp" aria-hidden="true">
                           {TICKET.stamp.text}

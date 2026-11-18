@@ -319,12 +319,14 @@
   stroke-linecap: round;
   stroke-dasharray: var(--cta-len, 480px);
   stroke-dashoffset: var(--cta-len, 480px);
+  opacity: 0;
   transition: stroke-dashoffset var(--f5-cta-draw) linear;
 }
 
 .frame5-cta:hover .frame5-cta-line path,
 .frame5-cta:focus-visible .frame5-cta-line path {
   stroke-dashoffset: 0;
+  opacity: 1;
 }
 
 .frame5-cta-arrow {
@@ -392,11 +394,49 @@
   transform: translateY(-2px);
 }
 
+/* CV sits in the same row as the brand buttons, at the same height. */
+
+.frame5-cv {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  height: var(--f5-social-size);
+  padding: 0 11px 0 8px;
+  border-radius: 6px;
+  background: var(--f5-white);
+  color: #1c1916;
+  font-family: var(--font-text), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 180ms ease;
+}
+
+.frame5-cv svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frame5-cv:hover,
+.frame5-cv:focus-visible {
+  transform: translateY(-2px);
+}
+
 /* Hobbies, under the contact details, across the whole of Ending A. */
 
 .frame5-hobbies {
-  container-type: inline-size;
-  container-name: hobbies;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -431,11 +471,11 @@
 }
 
 /* Hobbies as ticket stubs: cream paper, a warm band on top, torn along the right edge.
-   Five across when the row is wide enough, otherwise two even rows (three, then two). */
+   Two rows of three. Phones switch this to three rows of two. */
 
 .frame5-tickets {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--f5-ticket-gap);
   align-items: stretch;
   width: 100%;
@@ -446,30 +486,9 @@
 
 .frame5-ticket {
   display: flex;
-  grid-column: span 2;
   min-width: 0;
   filter: var(--f5-ticket-shadow);
   transform: translateY(var(--f5-ticket-lift)) rotate(var(--f5-ticket-tilt));
-}
-
-.frame5-ticket:nth-child(4) {
-  grid-column: 2 / span 2;
-}
-
-.frame5-ticket:nth-child(5) {
-  grid-column: 4 / span 2;
-}
-
-@container hobbies (min-width: 860px) {
-  .frame5-tickets {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .frame5-ticket,
-  .frame5-ticket:nth-child(4),
-  .frame5-ticket:nth-child(5) {
-    grid-column: auto;
-  }
 }
 
 .frame5-ticket-paper {
@@ -519,6 +538,14 @@
   stroke-width: 1.45;
 }
 
+.frame5-ticket-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .frame5-ticket-label {
   max-width: 100%;
   font-family: var(--font-text), sans-serif;
@@ -526,6 +553,16 @@
   font-weight: 500;
   line-height: 1.22;
   text-wrap: balance;
+}
+
+.frame5-ticket-detail {
+  max-width: 100%;
+  font-family: var(--font-text), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: rgba(43, 33, 26, 0.72);
+  text-wrap: pretty;
 }
 
 .frame5-stamp {
@@ -952,7 +989,7 @@
 
 /*
   Phones: one column. The title, Ending A with the photo beside its line,
-  the contact rows and the icons, the hobby tickets two to a row, then
+  the contact rows and the icons, the hobby tickets in three rows of two, then
   Ending B with each film as a card, and the way back at the end. The frame
   grows as tall as its content.
 */
@@ -1049,17 +1086,6 @@
   .frame5-tickets {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     row-gap: 16px;
-  }
-
-  .frame5-ticket,
-  .frame5-ticket:nth-child(4) {
-    grid-column: auto;
-  }
-
-  .frame5-ticket:nth-child(5) {
-    grid-column: 1 / -1;
-    justify-self: center;
-    width: calc(50% - var(--f5-ticket-gap) / 2);
   }
 
   .frame5-ticket-label {
@@ -1159,6 +1185,7 @@
   .frame5-cover,
   .frame5-play,
   .frame5-brand,
+  .frame5-cv,
   .frame5-overlay,
   .frame5-dialog,
   .frame5-cta-line path {
