@@ -147,6 +147,24 @@
   pointer-events: none;
 }
 
+.crown-glow {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 0;
+  width: var(--glow-size, 20vw);
+  height: var(--glow-size, 20vw);
+  transform: translate(-50%, var(--glow-shift, -50%));
+  background: radial-gradient(
+    circle closest-side at 50% 50%,
+    rgba(var(--glow-rgb, 255, 214, 170), var(--glow-opacity, 0.16)) 0%,
+    rgba(var(--glow-rgb, 255, 214, 170), calc(var(--glow-opacity, 0.16) * 0.28)) 36%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .portrait-sharp {
   position: absolute;
   z-index: 2;
@@ -762,7 +780,8 @@
 
 .frame.is-scroll-opening .region-left,
 .frame.is-scroll-opening .region-right,
-.frame.is-scroll-opening .copy {
+.frame.is-scroll-opening .copy,
+.frame.is-scroll-opening .crown-glow {
   opacity: var(--op-sides, 1);
 }
 
@@ -778,8 +797,8 @@
   opacity: var(--op-icons, 1);
 }
 
-.frame.is-scroll-opening .portrait-layer {
-  transform-origin: 50% var(--hair-origin, 25%);
+.frame.is-scroll-opening .portrait-sharp {
+  transform-origin: 50% var(--crown-origin, 2%);
   transform: translateY(var(--op-shift, 0px)) scale(var(--op-scale, 1));
 }
 

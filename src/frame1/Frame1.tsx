@@ -15,7 +15,7 @@ type OpeningState = {
   startScale: number;
   /** Portrait shift in the start state, in pixels. Negative is up. */
   startShift: number;
-  /** Distance from the top of the hair down to the top of the name, in the full frame. */
+  /** Distance from the top of the crown down to the top of the name, in the full frame. */
   nameSpan: number;
 };
 
@@ -117,19 +117,15 @@ function Asset({
   alt,
   className,
   labelAt,
-  fallback,
 }: {
   id?: string;
   src: string;
   alt: string;
   className?: string;
   labelAt?: { x: string; y: string };
-  fallback?: string;
 }) {
   const [missing, setMissing] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
-  const shownSrc = useFallback && fallback ? fallback : src;
-  const name = fileName(shownSrc);
+  const name = fileName(src);
 
   if (missing) {
     return (
@@ -148,14 +144,11 @@ function Asset({
   return (
     <img
       id={id}
-      src={shownSrc}
+      src={src}
       alt={alt}
       className={className}
       draggable={false}
-      onError={() => {
-        if (fallback && !useFallback) setUseFallback(true);
-        else setMissing(true);
-      }}
+      onError={() => setMissing(true)}
     />
   );
 }
@@ -257,11 +250,11 @@ function layoutCopy(copy: HTMLElement, side: "left" | "right", width: number, he
 function fitPortrait(_width: number, height: number, nameTop: number) {
   const layout = frame1Config.portraitLayout;
   const cap = layout.naturalHeight * layout.maxScale;
-  const target = layout.hairFrame * height;
+  const target = layout.crownFrame * height;
   const shoulderLimit = nameTop - layout.shoulderGap;
   const chinLimit = nameTop - layout.chinGap;
 
-  const topFor = (size: number) => target - layout.hairTopY * size;
+  const topFor = (size: number) => target - layout.crownTopY * size;
 
   const fits = (size: number) => {
     const top = topFor(size);
@@ -415,6 +408,7 @@ export function Frame1() {
       placeBadges(element, rect.width, rect.height);
       element.style.setProperty("--middle-width", `${frame1Config.middle.maxWidth * rect.width}px`);
       element.style.setProperty("--name-bottom", `${frame1Config.middle.bottom * rect.height}px`);
+      element.style.setProperty("--glow-size", `${frame1Config.crownGlow.reach * 2 * rect.height}px`);
       const masks = buildSeamMasks(rect.width, rect.height, frame1Config.seams);
       element.style.setProperty("--mask-left", `url("${masks.left}")`);
       element.style.setProperty("--mask-right", `url("${masks.right}")`);
@@ -485,18 +479,18 @@ export function Frame1() {
       if (scrollOpening && name instanceof HTMLElement) {
         const setup = frame1Config.scrollOpening;
         const hint = element.querySelector<HTMLElement>(".middle-hint");
-        const hairY = frame1Config.portraitLayout.hairFrame * rect.height;
-        const nameSpan = Math.max(1, nameTop - hairY);
+        const crownY = frame1Config.portraitLayout.crownFrame * rect.height;
+        const nameSpan = Math.max(1, nameTop - crownY);
         const hintH = hint?.offsetHeight ?? 0;
         const floor = rect.height * (1 - frame1Config.middle.bottom);
         const nameMax = floor - name.offsetHeight - setup.hintGap - hintH;
-        const hairMin = setup.startHairMin * rect.height;
-        const startScale = Math.max(1, Math.min(setup.portraitStart, (nameMax - Math.min(hairMin, hairY)) / nameSpan));
+        const topMin = setup.startTopMin * rect.height;
+        const startScale = Math.max(1, Math.min(setup.portraitStart, (nameMax - Math.min(topMin, crownY)) / nameSpan));
         openingRef.current.startScale = startScale;
-        openingRef.current.startShift = Math.min(0, nameMax - hairY - startScale * nameSpan);
+        openingRef.current.startShift = Math.min(0, nameMax - crownY - startScale * nameSpan);
         openingRef.current.nameSpan = nameSpan;
         element.style.setProperty("--hint-top", `${name.offsetTop + name.offsetHeight + setup.hintGap}px`);
-        element.style.setProperty("--hair-origin", `${frame1Config.portraitLayout.hairTopY * 100}%`);
+        element.style.setProperty("--crown-origin", `${frame1Config.portraitLayout.crownTopY * 100}%`);
         paintOpening(element, openingRef.current, reducedRef.current);
       }
       effectsRef.current?.resize(rect.width, rect.height);
@@ -807,6 +801,9 @@ export function Frame1() {
     "--badge-bilkent": frame1Config.badge.bilkentTint,
     "--portrait-grade": frame1Config.portraitGrade,
     "--focus": frame1Config.focus,
+    "--glow-rgb": frame1Config.crownGlow.rgb,
+    "--glow-opacity": String(frame1Config.crownGlow.opacity),
+    "--glow-shift": frame1Config.crownGlow.shift,
     "--space-divider": `${frame1Config.text.spaceDivider}px`,
     "--space-label": `${frame1Config.text.spaceLabel}px`,
     "--space-body": `${frame1Config.text.spaceBody}px`,
@@ -973,8 +970,8 @@ export function Frame1() {
         src={frame1Config.assets.portrait}
         alt="Portrait of Alper Bozkurt"
         className="portrait-sharp portrait-layer"
-        fallback={frame1Config.assets.portraitFallback}
       />
+      <div className="crown-glow portrait-layer" aria-hidden="true" />
 
       {frame1Config.effects.PORTRAIT_EDGE_LIGHT ? (
         <div className="edge mask-middle fill">

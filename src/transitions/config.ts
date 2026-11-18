@@ -529,7 +529,7 @@ export const scrollConfig = {
   /** A station click or Back to the beginning fades through black over this long, each way. */
   jumpMs: 260,
   /** Show the track at the right edge. Its carriage follows the scroll. */
-  showTrack: true,
+  showTrack: false,
   /** With reduced motion, each stop crossfades to the next. */
   reduced: {
     ms: 320,
