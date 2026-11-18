@@ -114,19 +114,19 @@
   }
 }
 
-/* The two endings share one row between the title and the credits. */
+/* The two endings share one row between the title and the back link. */
 
 .frame5-content {
   position: absolute;
   left: 0;
   right: 0;
   top: var(--f5-content-top);
-  bottom: calc(var(--f5-band-bottom) + var(--band-h, 160px) + var(--f5-content-gap));
+  bottom: calc(var(--f5-back-bottom) + var(--f5-back-clearance));
   z-index: 3;
   display: grid;
   grid-template-columns: var(--f5-a-left) minmax(0, max(var(--f5-a-max), var(--f5-a-min))) 1fr minmax(0, calc(100% - var(--f5-b-left) - var(--f5-b-right))) var(--f5-b-right);
   grid-template-areas: ". a . b .";
-  align-content: center;
+  align-content: safe center;
   align-items: start;
 }
 
@@ -140,14 +140,19 @@
   min-width: 0;
 }
 
-.frame5-label {
-  margin: 0 0 var(--f5-label-gap);
+.frame5-label,
+.frame5-long-heading {
   font-family: var(--font-text), sans-serif;
   font-size: var(--f5-label-size);
   font-weight: var(--f5-label-weight);
   letter-spacing: var(--f5-label-tracking);
   line-height: 1.2;
+  text-transform: none;
   color: var(--f5-white-55);
+}
+
+.frame5-label {
+  margin: 0 0 var(--f5-label-gap);
 }
 
 .frame5-line-a,
@@ -270,17 +275,68 @@
   text-underline-offset: 4px;
 }
 
-.frame5-write {
-  margin-left: 4px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--f5-white-55);
+/* Invitations to act: Instrument Serif italic, gold, a hand-drawn underline. */
+
+.frame5-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--f5-cta);
+  font-family: var(--font-frame5), "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--f5-cta-size);
+  line-height: 1.15;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.frame5-write:hover,
-.frame5-write:focus-visible {
-  color: var(--f5-white);
+.frame5-cta-label {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 4px;
+}
+
+.frame5-cta-line {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 7px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.frame5-cta-line path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15px;
+  stroke-linecap: round;
+  stroke-dasharray: var(--cta-len, 480px);
+  stroke-dashoffset: var(--cta-len, 480px);
+  transition: stroke-dashoffset var(--f5-cta-draw) linear;
+}
+
+.frame5-cta:hover .frame5-cta-line path,
+.frame5-cta:focus-visible .frame5-cta-line path {
+  stroke-dashoffset: 0;
+}
+
+.frame5-cta-arrow {
+  display: block;
+  flex: none;
+  margin-bottom: 4px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .frame5-copied {
@@ -336,26 +392,24 @@
   transform: translateY(-2px);
 }
 
-/* Hobbies, under the contact details. */
+/* Hobbies, under the contact details, across the whole of Ending A. */
 
 .frame5-hobbies {
-  display: grid;
-  grid-template-columns: var(--f5-hobby-arrow-w) minmax(0, 1fr);
-  grid-template-areas:
-    "head head"
-    "arrow tickets";
-  row-gap: 4px;
+  container-type: inline-size;
+  container-name: hobbies;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   width: 100%;
   margin-top: var(--f5-hobby-gap);
 }
 
 .frame5-hobby-head {
-  grid-area: head;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 12px;
-  row-gap: 2px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 10px;
 }
 
 .frame5-hobby-heading {
@@ -376,44 +430,57 @@
   color: var(--f5-white-70);
 }
 
-.frame5-hobby-arrow {
-  grid-area: arrow;
-  align-self: start;
-  display: block;
-  overflow: visible;
-  fill: none;
-  stroke: var(--f5-arrow-color);
-  stroke-width: var(--f5-arrow-stroke);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Hobbies as ticket stubs: cream paper, a warm band on top, torn along the right edge. */
+/* Hobbies as ticket stubs: cream paper, a warm band on top, torn along the right edge.
+   Five across when the row is wide enough, otherwise two even rows (three, then two). */
 
 .frame5-tickets {
-  grid-area: tickets;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  column-gap: var(--f5-ticket-gap);
-  row-gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--f5-ticket-gap);
+  align-items: stretch;
+  width: 100%;
   margin: 0;
-  padding: 4px 2px 2px 2px;
+  padding: 2px 2px 2px;
   list-style: none;
 }
 
 .frame5-ticket {
-  flex: none;
+  display: flex;
+  grid-column: span 2;
+  min-width: 0;
   filter: var(--f5-ticket-shadow);
   transform: translateY(var(--f5-ticket-lift)) rotate(var(--f5-ticket-tilt));
+}
+
+.frame5-ticket:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.frame5-ticket:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
+@container hobbies (min-width: 860px) {
+  .frame5-tickets {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .frame5-ticket,
+  .frame5-ticket:nth-child(4),
+  .frame5-ticket:nth-child(5) {
+    grid-column: auto;
+  }
 }
 
 .frame5-ticket-paper {
   position: relative;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
   padding: calc(var(--f5-ticket-band-h) + 6px) 16px 8px 11px;
   background:
     linear-gradient(var(--f5-ticket-band) 0 var(--f5-ticket-band-h), transparent var(--f5-ticket-band-h)),
@@ -452,12 +519,8 @@
   stroke-width: 1.45;
 }
 
-.frame5-ticket.is-stamped .frame5-ticket-paper {
-  padding-right: calc(var(--f5-stamp-size) + 2px);
-}
-
 .frame5-ticket-label {
-  max-width: var(--f5-ticket-label-w);
+  max-width: 100%;
   font-family: var(--font-text), sans-serif;
   font-size: var(--f5-ticket-size);
   font-weight: 500;
@@ -601,136 +664,31 @@
 }
 
 .frame5-film-warning,
-.frame5-dialog-warning,
-.frame5-long-heading {
-  font-family: var(--font-text), sans-serif;
-  font-size: var(--f5-label-size);
-  font-weight: var(--f5-label-weight);
-  letter-spacing: var(--f5-label-tracking);
-  line-height: 1.2;
-  color: var(--f5-white-55);
-}
-
-.frame5-film-warning {
+.frame5-dialog-warning {
   margin: 4px 0 0;
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--f5-warning-size);
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-transform: none;
+  color: var(--f5-warning-color);
 }
 
-/* End credits. */
-
-.frame5-band {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: var(--f5-band-bottom);
-  z-index: 4;
-  height: var(--band-h, 160px);
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    #000 var(--f5-band-fade),
-    #000 calc(100% - var(--f5-band-fade)),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    #000 var(--f5-band-fade),
-    #000 calc(100% - var(--f5-band-fade)),
-    transparent 100%
-  );
-}
-
-/* --tx-tail is the scroll past this frame, from 0 to 1, set by the stage. */
-.frame5-roll {
-  transform: translateY(
-    calc(var(--roll-from, 200px) + (var(--roll-to, 0px) - var(--roll-from, 200px)) * var(--tx-tail, 0))
-  );
-  will-change: transform;
-}
-
-.frame5.is-rolled .frame5-roll {
-  transform: translateY(var(--roll-to, 0px));
-}
-
-.frame5-credits {
+.frame5-dialog-warning {
   margin: 0;
-  font-size: var(--f5-credit-size);
-  letter-spacing: var(--f5-credit-tracking);
-  line-height: var(--f5-credit-line);
-  color: var(--f5-credit-color);
 }
 
-.frame5-credit {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: var(--f5-credit-gap);
-}
-
-.frame5-credit dt {
-  text-align: right;
-}
-
-.frame5-credit dd {
-  margin: 0;
-  text-align: left;
-}
-
-.frame5-end {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding-top: var(--f5-end-gap);
-}
-
-.frame5-end-line {
-  margin: 0;
-  font-family: var(--font-frame5), serif;
-  font-style: italic;
-  font-size: var(--f5-end-size);
-  line-height: 1.2;
-  color: var(--f5-white);
-}
+/* Back to the beginning, centered near the bottom. */
 
 .frame5-back {
-  margin: 0;
-  padding: 4px 6px;
-  border: 0;
-  background: transparent;
-  font-family: var(--font-text), sans-serif;
-  font-size: var(--f5-back-size);
-  letter-spacing: 0.04em;
-  color: var(--f5-white-55);
-  cursor: pointer;
-}
-
-.frame5-back:hover,
-.frame5-back:focus-visible {
-  color: var(--f5-white);
-}
-
-.frame5.is-reduced .frame5-band {
-  -webkit-mask-image: none;
-  mask-image: none;
-  height: auto;
-  min-height: var(--band-h, 160px);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.frame5.is-reduced .frame5-roll {
-  animation: none;
-  transform: none;
-}
-
-.frame5.is-reduced .frame5-credits {
-  line-height: var(--f5-credit-still-line);
-}
-
-.frame5.is-reduced .frame5-end {
-  padding-top: 12px;
+  position: absolute;
+  left: 50%;
+  bottom: var(--f5-back-bottom);
+  z-index: 5;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .frame5.is-reduced .frame5-arrow-line {
@@ -853,28 +811,7 @@
 }
 
 .frame5-more {
-  display: inline-block;
-  margin: 16px 0 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-family: var(--font-text), sans-serif;
-  font-size: var(--f5-label-size);
-  font-weight: var(--f5-label-weight);
-  letter-spacing: var(--f5-label-tracking);
-  line-height: 1.3;
-  color: var(--f5-white-70);
-  text-align: left;
-  text-decoration: underline;
-  text-decoration-color: rgba(242, 238, 230, 0.35);
-  text-underline-offset: 4px;
-  cursor: pointer;
-}
-
-.frame5-more:hover,
-.frame5-more:focus-visible {
-  color: var(--f5-white);
-  text-decoration-color: currentColor;
+  margin-top: 16px;
 }
 
 .frame5-long-part {
@@ -883,6 +820,7 @@
 
 .frame5-long-heading {
   margin: 0;
+  text-transform: none;
 }
 
 .frame5-long-part .frame5-dialog-body {
@@ -942,7 +880,8 @@
   .frame5-play,
   .frame5-brand,
   .frame5-overlay,
-  .frame5-dialog {
+  .frame5-dialog,
+  .frame5-cta-line path {
     transition: none;
   }
 
