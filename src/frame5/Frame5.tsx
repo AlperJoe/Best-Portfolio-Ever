@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { CSSProperties, ReactNode, RefObject } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
 import { goToFrame } from "../frameOrder";
-import { frame5, type Film } from "./config";
+import { frame5, type Film, type HobbyIcon } from "./config";
 import "./Frame5.css";
 
 const A = frame5.endingA;
@@ -170,6 +170,49 @@ function GitHubIcon() {
   );
 }
 
+function HobbyIcon({ id }: { id: HobbyIcon }) {
+  if (id === "piano") {
+    return (
+      <Icon>
+        <rect x="2.5" y="7.5" width="19" height="9.5" rx="1.4" />
+        <path d="M2.5 12.6h19" />
+        <path d="M7 7.5v5.1M12 7.5v5.1M17 7.5v5.1" />
+      </Icon>
+    );
+  }
+  if (id === "ticket") {
+    return (
+      <Icon>
+        <path d="M5 8h14.2c.7 0 1.3.6 1.3 1.3v1.4a1.6 1.6 0 0 0 0 3V15c0 .7-.6 1.3-1.3 1.3H5c-.7 0-1.3-.6-1.3-1.3v-1.3a1.6 1.6 0 0 0 0-3V9.3C3.7 8.6 4.3 8 5 8Z" />
+        <path d="M9.2 8v8.3" strokeDasharray="1.3 1.5" />
+      </Icon>
+    );
+  }
+  if (id === "ball") {
+    return (
+      <Icon>
+        <circle cx="12" cy="12" r="7.4" />
+        <path d="M12 4.6c2.2 2.2 3.4 4.6 3.4 7.4s-1.2 5.2-3.4 7.4c-2.2-2.2-3.4-4.6-3.4-7.4s1.2-5.2 3.4-7.4Z" />
+        <path d="M4.8 12h14.4" />
+      </Icon>
+    );
+  }
+  if (id === "mat") {
+    return (
+      <Icon>
+        <path d="M8.4 7.2h9.1A2.3 2.3 0 0 1 19.8 9.5v5a2.3 2.3 0 0 1-2.3 2.3H8.4" />
+        <ellipse cx="7.5" cy="12" rx="2.5" ry="5" />
+      </Icon>
+    );
+  }
+  return (
+    <Icon>
+      <circle cx="12" cy="6.2" r="2.15" />
+      <path d="M8.3 10.8c.6-1.4 2-2.2 3.7-2.2s3.1.8 3.7 2.2c.9.6 1.6 1.1 1.6 2 0 1-.8 1.7-1.9 1.9V19H8.6v-4.3c-1.1-.2-1.9-.9-1.9-1.9 0-.9.7-1.4 1.6-2Z" />
+    </Icon>
+  );
+}
+
 function LinkedInIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -243,7 +286,8 @@ export function Frame5() {
     if (A.photoPlacement === "auto") {
       const lines = linesRef.current?.offsetWidth ?? 0;
       const photo = A.photoWidth + 2 * A.photoBorder + 8;
-      setPhotoRight(lines + A.photoGap + photo <= width * A.maxWidth);
+      const room = Math.max(width * A.maxWidth, A.minWidth);
+      setPhotoRight(lines + A.photoGap + photo <= room);
     }
 
     const roll = rollRef.current;
@@ -418,6 +462,7 @@ export function Frame5() {
     "--f5-label-gap": frame5.label.gap,
     "--f5-a-left": `${A.left * 100}%`,
     "--f5-a-max": `${A.maxWidth * 100}%`,
+    "--f5-a-min": `${A.minWidth}px`,
     "--f5-a-size": A.lineSize,
     "--f5-a-line": String(A.lineHeight),
     "--f5-a-gap": A.lineGap,
@@ -438,6 +483,10 @@ export function Frame5() {
     "--f5-github-color": A.githubColor,
     "--f5-linkedin-bg": A.linkedinBackground,
     "--f5-linkedin-color": A.linkedinColor,
+    "--f5-hobby-heading": A.hobbies.headingSize,
+    "--f5-hobby-size": A.hobbies.textSize,
+    "--f5-hobby-gap": A.hobbies.topGap,
+    "--f5-hobby-icon": A.hobbies.iconSize,
     "--f5-b-left": `${B.left * 100}%`,
     "--f5-b-right": `${B.right * 100}%`,
     "--f5-b-size": B.lineSize,
@@ -573,6 +622,20 @@ export function Frame5() {
               </li>
             </ul>
           </div>
+          <section className="frame5-hobbies" aria-labelledby="frame5-hobbies-heading">
+            <h3 id="frame5-hobbies-heading" className="frame5-hobby-heading">
+              {A.hobbies.heading}
+            </h3>
+            <p className="frame5-hobby-line">{A.hobbies.line}</p>
+            <ul className="frame5-hobby-list">
+              {A.hobbies.items.map((item) => (
+                <li key={item.id} className="frame5-hobby">
+                  <HobbyIcon id={item.id} />
+                  <span>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
 
         <div className="frame5-ending frame5-ending-b">
