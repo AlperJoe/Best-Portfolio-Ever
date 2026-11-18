@@ -49,7 +49,7 @@ export const interludes: Partial<Record<FramePair, Interlude>> = {
   },
 };
 
-/** The control under the gold line that opens the note. It appears once every word is lit. */
+/** The control under the gold line that opens the note. It appears once every word is lit and stays through the hold. */
 export const interludeWhy = {
   label: "Why I say this",
   color: "rgba(242, 238, 230, 0.85)",
