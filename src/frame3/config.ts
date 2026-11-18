@@ -32,7 +32,12 @@ export const frame3 = {
    */
   mapHeight: 0.78,
   mapFloor: "#222833",
-  mapBorder: "rgba(255, 255, 255, 0.08)",
+  /** Framed map: 10px corners, a 12% white edge, inner padding, and a soft shadow. */
+  mapBorder: "rgba(255, 255, 255, 0.12)",
+  mapBorderWidth: 1,
+  mapRadius: "10px",
+  mapPad: 8,
+  mapShadow: "0 14px 34px rgba(0, 0, 0, 0.42)",
   /** How much of the floor color shows in the tiles outside the map. */
   outsideMix: 0.62,
   /** Share of each outer margin that fades away. The rest stays dim. */
@@ -43,13 +48,6 @@ export const frame3 = {
   refsRight: "5%",
   /** Focus ring for keyboard controls. */
   focus: "#3CC8B4",
-  buttonSize: "17px",
-  buttonWeight: 600,
-  buttonPadY: "8px",
-  buttonPadX: "14px",
-  buttonRadius: "6px",
-  buttonBorder: "rgba(255, 255, 255, 0.4)",
-  arrowShift: "4px",
   refsBottom: "4%",
 
   /**
@@ -59,30 +57,41 @@ export const frame3 = {
   copyMargin: 0.04,
   copyMinFit: 0.72,
   /** Small label above the title. */
-  eyebrowSize: "14px",
+  eyebrowSize: "13px",
   eyebrowWeight: 500,
   eyebrowGap: "8px",
-  titleSize: "clamp(28px, 2.6vw, 44px)",
+  eyebrowTracking: "0.08em",
+  eyebrowColor: "rgba(255, 255, 255, 0.82)",
+  /**
+   * JetBrains Mono, sized so the title stays on two lines from 1440px wide up.
+   * The column is 26% of the frame, and this face is 0.6em wide.
+   */
+  titleSize: "25px",
   titleWeight: 700,
   titleLine: 1.15,
-  introSize: "18px",
+  introSize: "16px",
   introWeight: 400,
-  introLine: 1.45,
-  introGap: "10px",
-  labelSize: "15px",
+  introLine: 1.55,
+  introGap: "12px",
+  labelSize: "13px",
   labelWeight: 600,
-  sectionGap: "22px",
+  labelTracking: "0.14em",
+  sectionGap: "32px",
   labelGap: "8px",
-  bodySize: "17px",
+  bodySize: "16px",
   bodyWeight: 400,
-  bodyLine: 1.45,
+  bodyLine: 1.55,
+  /** Body measure. The column is often narrower, so this is a ceiling. */
+  bodyMeasure: "52ch",
   itemGap: "10px",
-  bullet: "6px",
+  bullet: "5px",
   stackSize: "14px",
   stackWeight: 500,
-  linkSize: "17px",
-  linkWeight: 600,
-  linkGap: "18px",
+  /** Shared invitation: Instrument Serif italic, gold, with a drawn underline. */
+  inviteSize: "20px",
+  inviteColor: "#EFC785",
+  inviteDraw: "0.2s",
+  linkGap: "20px",
   captionSize: "13px",
   captionOffset: 12,
   noteSize: "13px",
@@ -97,8 +106,6 @@ export const frame3 = {
   noteInset: 8,
   noteMax: 220,
   noteMaxHeight: 96,
-  refsSize: "14px",
-  refsWeight: 600,
   panelTextSize: "14px",
   panelLine: 1.5,
   panelRadius: "10px",
