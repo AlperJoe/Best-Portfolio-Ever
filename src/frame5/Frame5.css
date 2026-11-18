@@ -339,8 +339,23 @@
 /* Hobbies, under the contact details. */
 
 .frame5-hobbies {
+  display: grid;
+  grid-template-columns: var(--f5-hobby-arrow-w) minmax(0, 1fr);
+  grid-template-areas:
+    "head head"
+    "arrow tickets";
+  row-gap: 4px;
   width: 100%;
   margin-top: var(--f5-hobby-gap);
+}
+
+.frame5-hobby-head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 2px;
 }
 
 .frame5-hobby-heading {
@@ -354,39 +369,120 @@
 }
 
 .frame5-hobby-line {
-  margin: 3px 0 0;
+  margin: 0;
   font-family: var(--font-text), sans-serif;
   font-size: var(--f5-hobby-size);
   line-height: 1.35;
   color: var(--f5-white-70);
 }
 
-.frame5-hobby-list {
+.frame5-hobby-arrow {
+  grid-area: arrow;
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: var(--f5-arrow-color);
+  stroke-width: var(--f5-arrow-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Hobbies as ticket stubs: cream paper, a warm band on top, torn along the right edge. */
+
+.frame5-tickets {
+  grid-area: tickets;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 0;
+  align-items: flex-start;
+  gap: var(--f5-ticket-gap);
+  margin: 0;
+  padding: 6px 0 0 2px;
   list-style: none;
 }
 
-.frame5-hobby {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px 3px 7px;
-  border: 1px solid rgba(242, 238, 230, 0.22);
-  border-radius: 999px;
-  font-family: var(--font-text), sans-serif;
-  font-size: var(--f5-hobby-size);
-  line-height: 1.25;
-  color: rgba(242, 238, 230, 0.82);
-  white-space: nowrap;
+.frame5-ticket {
+  flex: none;
+  filter: var(--f5-ticket-shadow);
+  transform: translateY(var(--f5-ticket-lift)) rotate(var(--f5-ticket-tilt));
 }
 
-.frame5-hobby .frame5-icon {
+.frame5-ticket-paper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: calc(var(--f5-ticket-band-h) + 6px) 15px 8px 10px;
+  background:
+    linear-gradient(var(--f5-ticket-band) 0 var(--f5-ticket-band-h), transparent var(--f5-ticket-band-h)),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.35), rgba(160, 120, 70, 0.08)),
+    var(--f5-ticket-paper);
+  color: var(--f5-ticket-ink);
+  -webkit-mask-image: radial-gradient(
+    circle at 100% 50%,
+    transparent var(--f5-ticket-tear-r),
+    #000 calc(var(--f5-ticket-tear-r) + 0.5px)
+  );
+  mask-image: radial-gradient(
+    circle at 100% 50%,
+    transparent var(--f5-ticket-tear-r),
+    #000 calc(var(--f5-ticket-tear-r) + 0.5px)
+  );
+  -webkit-mask-size: 100% var(--f5-ticket-tear-step);
+  mask-size: 100% var(--f5-ticket-tear-step);
+  -webkit-mask-repeat: no-repeat round;
+  mask-repeat: no-repeat round;
+}
+
+.frame5-ticket-paper::after {
+  content: "";
+  position: absolute;
+  top: var(--f5-ticket-band-h);
+  bottom: 0;
+  right: calc(var(--f5-ticket-tear-r) + 4px);
+  border-right: 1px dashed rgba(43, 33, 26, 0.25);
+}
+
+.frame5-ticket .frame5-icon {
   width: var(--f5-hobby-icon);
   height: var(--f5-hobby-icon);
+  stroke: var(--f5-ticket-ink);
+  stroke-width: 1.45;
+}
+
+.frame5-ticket-label {
+  max-width: var(--f5-ticket-label-w);
+  font-family: var(--font-text), sans-serif;
+  font-size: var(--f5-ticket-size);
+  font-weight: 500;
+  line-height: 1.22;
+  text-wrap: balance;
+}
+
+.frame5-stamp {
+  position: absolute;
+  top: calc(var(--f5-ticket-band-h) + 4px);
+  right: 14px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: var(--f5-stamp-size);
+  height: var(--f5-stamp-size);
+  padding: 4px;
+  border: 1.5px solid var(--f5-stamp-color);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1.5px var(--f5-ticket-paper),
+    inset 0 0 0 2.5px var(--f5-stamp-color);
+  color: var(--f5-stamp-color);
+  font-family: var(--font-text), sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+  text-align: center;
+  opacity: 0.85;
+  mix-blend-mode: multiply;
+  transform: rotate(var(--f5-stamp-tilt));
 }
 
 .frame5 a:focus-visible,
