@@ -38,7 +38,7 @@ export class ScrollEngine {
   private readonly pairs: Pair[] = [];
   /** Scroll position of every frame, where it sits fully on screen. Frame 1 sits at the end of its opening. */
   private readonly frameStops: number[] = [];
-  /** Every place a key press can stop, with and without reduced motion. */
+  /** Every place a key press can stop, with and without reduced motion. Includes each interlude's resting place. */
   private readonly stops: number[] = [];
   private readonly reducedStops: number[] = [];
   private readonly lastFrame: number;

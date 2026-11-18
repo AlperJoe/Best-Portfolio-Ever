@@ -38,8 +38,10 @@ function focusColor(t: number) {
 /**
  * The dark scene between two frames. Its lines sit centered, every word dim
  * until the scroll lights it, and a gold line under them draws itself with
- * the scroll. When the line is complete it becomes the edge of the next
- * frame, which opens from it upward and downward.
+ * the scroll. When the line is complete the scene holds still, with the note
+ * control on screen, and then the line becomes the edge of the next frame,
+ * which opens from it upward and downward. The text, the line and the
+ * control fade out over the start of that opening.
  */
 export class InterludeScene {
   private readonly root = div("txd-layer");
@@ -107,12 +109,14 @@ export class InterludeScene {
   static length(interlude: Interlude | null) {
     if (!interlude || interlude.lines.length === 0) return scrollConfig.plain;
     const c = scrollConfig.interlude;
-    return interlude.lines.length * c.perLine + c.open;
+    return interlude.lines.length * c.perLine + c.hold + c.open;
   }
 
   /**
    * Places inside a pair where a key press stops: the end of every line, or
-   * with reduced motion only the end of the last one, where all words are lit.
+   * with reduced motion only the end of the last one. The last of these is
+   * the resting place. The gold line is complete there, the note control is
+   * on screen, and the next frame waits through the hold.
    */
   static stops(interlude: Interlude | null, reduced: boolean) {
     if (!interlude || interlude.lines.length === 0) return [];
@@ -195,11 +199,24 @@ export class InterludeScene {
     this.edges.classList.remove("is-on");
   }
 
-  private showWhy(on: boolean) {
+  /**
+   * `driven` is the scroll fade at the start of the opening. The control's
+   * own fade is turned off then, so its opacity follows the text in both
+   * directions instead of easing on a timer.
+   */
+  private showWhy(on: boolean, driven = false) {
     if (!on) this.whyNote?.close();
-    if (on === this.whyShown) return;
-    this.whyShown = on;
-    this.why.classList.toggle("is-on", on);
+    if (on !== this.whyShown) {
+      this.whyShown = on;
+      this.why.classList.toggle("is-on", on);
+    }
+    if (driven && on) {
+      this.why.style.transition = "none";
+      this.why.style.opacity = "1";
+    } else {
+      this.why.style.transition = "";
+      this.why.style.opacity = "";
+    }
   }
 
   private light(word: Word, lit: number) {
@@ -233,7 +250,9 @@ export class InterludeScene {
     const c = scrollConfig.interlude;
     const n = this.lines.length;
     const litEnd = n * c.perLine;
-    const u = clamp((x - litEnd) / c.open);
+    const openAt = litEnd + c.hold;
+    const u = clamp((x - openAt) / Math.max(1e-6, c.open));
+    const exit = u <= 0 ? 1 : clamp(1 - u / Math.max(1e-6, c.fadeShare));
 
     if (reduced) {
       // Each half of a crossfade passes through the dark, so the text never sits over a frame.
@@ -245,7 +264,7 @@ export class InterludeScene {
       this.lines.forEach((line) => line.words.forEach((word) => this.light(word, 1)));
       this.rule.style.visibility = "hidden";
       this.edges.classList.remove("is-on");
-      this.showWhy(Boolean(interlude.note) && a >= 1 && u <= 0);
+      this.showWhy(Boolean(interlude.note) && a >= 1 && textIn > 0.001, u > 0);
       return { source: a < 0.5, dest: u > 0.5, clip: null, destOpacity: clamp((u - 0.5) / 0.5) };
     }
 
@@ -253,7 +272,8 @@ export class InterludeScene {
     this.root.style.opacity = "";
     this.bg.style.opacity = x < c.darken ? clamp(x / c.darken).toFixed(4) : "";
     const textIn = clamp((x - c.darken) / c.appear);
-    this.stack.style.opacity = textIn < 1 ? textIn.toFixed(4) : "";
+    const veil = textIn * exit;
+    this.stack.style.opacity = veil < 1 ? veil.toFixed(4) : "";
 
     this.lines.forEach((line, k) => {
       const from = k === 0 ? textFrom : k * c.perLine;
@@ -266,7 +286,7 @@ export class InterludeScene {
 
     const progress = clamp((x - textFrom) / (litEnd - textFrom));
     const ruleWidth = this.ruleBox.right - this.ruleBox.left;
-    this.rule.style.visibility = u > 0 ? "hidden" : "";
+    this.rule.style.visibility = "";
     this.fill.style.transform = `scaleX(${progress.toFixed(5)})`;
     this.tip.style.transform = `translate(${(progress * ruleWidth).toFixed(2)}px, -50%) translateX(-50%)`;
 
@@ -292,7 +312,7 @@ export class InterludeScene {
       this.edges.classList.remove("is-on");
     }
 
-    this.showWhy(Boolean(interlude.note) && allLit && u <= 0);
+    this.showWhy(Boolean(interlude.note) && allLit && exit > 0.001, u > 0);
     return { source: x < c.darken, dest: u > 0, clip, destOpacity: 1 };
   }
 }

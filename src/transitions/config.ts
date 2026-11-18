@@ -43,8 +43,17 @@ export const scrollConfig = {
   interlude: {
     /** Lighting the words of each line. */
     perLine: 1,
+    /**
+     * After the last word is lit and the gold line is complete, the scene
+     * holds still for this many screen heights. The note control stays
+     * visible and clickable, the glowing point rests at the end of the line,
+     * and a key press stops here. Then the next frame starts to open.
+     */
+    hold: 0.4,
     /** Opening the next frame from the gold line. */
     open: 0.6,
+    /** Share of the opening over which the text, the gold line and the note control fade out. Scrolling back fades them in again. */
+    fadeShare: 0.3,
     /** Start of the first line over which the frame being left fades to dark. */
     darken: 0.22,
     /** Then the words appear at their dim level over this much. */
