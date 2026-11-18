@@ -49,13 +49,13 @@ export const interludes: Partial<Record<FramePair, Interlude>> = {
   },
 };
 
-/** The control under the gold line that opens the note. It appears once every word is lit and stays through the hold. */
+/**
+ * The control under the gold line that opens the note. It appears once every
+ * word is lit and stays through the hold. Its look is the shared invitation
+ * in whyNote, so only the label and the gap live here.
+ */
 export const interludeWhy = {
   label: "Why I say this",
-  color: "rgba(242, 238, 230, 0.85)",
-  /** Archivo, underlined. */
-  size: 14,
-  weight: 500,
   /** Space between the gold line and the control, in pixels. */
   gap: 22,
 };

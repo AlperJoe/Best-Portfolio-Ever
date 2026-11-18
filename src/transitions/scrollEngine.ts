@@ -26,7 +26,9 @@ type Jump = { to: number; start: number; swapped: boolean };
  * One scroll position, in screen heights, runs from the Frame 1 start state
  * through every frame and interlude. Input sets where it is heading, and the
  * scene follows with a short ease that comes to rest soon after input stops.
- * Nothing moves on its own, except a key glide or a jump the visitor asked for.
+ * A gesture that reaches a frame stops there, and during a gesture the scene
+ * never moves faster than the configured rate. Nothing moves on its own,
+ * except a key glide or a jump the visitor asked for.
  */
 export class ScrollEngine {
   /** Where the scene is drawn, and where input has sent it. */
@@ -57,8 +59,16 @@ export class ScrollEngine {
   private lastTick = 0;
   private stepSum = 0;
   private lastStep = 0;
-  private wheel = { at: -Infinity, size: 0, dir: 0, fading: false };
+  /** The gesture now in progress has already been caught by a frame. */
+  private caught = false;
+  /** Last wheel or trackpad event. A quiet gap longer than the config starts a new gesture. */
+  private gestureAt = -Infinity;
+  /** Distance the gesture may still spend, in screen heights, and when it was refilled. */
+  private credit = 0;
+  private creditAt = -Infinity;
   private touchY: number | null = null;
+  /** The next touch move is the first of a new finger gesture. */
+  private touchFresh = false;
   private openingSent = -1;
   private tailSent = -1;
   private active: number | null = null;
@@ -174,26 +184,67 @@ export class ScrollEngine {
   }
 
   /**
-   * Moves the target by d screen heights. A frame on the way stops it, and
-   * the tail of a flick does not carry past a frame it has reached.
+   * The frame a step from `from` to `to` would reach, in either direction.
+   * Interlude resting places are not in frameStops, so a step passes them.
    */
-  private move(d: number, tail: boolean) {
-    if (d === 0) return;
+  private frameOnWay(from: number, to: number) {
+    if (to > from + EPS) return this.frameStops.find((at) => at > from + EPS && at <= to + EPS) ?? null;
+    if (to < from - EPS) return [...this.frameStops].reverse().find((at) => at < from - EPS && at >= to - EPS) ?? null;
+    return null;
+  }
+
+  /**
+   * Moves the target by d screen heights. Reaching a frame catches the
+   * gesture there, and later input from that gesture is ignored.
+   */
+  private move(d: number) {
+    if (d === 0 || this.caught) return;
     if (this.glide) {
       this.glide = null;
       this.target = this.pos;
     }
     const from = this.target;
-    if (tail && this.frameStops.some((at) => Math.abs(at - from) < EPS)) return;
     let next = clamp(from + d, 0, this.end);
-    const crossed =
-      d > 0
-        ? this.frameStops.find((at) => at > from + EPS && at < next - EPS)
-        : [...this.frameStops].reverse().find((at) => at < from - EPS && at > next + EPS);
-    if (crossed !== undefined) next = crossed;
+    const frame = this.frameOnWay(from, next);
+    if (frame !== null) {
+      next = frame;
+      this.caught = true;
+    }
     this.target = next;
     this.floor = Math.abs(this.target - this.pos) / this.floorMs;
     this.run();
+  }
+
+  /**
+   * How much of `want` this gesture may spend. A new gesture may spend one
+   * wheel step at once. After that the spend refills at the configured rate,
+   * and it never banks more than one step, so a pause cannot become a leap.
+   */
+  private spend(now: number, want: number, fresh: boolean) {
+    const rate = scrollConfig.gesture.maxPerSecond;
+    const burst = scrollConfig.input.maxDelta / Math.max(1, window.innerHeight);
+    if (fresh) this.credit = burst;
+    else {
+      const dt = Math.max(0, now - this.creditAt) / 1000;
+      this.credit = Math.min(burst, this.credit + dt * rate);
+    }
+    this.creditAt = now;
+    if (this.caught || want === 0) {
+      if (fresh) this.credit = 0;
+      return 0;
+    }
+    const used = Math.min(Math.abs(want), this.credit);
+    // A new gesture's extra credit belongs to this event only, not the next one.
+    this.credit = fresh ? 0 : this.credit - used;
+    return Math.sign(want) * used;
+  }
+
+  /** A wheel or trackpad gesture. A quiet gap starts a new one and clears the catch. */
+  private noteWheel(now: number) {
+    const fresh = now - this.gestureAt >= scrollConfig.gesture.quietMs;
+    if (fresh) this.caught = false;
+    this.gestureAt = now;
+    return fresh;
   }
 
   /** With reduced motion, input adds up to a step, and each step crossfades to the next stop. */
@@ -259,7 +310,17 @@ export class ScrollEngine {
       const gap = this.target - this.pos;
       const eased = gap * (1 - Math.exp(-dt / scrollConfig.follow.ms));
       const least = Math.min(Math.abs(gap), this.floor * dt);
-      this.pos += Math.abs(eased) >= least ? eased : Math.sign(gap) * least;
+      let step = Math.abs(eased) >= least ? eased : Math.sign(gap) * least;
+      const cap = (scrollConfig.gesture.maxPerSecond * dt) / 1000;
+      if (Math.abs(step) > cap) step = Math.sign(gap) * cap;
+      let next = this.pos + step;
+      const frame = this.frameOnWay(this.pos, next);
+      if (frame !== null) {
+        next = frame;
+        this.target = frame;
+        this.caught = true;
+      }
+      this.pos = next;
       if (Math.abs(this.target - this.pos) < 1e-6) this.pos = this.target;
       this.render();
     }
@@ -283,20 +344,6 @@ export class ScrollEngine {
     this.jumpTo(index === 0 ? 0 : this.frameStops[index]);
   };
 
-  /** True when this wheel event belongs to the fading tail of a flick. */
-  private isTail(delta: number, now: number) {
-    const wheel = this.wheel;
-    const size = Math.abs(delta);
-    const dir = Math.sign(delta);
-    if (now - wheel.at >= scrollConfig.momentum.pauseMs || dir !== wheel.dir) wheel.fading = false;
-    else if (size < wheel.size) wheel.fading = true;
-    else if (size > wheel.size) wheel.fading = false;
-    wheel.at = now;
-    wheel.size = size;
-    wheel.dir = dir;
-    return wheel.fading;
-  }
-
   private onWheel = (event: WheelEvent) => {
     if (event.ctrlKey) return;
     if (this.overlayOpen()) return;
@@ -306,16 +353,27 @@ export class ScrollEngine {
     else if (event.deltaMode === 2) delta *= window.innerHeight;
     if (Math.abs(event.deltaX) > Math.abs(delta) || delta === 0) return;
     const now = performance.now();
-    const tail = this.isTail(delta, now);
     if (this.jump) return;
     const max = scrollConfig.input.maxDelta;
     delta = clamp(delta, -max, max);
-    if (this.reduced) this.step(delta, now);
-    else this.move((delta * scrollConfig.input.scrollScale) / window.innerHeight, tail);
+    if (this.reduced) {
+      this.step(delta, now);
+      return;
+    }
+    const fresh = this.noteWheel(now);
+    const screens = (delta * scrollConfig.input.scrollScale) / window.innerHeight;
+    this.move(this.spend(now, screens, fresh));
   };
 
   private onTouchStart = (event: TouchEvent) => {
-    this.touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+    if (event.touches.length !== 1) {
+      this.touchY = null;
+      return;
+    }
+    this.touchY = event.touches[0].clientY;
+    // A finger down is a new gesture, even a moment after the last one.
+    this.caught = false;
+    this.touchFresh = true;
   };
 
   private onTouchMove = (event: TouchEvent) => {
@@ -326,12 +384,23 @@ export class ScrollEngine {
     const delta = (this.touchY - y) * scrollConfig.input.touchScale;
     this.touchY = y;
     if (this.jump) return;
-    if (this.reduced) this.step(delta, performance.now());
-    else this.move((delta * scrollConfig.input.scrollScale) / window.innerHeight, false);
+    const now = performance.now();
+    if (this.reduced) {
+      this.step(delta, now);
+      return;
+    }
+    const fresh = this.touchFresh;
+    this.touchFresh = false;
+    this.gestureAt = now;
+    const screens = (delta * scrollConfig.input.scrollScale) / window.innerHeight;
+    this.move(this.spend(now, screens, fresh));
   };
 
   private onTouchEnd = () => {
     this.touchY = null;
+    this.touchFresh = false;
+    this.caught = false;
+    this.gestureAt = -Infinity;
   };
 
   private onKey = (event: KeyboardEvent) => {
