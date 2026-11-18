@@ -61,7 +61,10 @@ export class ScrollEngine {
   private lastStep = 0;
   /** The gesture now in progress has already been caught by a frame. */
   private caught = false;
-  /** Last wheel or trackpad event. A quiet gap longer than the config starts a new gesture. */
+  /**
+   * Timestamp of the last wheel or trackpad event, from the event itself.
+   * A quiet gap longer than the config starts a new gesture.
+   */
   private gestureAt = -Infinity;
   /** Distance the gesture may still spend, in screen heights, and when it was refilled. */
   private credit = 0;
@@ -239,7 +242,12 @@ export class ScrollEngine {
     return Math.sign(want) * used;
   }
 
-  /** A wheel or trackpad gesture. A quiet gap starts a new one and clears the catch. */
+  /**
+   * A wheel or trackpad gesture. A quiet gap in event time starts a new one
+   * and clears the catch. `now` is the event's own timestamp: the handler can
+   * run much later when a frame is busy drawing, and that delay is not a gap
+   * in the gesture.
+   */
   private noteWheel(now: number) {
     const fresh = now - this.gestureAt >= scrollConfig.gesture.quietMs;
     if (fresh) this.caught = false;
@@ -352,7 +360,9 @@ export class ScrollEngine {
     if (event.deltaMode === 1) delta *= scrollConfig.input.lineHeight;
     else if (event.deltaMode === 2) delta *= window.innerHeight;
     if (Math.abs(event.deltaX) > Math.abs(delta) || delta === 0) return;
-    const now = performance.now();
+    // event.timeStamp is when the wheel moved. performance.now() here is when
+    // the handler runs, which falls behind while a frame is painting.
+    const now = event.timeStamp || performance.now();
     if (this.jump) return;
     const max = scrollConfig.input.maxDelta;
     delta = clamp(delta, -max, max);

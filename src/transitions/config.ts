@@ -34,7 +34,8 @@ export const scrollConfig = {
    * Catching a frame. A wheel, trackpad or touch gesture that reaches a frame,
    * in either direction, stops on it and the rest of that gesture is ignored.
    * The next gesture moves on from there. A wheel or trackpad gesture ends
-   * after quietMs without input. A touch gesture ends when the finger lifts.
+   * after quietMs without input, measured with each event's own timestamp.
+   * A touch gesture ends when the finger lifts.
    * Keys are not gestures, and an interlude's resting place is not a frame,
    * so neither of those catches.
    */
