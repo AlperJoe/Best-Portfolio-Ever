@@ -618,27 +618,16 @@
   );
 }
 
+/* --tx-tail is the scroll past this frame, from 0 to 1, set by the stage. */
 .frame5-roll {
-  transform: translateY(var(--roll-from, 200px));
+  transform: translateY(
+    calc(var(--roll-from, 200px) + (var(--roll-to, 0px) - var(--roll-from, 200px)) * var(--tx-tail, 0))
+  );
   will-change: transform;
 }
 
-.frame5.is-locked .frame5-roll {
-  animation: frame5-roll var(--roll-ms, 12000ms) var(--f5-roll-ease) var(--f5-roll-delay) forwards;
-}
-
 .frame5.is-rolled .frame5-roll {
-  animation: none;
   transform: translateY(var(--roll-to, 0px));
-}
-
-@keyframes frame5-roll {
-  from {
-    transform: translateY(var(--roll-from, 200px));
-  }
-  to {
-    transform: translateY(var(--roll-to, 0px));
-  }
 }
 
 .frame5-credits {

@@ -777,7 +777,7 @@
   visibility: visible;
 }
 
-/* ?transition=d: the opening follows the scroll. Frame1.tsx writes the --op-* values. */
+/* The opening follows the scroll. Frame1.tsx writes the --op-* values. */
 .frame.is-scroll-opening .frame-world {
   opacity: var(--op-world, 1);
 }

@@ -305,8 +305,8 @@ export const frame1Config = {
     fade: 0.6,
   },
   /**
-   * Opening driven by the scroll, used only with ?transition=d. It replaces
-   * the timed opening below and the scroll cue.
+   * Opening driven by the scroll. It replaces the timed opening below and
+   * the scroll cue.
    */
   scrollOpening: {
     /** Line under the name in the start state. */

@@ -3,206 +3,99 @@ import { attachWhyNote, type WhyNote } from "../whyNote/whyNote";
 import { interludeStyle, interludeWhy, type Interlude } from "./interludes";
 import { clamp, lerp, smoothstep } from "./math";
 
-const SVG = "http://www.w3.org/2000/svg";
+type Word = { el: HTMLSpanElement; focus: boolean; lit: number };
+type Line = { el: HTMLElement; words: Word[] };
 
-type Point = { x: number; y: number };
-
-type LineLayout = {
-  /** Text size, in pixels, when the line sits at its own size on screen. */
-  size: number;
-  /** Width of the line, and the top and bottom of its ink relative to its center, at that size. */
-  width: number;
-  top: number;
-  bottom: number;
-  /** Center of the focus word, relative to the line's center, at that size. */
-  focus: Point;
-  group: SVGGElement;
-  focusSpan: SVGTSpanElement;
-};
-
-type Layout = {
-  lines: LineLayout[];
-  /** Deepest point inside the ink of the last focus word, relative to its line's center. */
-  ink: Point;
-  /** Distance from that point to the nearest edge of the ink, in pixels at line size. */
-  depth: number;
-  maskGroup: SVGGElement;
-  maskFocus: SVGTSpanElement;
-};
-
-/** What the engine must show behind the interlude. */
+/** What the engine must show around the interlude. */
 export type InterludeView = {
-  /** The frame being left is visible behind the scene, growing by sourceGrow. */
+  /** The frame being left shows under the scene while the scene darkens over it. */
   source: boolean;
-  sourceGrow: number;
-  /** The frame ahead is visible behind the scene. */
+  /** The frame ahead shows over the scene, cut by `clip` and faded by `destOpacity`. */
   dest: boolean;
+  clip: string | null;
+  destOpacity: number;
 };
 
-function svg<K extends keyof SVGElementTagNameMap>(name: K, attributes: Record<string, string> = {}) {
-  const node = document.createElementNS(SVG, name);
-  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
+function div(className: string) {
+  const node = document.createElement("div");
+  node.className = className;
   return node;
 }
 
-function mixHex(a: string, b: string, t: number) {
-  const parse = (hex: string) => {
-    const value = hex.replace("#", "");
-    return [0, 2, 4].map((at) => parseInt(value.slice(at, at + 2), 16));
-  };
-  const [ra, ga, ba] = parse(a);
-  const [rb, gb, bb] = parse(b);
-  const mix = (x: number, y: number) => Math.round(lerp(x, y, clamp(t)));
-  return `rgb(${mix(ra, rb)}, ${mix(ga, gb)}, ${mix(ba, bb)})`;
+function parseHex(hex: string) {
+  const value = hex.replace("#", "");
+  return [0, 2, 4].map((at) => parseInt(value.slice(at, at + 2), 16));
 }
 
-function fontFor(size: number, italic: boolean) {
-  return `${italic ? "italic " : ""}400 ${size}px "${interludeStyle.font}", serif`;
-}
+const TEXT_RGB = parseHex(interludeStyle.textColor);
+const FOCUS_RGB = parseHex(interludeStyle.focusColor);
 
-let measureCanvas: HTMLCanvasElement | null = null;
-function context() {
-  measureCanvas ??= document.createElement("canvas");
-  return measureCanvas.getContext("2d")!;
+function focusColor(t: number) {
+  const [r, g, b] = TEXT_RGB.map((from, index) => Math.round(lerp(from, FOCUS_RGB[index], t)));
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**
- * Deepest point inside the ink of `word`, found with a chamfer distance
- * transform on a canvas rendering. Coordinates are relative to the start of
- * the word on its baseline, at text size `size`.
- */
-function deepestInk(word: string, size: number, italic: boolean, letter?: number) {
-  const scale = Math.min(4, 420 / size);
-  const px = size * scale;
-  const ctx = context();
-  ctx.font = fontFor(px, italic);
-  const metrics = ctx.measureText(word);
-  const pad = Math.ceil(px * 0.25);
-  const left = Math.ceil(metrics.actualBoundingBoxLeft);
-  const width = Math.ceil(metrics.actualBoundingBoxRight + left) + pad * 2;
-  const ascent = Math.ceil(metrics.actualBoundingBoxAscent);
-  const height = Math.ceil(ascent + metrics.actualBoundingBoxDescent) + pad * 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, width);
-  canvas.height = Math.max(1, height);
-  const draw = canvas.getContext("2d", { willReadFrequently: true })!;
-  draw.font = fontFor(px, italic);
-  draw.fillStyle = "#fff";
-  const originX = pad + left;
-  const originY = pad + ascent;
-  draw.fillText(word, originX, originY);
-  const pixels = draw.getImageData(0, 0, canvas.width, canvas.height).data;
-
-  const w = canvas.width;
-  const h = canvas.height;
-  const far = 1e9;
-  const dist = new Float32Array(w * h);
-  for (let index = 0; index < w * h; index += 1) dist[index] = pixels[index * 4 + 3] > 127 ? far : 0;
-  const diagonal = Math.SQRT2;
-  for (let y = 0; y < h; y += 1) {
-    for (let x = 0; x < w; x += 1) {
-      const at = y * w + x;
-      if (dist[at] === 0) continue;
-      let best = dist[at];
-      if (x > 0) best = Math.min(best, dist[at - 1] + 1);
-      if (y > 0) {
-        best = Math.min(best, dist[at - w] + 1);
-        if (x > 0) best = Math.min(best, dist[at - w - 1] + diagonal);
-        if (x < w - 1) best = Math.min(best, dist[at - w + 1] + diagonal);
-      }
-      dist[at] = best;
-    }
-  }
-  for (let y = h - 1; y >= 0; y -= 1) {
-    for (let x = w - 1; x >= 0; x -= 1) {
-      const at = y * w + x;
-      if (dist[at] === 0) continue;
-      let best = dist[at];
-      if (x < w - 1) best = Math.min(best, dist[at + 1] + 1);
-      if (y < h - 1) {
-        best = Math.min(best, dist[at + w] + 1);
-        if (x < w - 1) best = Math.min(best, dist[at + w + 1] + diagonal);
-        if (x > 0) best = Math.min(best, dist[at + w - 1] + diagonal);
-      }
-      dist[at] = best;
-    }
-  }
-
-  let fromX = 0;
-  let toX = w;
-  if (letter !== undefined && letter >= 0 && letter < word.length) {
-    fromX = Math.floor(originX + ctx.measureText(word.slice(0, letter)).width);
-    toX = Math.ceil(originX + ctx.measureText(word.slice(0, letter + 1)).width);
-  }
-  let bestAt = -1;
-  let bestDepth = 0;
-  for (let y = 0; y < h; y += 1) {
-    for (let x = Math.max(0, fromX); x < Math.min(w, toX); x += 1) {
-      const value = dist[y * w + x];
-      if (value > bestDepth && value < far) {
-        bestDepth = value;
-        bestAt = y * w + x;
-      }
-    }
-  }
-  if (bestAt < 0) return { x: 0, y: -size * 0.3, depth: size * 0.04 };
-  return {
-    x: ((bestAt % w) - originX) / scale,
-    y: (Math.floor(bestAt / w) - originY) / scale,
-    depth: bestDepth / scale,
-  };
-}
-
-let maskCount = 0;
-
-/**
- * The dark scene between two frames in variant d. Each line is centered on
- * screen at its own size; line k + 1 sits inside the focus word of line k at
- * 1 / zoomPerLine of the size, so one continuous camera zoom carries the eye
- * from one line into the next. The last focus word is cut out of the
- * background, so the next frame shows through its letters, and the camera
- * dives into the thickest stroke until the frame fills the screen.
+ * The dark scene between two frames. Its lines sit centered, every word dim
+ * until the scroll lights it, and a gold line under them draws itself with
+ * the scroll. When the line is complete it becomes the edge of the next
+ * frame, which opens from it upward and downward.
  */
 export class InterludeScene {
-  private readonly root = document.createElement("div");
-  private readonly svgRoot = svg("svg", { class: "txd-svg" });
-  private readonly mask = svg("mask");
-  private readonly maskRect = svg("rect", { fill: "#fff" });
-  private readonly bg = svg("rect", { class: "txd-bg" });
-  private readonly linesRoot = svg("g");
-  private readonly maskId = `txd-mask-${(maskCount += 1)}`;
+  private readonly root = div("txd-layer");
+  private readonly bg = div("txd-bg");
+  private readonly stack = div("txd-stack");
+  private readonly text = div("txd-text");
+  private readonly rule = div("txd-rule");
+  private readonly fill = div("txd-rule-fill");
+  private readonly tip = div("txd-tip");
+  private readonly edges = div("txd-edges");
+  private readonly edgeTop = div("txd-edge");
+  private readonly edgeBottom = div("txd-edge");
+  private readonly why = document.createElement("button");
   private interlude: Interlude | null = null;
-  private layout: Layout | null = null;
-  private tint = interludeStyle.base;
+  private lines: Line[] = [];
+  /** The gold line on screen: its ends and its vertical center, in pixels. */
+  private ruleBox = { left: 0, right: 0, y: 0 };
   private width = 0;
   private height = 0;
   private shown = false;
-  private readonly why = document.createElement("button");
   private whyNote: WhyNote | null = null;
   private whyShown = false;
 
   constructor(private readonly stage: HTMLElement) {
+    const style = interludeStyle;
     this.why.type = "button";
     this.why.className = "why-button txd-why";
     this.why.textContent = interludeWhy.label;
-    this.why.style.setProperty("--why-color", interludeWhy.color);
-    this.root.className = "txd-layer";
-    this.root.setAttribute("aria-hidden", "true");
-    this.mask.id = this.maskId;
-    this.mask.setAttribute("maskUnits", "userSpaceOnUse");
-    this.mask.setAttribute("maskContentUnits", "userSpaceOnUse");
-    this.mask.append(this.maskRect);
-    const defs = svg("defs");
-    defs.append(this.mask);
-    this.svgRoot.append(defs, this.bg, this.linesRoot);
-    this.root.append(this.svgRoot);
-    stage.append(this.root, this.why);
+    this.root.style.setProperty("--txd-bg", style.background);
+    this.root.style.setProperty("--txd-font", `"${style.font}", serif`);
+    this.root.style.setProperty("--txd-line", String(style.lineHeight));
+    this.root.style.setProperty("--txd-text", style.textColor);
+    this.root.style.setProperty("--txd-rule", style.rule.color);
+    this.root.style.setProperty("--txd-rule-w", `${style.rule.width}px`);
+    this.root.style.setProperty("--txd-tip", `${style.rule.tip}px`);
+    this.root.style.setProperty("--txd-glow", style.rule.glow);
+    this.root.style.setProperty("--why-color", interludeWhy.color);
+    this.root.style.setProperty("--why-size", `${interludeWhy.size}px`);
+    this.root.style.setProperty("--why-weight", String(interludeWhy.weight));
+    this.root.style.setProperty("--txd-why-gap", `${interludeWhy.gap}px`);
+    this.edges.style.setProperty("--txd-rule", style.rule.color);
+    this.edges.style.setProperty("--txd-rule-w", `${style.rule.width}px`);
+    this.edges.setAttribute("aria-hidden", "true");
+    this.rule.setAttribute("aria-hidden", "true");
+
+    this.rule.append(this.fill, this.tip);
+    this.stack.append(this.text, this.rule, this.why);
+    this.root.append(this.bg, this.stack);
+    this.edges.append(this.edgeTop, this.edgeBottom);
+    stage.append(this.root, this.edges);
   }
 
   destroy() {
     this.whyNote?.destroy();
     this.root.remove();
-    this.why.remove();
+    this.edges.remove();
   }
 
   /** True while the note of the current interlude is open. */
@@ -213,148 +106,85 @@ export class InterludeScene {
   /** Scroll length of a pair, in screen heights. */
   static length(interlude: Interlude | null) {
     if (!interlude || interlude.lines.length === 0) return scrollConfig.plain;
-    return scrollConfig.enter + interlude.lines.length * scrollConfig.perLine;
+    const c = scrollConfig.interlude;
+    return interlude.lines.length * c.perLine + c.open;
   }
 
-  /** Positions of the stops inside a pair: each line at its own size. */
-  static stops(interlude: Interlude | null) {
+  /**
+   * Places inside a pair where a key press stops: the end of every line, or
+   * with reduced motion only the end of the last one, where all words are lit.
+   */
+  static stops(interlude: Interlude | null, reduced: boolean) {
     if (!interlude || interlude.lines.length === 0) return [];
-    return interlude.lines.map((_, index) => scrollConfig.enter + index * scrollConfig.perLine);
+    const per = scrollConfig.interlude.perLine;
+    const n = interlude.lines.length;
+    if (reduced) return [n * per];
+    return interlude.lines.map((_, index) => (index + 1) * per);
   }
 
-  set(interlude: Interlude | null, tint: string) {
-    this.tint = tint;
-    if (interlude === this.interlude && this.layout) return;
+  set(interlude: Interlude | null) {
+    if (interlude === this.interlude) return;
     this.interlude = interlude;
     this.whyNote?.destroy();
     this.whyNote = interlude?.note
       ? attachWhyNote(this.why, this.stage, { note: interlude.note, label: interludeWhy.label })
       : null;
     this.build();
-  }
-
-  measure() {
-    this.build();
+    this.measure();
   }
 
   private build() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    this.width = width;
-    this.height = height;
-    this.svgRoot.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    this.svgRoot.setAttribute("width", String(width));
-    this.svgRoot.setAttribute("height", String(height));
-    for (const rect of [this.maskRect, this.bg]) {
-      rect.setAttribute("x", "0");
-      rect.setAttribute("y", "0");
-      rect.setAttribute("width", String(width));
-      rect.setAttribute("height", String(height));
-    }
-    for (const [key, value] of Object.entries({ x: "0", y: "0", width: String(width), height: String(height) })) {
-      this.mask.setAttribute(key, value);
-    }
-    this.linesRoot.replaceChildren();
-    this.mask.replaceChildren(this.maskRect);
-    this.layout = null;
+    this.text.replaceChildren();
+    this.lines = [];
     const interlude = this.interlude;
-    if (!interlude || interlude.lines.length === 0) return;
-
-    const style = interludeStyle;
-    const ctx = context();
-    const lines: LineLayout[] = [];
-    let maskGroup: SVGGElement | null = null;
-    let maskFocus: SVGTSpanElement | null = null;
-    let ink = { x: 0, y: 0, depth: 1 };
-
-    interlude.lines.forEach((line, index) => {
-      const at = line.text.indexOf(line.focus);
-      const before = at >= 0 ? line.text.slice(0, at) : line.text;
-      const focus = at >= 0 ? line.focus : "";
-      const after = at >= 0 ? line.text.slice(at + line.focus.length) : "";
-      const italic = style.focusItalic;
-      const measure = (text: string, slant: boolean, size: number) => {
-        ctx.font = fontFor(size, slant);
-        return ctx.measureText(text);
-      };
-      const widthAt = (size: number) =>
-        measure(before, false, size).width + measure(focus, italic, size).width + measure(after, false, size).width;
-      const probe = 100;
-      const size = Math.min(
-        style.maxSize,
-        (width * style.widthShare * probe) / Math.max(1, widthAt(probe)),
-        height * style.heightShare,
-      );
-      const plain = measure(line.text, false, size);
-      const ascent = plain.actualBoundingBoxAscent;
-      const descent = plain.actualBoundingBoxDescent;
-      const total = widthAt(size);
-      const x0 = -total / 2;
-      const baseline = (ascent - descent) / 2;
-      const beforeW = measure(before, false, size).width;
-      const focusMetrics = measure(focus, italic, size);
-      const focusW = focusMetrics.width;
-      const focusCenter = {
-        x: x0 + beforeW + focusW / 2,
-        y: baseline - (focusMetrics.actualBoundingBoxAscent - focusMetrics.actualBoundingBoxDescent) / 2,
-      };
-
-      const makeText = (fills: [string, string, string]) => {
-        const text = svg("text", {
-          "font-family": `"${style.font}", serif`,
-          "font-size": size.toFixed(3),
-          "font-weight": "400",
-        });
-        const spans = [
-          { value: before, x: x0, slant: false, fill: fills[0] },
-          { value: focus, x: x0 + beforeW, slant: italic, fill: fills[1] },
-          { value: after, x: x0 + beforeW + focusW, slant: false, fill: fills[2] },
-        ].map((part) => {
-          const span = svg("tspan", {
-            x: part.x.toFixed(3),
-            y: baseline.toFixed(3),
-            fill: part.fill,
-          });
-          if (part.slant) span.setAttribute("font-style", "italic");
-          span.textContent = part.value;
-          return span;
-        });
-        text.append(...spans);
-        return { text, focusSpan: spans[1] };
-      };
-
-      const group = svg("g", { class: "txd-line" });
-      const visible = makeText([style.textColor, style.textColor, style.textColor]);
-      group.append(visible.text);
-      this.linesRoot.append(group);
-      lines.push({
-        size,
-        width: total,
-        top: baseline - ascent,
-        bottom: baseline + descent,
-        focus: focusCenter,
-        group,
-        focusSpan: visible.focusSpan,
-      });
-
-      if (index === interlude.lines.length - 1) {
-        maskGroup = svg("g");
-        const hole = makeText(["#fff", "#000", "#fff"]);
-        maskGroup.append(hole.text);
-        this.mask.append(maskGroup);
-        maskFocus = hole.focusSpan;
-        const deep = deepestInk(focus || line.text, size, italic && Boolean(focus), interlude.letter);
-        ink = { x: x0 + (focus ? beforeW : 0) + deep.x, y: baseline + deep.y, depth: Math.max(0.5, deep.depth) };
+    if (!interlude) return;
+    for (const line of interlude.lines) {
+      const el = document.createElement("p");
+      el.className = "txd-line";
+      const focusFrom = line.text.indexOf(line.focus);
+      const focusTo = focusFrom < 0 ? -1 : focusFrom + line.focus.length;
+      const words: Word[] = [];
+      let at = 0;
+      for (const part of line.text.split(" ")) {
+        if (words.length) el.append(" ");
+        const span = document.createElement("span");
+        span.className = "txd-word";
+        span.textContent = part;
+        const focus = focusFrom >= 0 && at < focusTo && at + part.length > focusFrom;
+        if (focus) span.classList.add("is-focus");
+        el.append(span);
+        words.push({ el: span, focus, lit: -1 });
+        at += part.length + 1;
       }
-    });
+      this.text.append(el);
+      this.lines.push({ el, words });
+    }
+  }
 
-    this.layout = {
-      lines,
-      ink: { x: ink.x, y: ink.y },
-      depth: ink.depth,
-      maskGroup: maskGroup!,
-      maskFocus: maskFocus!,
+  /** Sizes the text to fit the screen with margins, and finds the gold line on screen. */
+  measure() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    if (!this.lines.length) return;
+    const style = interludeStyle;
+    const probe = 100;
+    this.text.style.fontSize = `${probe}px`;
+    const widest = Math.max(1, ...this.lines.map((line) => line.el.offsetWidth));
+    const room = {
+      width: this.width * (1 - 2 * style.marginX),
+      height: this.height * (1 - 2 * style.marginY),
     };
+    const below = style.rule.width + interludeWhy.gap + this.why.offsetHeight;
+    const perPx = this.lines.length * style.lineHeight + style.rule.gap;
+    const size = Math.max(
+      8,
+      Math.min(style.maxSize, this.height * style.maxHeightShare, (room.width * probe) / widest, (room.height - below) / perPx),
+    );
+    this.text.style.fontSize = `${size.toFixed(2)}px`;
+    this.rule.style.marginTop = `${(size * style.rule.gap).toFixed(2)}px`;
+    this.rule.style.width = `${((widest * size) / probe).toFixed(2)}px`;
+    const box = this.rule.getBoundingClientRect();
+    this.ruleBox = { left: box.left, right: box.right, y: box.top + box.height / 2 };
   }
 
   hide() {
@@ -362,6 +192,7 @@ export class InterludeScene {
     if (!this.shown) return;
     this.shown = false;
     this.root.classList.remove("is-on");
+    this.edges.classList.remove("is-on");
   }
 
   private showWhy(on: boolean) {
@@ -371,161 +202,97 @@ export class InterludeScene {
     this.why.classList.toggle("is-on", on);
   }
 
-  /**
-   * The "Why I say this" control sits under the last line while that line is
-   * fully readable: alone on screen, opaque, inside the screen and not yet
-   * zooming, so it is gone before the zoom-through starts.
-   */
-  private placeWhy(line: LineLayout, t: { x: number; y: number; s: number }, readable: boolean) {
-    const left = t.x - (t.s * line.width) / 2;
-    const right = t.x + (t.s * line.width) / 2;
-    const top = t.y + t.s * line.top;
-    const bottom = t.y + t.s * line.bottom;
-    const below = bottom + interludeWhy.gap;
-    const fits =
-      left >= 0 && right <= this.width && top >= 0 && below + this.why.offsetHeight <= this.height;
-    const on = readable && fits && t.s <= interludeWhy.maxScale;
-    if (on) this.why.style.transform = `translate(${t.x.toFixed(2)}px, ${below.toFixed(2)}px) translateX(-50%)`;
-    this.showWhy(on);
+  private light(word: Word, lit: number) {
+    if (Math.abs(word.lit - lit) < 1e-3) return;
+    word.lit = lit;
+    const dim = interludeStyle.dim;
+    word.el.style.opacity = (dim + (1 - dim) * lit).toFixed(3);
+    if (word.focus) word.el.style.color = focusColor(lit);
   }
 
   /**
    * x is the scroll position inside the pair, in screen heights, from 0 to
-   * InterludeScene.length(). Returns which frames must show behind it.
+   * InterludeScene.length(). Returns which frames must show around it.
    */
   render(x: number, reduced: boolean): InterludeView {
     if (!this.shown) {
       this.shown = true;
       this.root.classList.add("is-on");
     }
-    const style = interludeStyle;
     const interlude = this.interlude;
-    const total = InterludeScene.length(interlude);
-    const depth = clamp(x / total);
-    this.bg.setAttribute("fill", mixHex(style.base, this.tint, style.tint * Math.pow(depth, 1.2)));
-
-    const layout = this.layout;
-    if (!interlude || !layout) {
-      const u = clamp(x / total);
-      this.root.style.opacity = (u < 0.5 ? smoothstep(0, 0.5, u) : 1 - smoothstep(0.5, 1, u)).toFixed(4);
-      this.bg.removeAttribute("mask");
+    if (!interlude || !this.lines.length) {
+      const u = clamp(x / scrollConfig.plain);
+      this.stack.style.opacity = "0";
+      this.root.style.opacity = clamp(u / 0.5).toFixed(4);
+      this.bg.style.opacity = "";
+      this.edges.classList.remove("is-on");
       this.showWhy(false);
-      return { source: u < 0.5, sourceGrow: 0, dest: u >= 0.5 };
+      return { source: u < 0.5, dest: u > 0.5, clip: null, destOpacity: clamp((u - 0.5) / 0.5) };
     }
 
-    const n = layout.lines.length;
-    const enter = scrollConfig.enter;
-    const per = scrollConfig.perLine;
-    const center = { x: this.width / 2, y: this.height / 2 };
-    const opacity = layout.lines.map(() => 0);
-    const transforms = layout.lines.map(() => ({ x: center.x, y: center.y, s: 1 }));
-    let hole = 0;
-    let layerOpacity = 1;
-    const view: InterludeView = { source: false, sourceGrow: 0, dest: false };
+    const c = scrollConfig.interlude;
+    const n = this.lines.length;
+    const litEnd = n * c.perLine;
+    const u = clamp((x - litEnd) / c.open);
 
-    // World: line k is centered at world[k] with scale scales[k].
-    const zoom = style.zoomPerLine;
-    const world: Point[] = [{ x: 0, y: 0 }];
-    const scales = [1];
-    for (let index = 1; index < n; index += 1) {
-      const prev = layout.lines[index - 1];
-      world.push({
-        x: world[index - 1].x + scales[index - 1] * prev.focus.x,
-        y: world[index - 1].y + scales[index - 1] * prev.focus.y,
-      });
-      scales.push(scales[index - 1] / zoom);
-    }
-    const place = (camera: { tx: number; ty: number; c: number }) => {
-      layout.lines.forEach((_, index) => {
-        transforms[index] = {
-          x: camera.tx + camera.c * world[index].x,
-          y: camera.ty + camera.c * world[index].y,
-          s: camera.c * scales[index],
-        };
-      });
-    };
-
-    if (x < enter) {
-      const e = smoothstep(0, 1, x / enter);
-      view.source = true;
-      view.sourceGrow = reduced ? 0 : style.sourceGrow * e;
-      layerOpacity = e;
-      opacity[0] = 1;
-      const c = reduced ? 1 : lerp(style.enterScale, 1, e);
-      place({ tx: center.x, ty: center.y, c });
-      if (n === 1) hole = 0;
-    } else {
-      const along = (x - enter) / per;
-      const k = Math.min(n - 1, Math.floor(along));
-      const u = clamp(along - k);
-      const last = k === n - 1;
-      if (reduced) {
-        layout.lines.forEach((_, index) => {
-          transforms[index] = { x: center.x, y: center.y, s: 1 };
-        });
-        if (last) {
-          opacity[k] = 1;
-          hole = smoothstep(0, 0.4, u);
-          layerOpacity = 1 - smoothstep(0.3, 1, u);
-          view.dest = true;
-        } else {
-          opacity[k] = 1 - smoothstep(0, 0.5, u);
-          opacity[k + 1] = smoothstep(0.5, 1, u);
-        }
-      } else {
-        const line = layout.lines[k];
-        const target = last ? layout.ink : line.focus;
-        const f = { x: world[k].x + scales[k] * target.x, y: world[k].y + scales[k] * target.y };
-        const c0 = 1 / scales[k];
-        const reach = last
-          ? Math.max(zoom, (1.15 * Math.hypot(this.width, this.height)) / 2 / layout.depth)
-          : zoom;
-        const c = c0 * Math.pow(reach, u);
-        const start = { x: center.x + target.x, y: center.y + target.y };
-        const pan = smoothstep(0, 1, u);
-        const sx = lerp(start.x, center.x, pan);
-        const sy = lerp(start.y, center.y, pan);
-        place({ tx: sx - c * f.x, ty: sy - c * f.y, c });
-        if (last) {
-          opacity[k] = 1;
-          hole = smoothstep(0, style.holeOpen, u);
-          layerOpacity = 1 - smoothstep(1 - style.handOver, 1, u);
-          view.dest = true;
-        } else {
-          opacity[k] = 1 - smoothstep(style.currentOut[0], style.currentOut[1], u);
-          opacity[k + 1] = smoothstep(style.nextIn[0], style.nextIn[1], u);
-        }
-      }
+    if (reduced) {
+      // Each half of a crossfade passes through the dark, so the text never sits over a frame.
+      const a = clamp(x / litEnd);
+      const textIn = clamp((a - 0.5) / 0.5) * (1 - clamp(u / 0.5));
+      this.root.style.opacity = "";
+      this.bg.style.opacity = a < 0.5 ? (a / 0.5).toFixed(4) : "";
+      this.stack.style.opacity = textIn < 1 ? textIn.toFixed(4) : "";
+      this.lines.forEach((line) => line.words.forEach((word) => this.light(word, 1)));
+      this.rule.style.visibility = "hidden";
+      this.edges.classList.remove("is-on");
+      this.showWhy(Boolean(interlude.note) && a >= 1 && u <= 0);
+      return { source: a < 0.5, dest: u > 0.5, clip: null, destOpacity: clamp((u - 0.5) / 0.5) };
     }
 
-    layout.lines.forEach((line, index) => {
-      const t = transforms[index];
-      const visible = opacity[index] > 0.002;
-      line.group.style.display = visible ? "" : "none";
-      if (!visible) return;
-      line.group.setAttribute("transform", `translate(${t.x.toFixed(3)} ${t.y.toFixed(3)}) scale(${t.s.toFixed(6)})`);
-      line.group.setAttribute("opacity", opacity[index].toFixed(4));
+    const textFrom = c.darken + c.appear;
+    this.root.style.opacity = "";
+    this.bg.style.opacity = x < c.darken ? clamp(x / c.darken).toFixed(4) : "";
+    const textIn = clamp((x - c.darken) / c.appear);
+    this.stack.style.opacity = textIn < 1 ? textIn.toFixed(4) : "";
+
+    this.lines.forEach((line, k) => {
+      const from = k === 0 ? textFrom : k * c.perLine;
+      const to = k * c.perLine + c.perLine * c.lightShare;
+      const t = clamp((x - from) / Math.max(1e-6, to - from));
+      const m = line.words.length;
+      line.words.forEach((word, j) => this.light(word, clamp(t * m - j)));
     });
+    const allLit = x >= (n - 1) * c.perLine + c.perLine * c.lightShare - 1e-4;
 
-    const lastLine = layout.lines[n - 1];
-    if (hole > 0.001) {
-      const t = transforms[n - 1];
-      layout.maskGroup.setAttribute("transform", `translate(${t.x.toFixed(3)} ${t.y.toFixed(3)}) scale(${t.s.toFixed(6)})`);
-      const level = Math.round((1 - hole) * 255);
-      layout.maskFocus.setAttribute("fill", `rgb(${level}, ${level}, ${level})`);
-      this.bg.setAttribute("mask", `url(#${this.maskId})`);
-      lastLine.focusSpan.setAttribute("fill-opacity", (1 - hole).toFixed(4));
+    const progress = clamp((x - textFrom) / (litEnd - textFrom));
+    const ruleWidth = this.ruleBox.right - this.ruleBox.left;
+    this.rule.style.visibility = u > 0 ? "hidden" : "";
+    this.fill.style.transform = `scaleX(${progress.toFixed(5)})`;
+    this.tip.style.transform = `translate(${(progress * ruleWidth).toFixed(2)}px, -50%) translateX(-50%)`;
+
+    let clip: string | null = null;
+    if (u > 0) {
+      const e = smoothstep(0, 1, u);
+      const { left, right, y } = this.ruleBox;
+      const top = y * (1 - e);
+      const bottom = (this.height - y) * (1 - e);
+      const l = left * (1 - e);
+      const r = (this.width - right) * (1 - e);
+      clip = `inset(${top.toFixed(2)}px ${r.toFixed(2)}px ${bottom.toFixed(2)}px ${l.toFixed(2)}px)`;
+      this.edges.classList.add("is-on");
+      this.edges.style.opacity = (1 - smoothstep(0.55, 1, u)).toFixed(4);
+      for (const [edge, at] of [
+        [this.edgeTop, top],
+        [this.edgeBottom, this.height - bottom],
+      ] as const) {
+        edge.style.transform = `translate(${l.toFixed(2)}px, ${at.toFixed(2)}px) translateY(-50%)`;
+        edge.style.width = `${(this.width - l - r).toFixed(2)}px`;
+      }
     } else {
-      this.bg.removeAttribute("mask");
-      lastLine.focusSpan.setAttribute("fill-opacity", "1");
+      this.edges.classList.remove("is-on");
     }
-    this.root.style.opacity = layerOpacity < 0.999 ? layerOpacity.toFixed(4) : "";
-    const readable =
-      Boolean(interlude.note) &&
-      layerOpacity >= 0.98 &&
-      hole <= 0.02 &&
-      opacity.every((value, index) => (index === n - 1 ? value >= 0.98 : value <= 0.02));
-    this.placeWhy(lastLine, transforms[n - 1], readable);
-    return view;
+
+    this.showWhy(Boolean(interlude.note) && allLit && u <= 0);
+    return { source: x < c.darken, dest: u > 0, clip, destOpacity: 1 };
   }
 }
