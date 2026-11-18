@@ -155,12 +155,7 @@ export function buildSeamMasks(
   };
 }
 
-/**
- * Organic portrait mask. An oval holds the crown, face and shoulders.
- * The photo's black field is fully transparent before any straight edge,
- * and the fade into the name starts at `fadeStart`.
- */
-export function buildPortraitMask(input: {
+export type PortraitMaskInput = {
   top: number;
   height: number;
   fadeStart: number;
@@ -174,34 +169,52 @@ export function buildPortraitMask(input: {
   sideSoft: number;
   topClear: number;
   topSoft: number;
-}) {
+};
+
+/**
+ * Organic portrait mask. An oval holds the crown, face and shoulders.
+ * The photo's black field is fully transparent before any straight edge,
+ * and the fade into the name starts at `fadeStart`.
+ * Alpha is opaque where the portrait shows, so the same canvas can mask
+ * the photo and thin the grain that sits on top of it.
+ */
+export function paintPortraitMask(canvas: HTMLCanvasElement, input: PortraitMaskInput) {
   const { top, height, fadeStart, fadeEnd, cx, cy, rx, ry, solid, sideClear, sideSoft, topClear, topSoft } =
     input;
-  if (height < 2 || rx <= 0 || ry <= 0) return "";
+  if (height < 2 || rx <= 0 || ry <= 0) {
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas;
+  }
   const maskH = Math.max(2, Math.min(480, Math.round(height)));
   const maskW = maskH;
-
-  return canvasUrl(maskW, maskH, (data) => {
-    for (let py = 0; py < maskH; py += 1) {
-      const ny = (py + 0.5) / maskH;
-      const y = top + ny * height;
-      const fade = y <= fadeStart ? 1 : y >= fadeEnd ? 0 : 1 - smoothstep(fadeStart, fadeEnd, y);
-      const ey = Math.abs(ny - cy) / ry;
-      for (let px = 0; px < maskW; px += 1) {
-        const nx = (px + 0.5) / maskW;
-        const er = Math.hypot(Math.abs(nx - cx) / rx, ey);
-        const blob = 1 - smoothstep(solid, 1, er);
-        const side =
-          smoothstep(sideClear, sideClear + sideSoft, nx) *
-          smoothstep(sideClear, sideClear + sideSoft, 1 - nx);
-        const crown = smoothstep(topClear, topClear + topSoft, ny);
-        const alpha = Math.round(Math.min(1, Math.max(0, blob * side * crown * fade)) * 255);
-        const index = (py * maskW + px) * 4;
-        data[index] = 255;
-        data[index + 1] = 255;
-        data[index + 2] = 255;
-        data[index + 3] = alpha;
-      }
+  canvas.width = maskW;
+  canvas.height = maskH;
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+  const image = context.createImageData(maskW, maskH);
+  const data = image.data;
+  for (let py = 0; py < maskH; py += 1) {
+    const ny = (py + 0.5) / maskH;
+    const y = top + ny * height;
+    const fade = y <= fadeStart ? 1 : y >= fadeEnd ? 0 : 1 - smoothstep(fadeStart, fadeEnd, y);
+    const ey = Math.abs(ny - cy) / ry;
+    for (let px = 0; px < maskW; px += 1) {
+      const nx = (px + 0.5) / maskW;
+      const er = Math.hypot(Math.abs(nx - cx) / rx, ey);
+      const blob = 1 - smoothstep(solid, 1, er);
+      const side =
+        smoothstep(sideClear, sideClear + sideSoft, nx) *
+        smoothstep(sideClear, sideClear + sideSoft, 1 - nx);
+      const crown = smoothstep(topClear, topClear + topSoft, ny);
+      const alpha = Math.round(Math.min(1, Math.max(0, blob * side * crown * fade)) * 255);
+      const index = (py * maskW + px) * 4;
+      data[index] = 255;
+      data[index + 1] = 255;
+      data[index + 2] = 255;
+      data[index + 3] = alpha;
     }
-  });
+  }
+  context.putImageData(image, 0, 0);
+  return canvas;
 }

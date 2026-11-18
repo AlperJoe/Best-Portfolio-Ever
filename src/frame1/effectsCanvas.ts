@@ -20,8 +20,20 @@ export type EffectsOptions = {
   beamMouth?: number;
   beamOvershoot?: number;
   beamPool?: number;
-  /** Opacity of the film grain. Covers the whole frame, including the portrait. */
+  /** Opacity of the film grain over the frame. */
   grainAlpha?: number;
+  /**
+   * Softens the grain on the portrait. `keep` is the share that remains
+   * (0 removes it). The canvas alpha matches the portrait mask.
+   */
+  portraitCut?: {
+    canvas: HTMLCanvasElement | null;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    keep: number;
+  } | null;
 };
 
 export type EffectsFrame = {
@@ -299,6 +311,19 @@ export class FrameEffects {
       context.fillStyle = pattern;
       context.fillRect(-offsetX, -offsetY, width, height);
     }
+    context.restore();
+    this.cutPortraitGrain(context);
+  }
+
+  /** Leaves at most `keep` of the grain on the portrait. The vignette is drawn after this. */
+  private cutPortraitGrain(context: CanvasRenderingContext2D) {
+    const cut = this.options.portraitCut;
+    if (!cut?.canvas || cut.keep >= 0.999 || cut.w < 2 || cut.h < 2) return;
+    if (cut.canvas.width < 2) return;
+    context.save();
+    context.globalCompositeOperation = "destination-out";
+    context.globalAlpha = Math.min(1, Math.max(0, 1 - cut.keep));
+    context.drawImage(cut.canvas, cut.x, cut.y, cut.w, cut.h);
     context.restore();
   }
 

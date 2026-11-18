@@ -18,8 +18,8 @@ export const frame1Config = {
     buas: "https://www.buas.nl/en",
     bilkent: "https://www.bilkent.edu.tr",
   },
-  /** Matte grade so the portrait matches the campus photos. */
-  portraitGrade: "contrast(0.9) saturate(0.8) brightness(1.04)",
+  /** The photo's own contrast, with a little more saturation. */
+  portraitGrade: "saturate(1.08)",
   /** Focus ring used by every keyboard-focusable control. */
   focus: "#F2EEE6",
   /** object-position kept for the portrait asset. The face is placed in layout. */
@@ -32,11 +32,11 @@ export const frame1Config = {
   shadeAmount: 0.16,
   /** The portrait is shaded less so the face stays clear. */
   portraitShadeAmount: 0.05,
-  /** The seam light band is off. The portrait keeps a wide, faint edge wash. */
+  /** The seam light band is off. */
   edgeGlowReach: 0.22,
   edgeGlowStrength: 0,
-  /** Faint two-sided wash on the portrait. Wide enough that it is not a line. */
-  portraitEdgeStrength: 0.07,
+  /** Two-sided edge light on the portrait stays off. */
+  portraitEdgeStrength: 0,
   /** Largest shift of the focal lights toward the cursor, as a fraction of frame width. */
   cursorLightShift: 0,
   /** Largest shift of the campus photos away from the cursor, in pixels. */
@@ -77,31 +77,14 @@ export const frame1Config = {
     bilkentShade: 0.8,
   },
   campus: {
-    pad: 28,
-    /** The roof may sit below the top edge so the landmarks land under the text. */
-    coverTop: false,
     /** Soft fade at the top of each photo, as a fraction of the frame height. */
     fade: 0.1,
-    buas: {
-      scale: 1,
-      maxZoom: 2.3,
-      naturalWidth: 480,
-      anchorX: 0.52,
-      anchorY: 0.2,
-      placeX: 0.11,
-      placeY: 0.72,
-      aspect: 480 / 480,
-    },
-    bilkent: {
-      scale: 1.05,
-      maxZoom: 2.5,
-      naturalWidth: 689,
-      anchorX: 0.88,
-      anchorY: 0.42,
-      placeX: 0.88,
-      placeY: 0.66,
-      aspect: 689 / 445,
-    },
+    /**
+     * Each photo covers its triangle's box: this share of the frame width,
+     * and the full frame height. object-fit cover, anchored to the bottom
+     * corner so cropping takes sky.
+     */
+    boxWidth: 0.5,
   },
   /**
    * A small glow centered on the apex, above the crown.
@@ -160,7 +143,7 @@ export const frame1Config = {
     /** Bottom of the line under the name, as a fraction of the frame height. */
     bottom: 0.06,
     /** Widest the block may be, as a fraction of the frame width. */
-    maxWidth: 0.4,
+    maxWidth: 0.44,
     /** Clear space kept between this block and each seam. */
     seamGap: 20,
     /** Clear space kept between this block and a side block. */
@@ -284,13 +267,28 @@ export const frame1Config = {
     },
   ],
   assets: {
-    buasCampus: `${import.meta.env.BASE_URL}assets/buas-campus.jpg`,
+    buasCampus: `${import.meta.env.BASE_URL}assets/frame1/buas-campus.jpg`,
     buasLogo: `${import.meta.env.BASE_URL}assets/buas-logo.png`,
-    bilkentCampus: `${import.meta.env.BASE_URL}assets/bilkent-campus.jpg`,
+    bilkentCampus: `${import.meta.env.BASE_URL}assets/frame1/bilkent-campus.jpg`,
     bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
     portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
     research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
+  },
+  scrollCue: {
+    text: "Scroll to continue",
+    /** Inset from the right edge and the bottom edge, as fractions of the frame. */
+    right: 0.04,
+    bottom: 0.04,
+    size: 13,
+    weight: 500,
+    opacity: 0.55,
+    /** How far the arrow nudges, in pixels, once each interval. */
+    nudge: 3,
+    /** Seconds between nudges. */
+    every: 4,
+    /** Fade after the first transition, in seconds. */
+    fade: 0.6,
   },
   opening: {
     bilkent: 160,
@@ -300,11 +298,13 @@ export const frame1Config = {
     name: 2020,
   },
   effects: {
-    PORTRAIT_EDGE_LIGHT: true,
+    PORTRAIT_EDGE_LIGHT: false,
     OPENING_SEQUENCE: true,
     CURSOR_REACTION: true,
     FILM_GRAIN: true,
   },
-  /** Strength of the film grain drawn over the whole frame, including the portrait. */
+  /** Strength of the film grain over the frame. The portrait keeps only a share of it. */
   grainAlpha: 0.11,
+  /** Share of the film grain kept on the portrait. Half strength at most. */
+  grainOnPortrait: 0.5,
 };

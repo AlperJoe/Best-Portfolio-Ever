@@ -1,7 +1,7 @@
 import { memo } from "react";
 import type { CSSProperties } from "react";
 import { frame3 } from "./config";
-import { agentColor, level, type AgentId, type Cell, type Door } from "./data";
+import { agentColor, level, run, type AgentId, type Cell, type Door } from "./data";
 import type { Pose } from "./replay";
 
 const doors = [...level.doors].sort((a, b) => a.id - b.id);
@@ -72,7 +72,7 @@ const LevelStatic = memo(function LevelStatic() {
   );
 });
 
-function DoorShape({ door, open }: { door: Door; open: number }) {
+function doorBox(door: Door) {
   const xs = door.cells.map((cell) => cell[0]);
   const ys = door.cells.map((cell) => cell[1]);
   const x = Math.min(...xs);
@@ -80,13 +80,24 @@ function DoorShape({ door, open }: { door: Door; open: number }) {
   const w = Math.max(...xs) - x + 1;
   const h = Math.max(...ys) - y + 1;
   const pad = frame3.doorPad;
-  const color = agentColor(door.openedBy);
-  const innerX = x + pad;
-  const innerY = y + pad;
-  const innerW = w - pad * 2;
-  const innerH = h - pad * 2;
+  return {
+    x,
+    y,
+    w,
+    h,
+    innerX: x + pad,
+    innerY: y + pad,
+    innerW: w - pad * 2,
+    innerH: h - pad * 2,
+  };
+}
 
-  if (open <= 0.05) {
+function DoorShape({ door, open }: { door: Door; open: number }) {
+  const box = doorBox(door);
+  const color = agentColor(door.openedBy);
+  const { innerX, innerY, innerW, innerH, w } = box;
+
+  if (open <= 0) {
     const count = Math.max(3, Math.round(w * 4));
     const bars = [];
     for (let index = 0; index < count; index += 1) {
@@ -113,38 +124,133 @@ function DoorShape({ door, open }: { door: Door; open: number }) {
   }
 
   const ratio = Math.max(0, Math.min(1, open / level.doorOpenSteps));
-  const horizontal = w >= h;
-  const thickness = frame3.doorOpenBar;
-  const bar = horizontal ? (
-    <rect
-      x={innerX}
-      y={y + h / 2 - thickness / 2}
-      width={innerW * ratio}
-      height={thickness}
-      fill={color}
-    />
-  ) : (
-    <rect
-      x={x + w / 2 - thickness / 2}
-      y={innerY}
-      width={thickness}
-      height={innerH * ratio}
-      fill={color}
+  const perimeter = 2 * (innerW + innerH);
+  const outline = `M ${innerX} ${innerY} H ${innerX + innerW} V ${innerY + innerH} H ${innerX} V ${innerY}`;
+
+  return (
+    <path
+      d={outline}
+      fill="none"
+      stroke={color}
+      strokeWidth={frame3.doorOutline}
+      vectorEffect="non-scaling-stroke"
+      strokeLinecap="butt"
+      strokeLinejoin="miter"
+      pathLength={perimeter}
+      strokeDasharray={`${perimeter * ratio} ${perimeter}`}
     />
   );
+}
+
+function sameCell(a: Cell, b: Cell) {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+function Footprints({ pose }: { pose: Pose }) {
+  const frames = run.frames;
+  const marks: { key: string; x: number; y: number; age: number; color: string }[] = [];
+  for (const agent of ["A", "B"] as const) {
+    const color = agentColor(agent);
+    const placed = new Map<string, number>();
+    const remember = (cell: Cell, age: number) => {
+      if (age <= 0 || age >= frame3.footprintSteps) return;
+      const key = `${agent}:${cell[0]},${cell[1]}`;
+      const prev = placed.get(key);
+      if (prev !== undefined && prev <= age) return;
+      placed.set(key, age);
+    };
+    const from = frames[pose.step]?.[agent];
+    const to = frames[pose.step + 1]?.[agent];
+    if (from && to && !sameCell(from, to)) remember(from, pose.along);
+    for (let back = 1; back <= frame3.footprintSteps; back += 1) {
+      const index = pose.step - back;
+      if (index < 0) break;
+      const cell = frames[index][agent];
+      const next = frames[index + 1]?.[agent];
+      if (!next || sameCell(cell, next)) continue;
+      remember(cell, back + pose.along);
+    }
+    for (const [key, age] of placed) {
+      const [, coords] = key.split(":");
+      const [x, y] = coords.split(",").map(Number);
+      marks.push({ key, x, y, age, color });
+    }
+  }
 
   return (
     <g>
-      <rect
-        x={innerX}
-        y={innerY}
-        width={innerW}
-        height={innerH}
-        fill="none"
-        stroke={color}
-        strokeWidth={frame3.doorBar}
+      {marks.map((mark) => {
+        const fade = (1 - mark.age / frame3.footprintSteps) * frame3.footprintAlpha * pose.opacity;
+        return (
+          <g key={mark.key} fill={mark.color} opacity={fade}>
+            <ellipse cx={mark.x + 0.38} cy={mark.y + 0.58} rx={0.1} ry={0.065} />
+            <ellipse cx={mark.x + 0.62} cy={mark.y + 0.68} rx={0.1} ry={0.065} />
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+function PlateLinks({ pose }: { pose: Pose }) {
+  const frames = run.frames;
+  const now = pose.step + pose.along;
+  const links: { key: string; x1: number; y1: number; x2: number; y2: number; color: string; opacity: number }[] = [];
+  for (const plate of level.plates) {
+    const agent = plate.usedBy;
+    let newest = -1;
+    for (let index = 1; index < frames.length; index += 1) {
+      const cell = frames[index][agent];
+      const prev = frames[index - 1][agent];
+      if (sameCell(cell, plate.pos) && !sameCell(prev, plate.pos)) newest = index;
+      const age = now - index;
+      if (newest === index && age >= 0 && age <= frame3.plateLinkSteps) {
+        const door = level.doors.find((item) => item.id === plate.opensDoor);
+        if (!door) continue;
+        const box = doorBox(door);
+        links.push({
+          key: `${plate.id}-${index}`,
+          x1: plate.pos[0] + 0.5,
+          y1: plate.pos[1] + 0.5,
+          x2: box.x + box.w / 2,
+          y2: box.y + box.h / 2,
+          color: agentColor(agent),
+          opacity: (1 - age / frame3.plateLinkSteps) * pose.opacity,
+        });
+      }
+    }
+  }
+
+  return (
+    <g fill="none" strokeLinecap="round">
+      {links.map((link) => (
+        <line
+          key={link.key}
+          x1={link.x1}
+          y1={link.y1}
+          x2={link.x2}
+          y2={link.y2}
+          stroke={link.color}
+          strokeWidth={frame3.plateLink}
+          vectorEffect="non-scaling-stroke"
+          opacity={link.opacity}
+        />
+      ))}
+    </g>
+  );
+}
+
+function ChestSparkle({ pose }: { pose: Pose }) {
+  if (pose.sparkle < 0) return null;
+  const [x, y] = level.treasure;
+  const alpha = Math.sin(pose.sparkle * Math.PI) * pose.opacity;
+  const scale = 0.85 + pose.sparkle * 0.2;
+  return (
+    <g opacity={alpha} transform={`translate(${x + 0.5} ${y + 0.36}) scale(${scale})`}>
+      <path
+        d="M0 -0.22 L0.05 -0.05 L0.22 0 L0.05 0.05 L0 0.22 L-0.05 0.05 L-0.22 0 L-0.05 -0.05 Z"
+        fill={frame3.chestHighlight}
       />
-      {bar}
     </g>
   );
 }
@@ -180,7 +286,15 @@ export function noteStyle(x: number, y: number, color: string): CSSProperties {
   };
 }
 
-export function LevelMap({ pose, watch }: { pose: Pose; watch: AgentId | null }) {
+export function LevelMap({
+  pose,
+  watch,
+  motion,
+}: {
+  pose: Pose;
+  watch: AgentId | null;
+  motion: boolean;
+}) {
   const watched = watch === "A" ? pose.a : watch === "B" ? pose.b : null;
   const box = watched ? visionOrigin(watched[0], watched[1], level.sensorRange) : null;
   const color = watch ? agentColor(watch) : frame3.agentA;
@@ -193,11 +307,14 @@ export function LevelMap({ pose, watch }: { pose: Pose; watch: AgentId | null })
       aria-hidden="true"
     >
       <LevelStatic />
+      {motion ? <Footprints pose={pose} /> : null}
       <g shapeRendering="geometricPrecision" opacity={pose.opacity}>
         {doors.map((door, index) => (
           <DoorShape key={door.id} door={door} open={pose.doors[index] ?? 0} />
         ))}
       </g>
+      {motion ? <PlateLinks pose={pose} /> : null}
+      {motion ? <ChestSparkle pose={pose} /> : null}
       {box && (
         <rect
           x={box.x}

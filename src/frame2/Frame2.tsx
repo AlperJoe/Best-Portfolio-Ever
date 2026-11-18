@@ -54,6 +54,53 @@ function cardBox(points: CardPoint[], image: HeroPlacement): CSSProperties {
   };
 }
 
+function seenMark(points: CardPoint[], image: HeroPlacement): CSSProperties {
+  const xs = points.map((point) => point[0]);
+  const ys = points.map((point) => point[1]);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const local = points.map(([x, y]) => ({
+    x: (x - minX) * image.width,
+    y: (y - minY) * image.height,
+  }));
+  let edge = 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < local.length; index += 1) {
+    const a = local[index];
+    const b = local[(index + 1) % local.length];
+    const y = (a.y + b.y) / 2;
+    if (y < best) {
+      best = y;
+      edge = index;
+    }
+  }
+  const a = local[edge];
+  const b = local[(edge + 1) % local.length];
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const cx = local.reduce((sum, point) => sum + point.x, 0) / local.length;
+  const cy = local.reduce((sum, point) => sum + point.y, 0) / local.length;
+  const dx = cx - mx;
+  const dy = cy - my;
+  const span = Math.hypot(dx, dy) || 1;
+  const inset = frame2Config.line.mark.inset;
+  const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+  return {
+    left: `${mx + (dx / span) * inset}px`,
+    top: `${my + (dy / span) * inset}px`,
+    width: `${frame2Config.line.mark.length}px`,
+    height: `${frame2Config.line.mark.thickness}px`,
+    transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+  };
+}
+
+/** A thin curve that ends in a small downward arrowhead. One path, so it draws as one stroke. */
+function arrowPath(width: number, height: number) {
+  const x = width / 2;
+  const tip = height - 2;
+  return `M ${x} 1 C ${x - width * 0.08} ${height * 0.38}, ${x + width * 0.16} ${height * 0.62}, ${x} ${tip - 8} l -6 -6 l 6 6 l 6 -6`;
+}
+
 function cardBounds(points: CardPoint[], image: HeroPlacement) {
   const xs = points.map((point) => point[0]);
   const ys = points.map((point) => point[1]);
@@ -73,7 +120,7 @@ export function Frame2() {
   const reduced = usePrefersReducedMotion();
   const frameRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<HTMLParagraphElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
   const emberRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -91,10 +138,11 @@ export function Frame2() {
   const [open, setOpen] = useState<OpenCard | null>(null);
   const [openCardHeight, setOpenCardHeight] = useState(0);
   const [inView, setInView] = useState(false);
-  const [lineHeld, setLineHeld] = useState(false);
-  const lineOn = inView && !lineHeld;
+  const [seen, setSeen] = useState<Frame2CardId[]>([]);
+  const [arrowKey, setArrowKey] = useState(0);
+  const lineOn = inView && !open;
   const [introFit, setIntroFit] = useState(1);
-  const [lineBox, setLineBox] = useState<{ left: number; top: number } | null>(null);
+  const [lineBox, setLineBox] = useState<{ left: number; top: number; width: number } | null>(null);
   placeRef.current = place;
 
   useLayoutEffect(() => {
@@ -160,9 +208,12 @@ export function Frame2() {
 
       setIntroFit((current) => (Math.abs(current - fit) < 0.001 ? current : fit));
       setLineBox((current) =>
-        current && Math.abs(current.left - left) < 0.5 && Math.abs(current.top - top) < 0.5
+        current &&
+        Math.abs(current.left - left) < 0.5 &&
+        Math.abs(current.top - top) < 0.5 &&
+        Math.abs(current.width - lineWidth) < 0.5
           ? current
-          : { left, top },
+          : { left, top, width: lineWidth },
       );
     };
 
@@ -176,7 +227,7 @@ export function Frame2() {
     return () => {
       cancelled = true;
     };
-  }, [place]);
+  }, [place, seen.length]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -334,9 +385,7 @@ export function Frame2() {
     if (!frame) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const visible = Boolean(entry?.isIntersecting);
-        setInView(visible);
-        if (!visible) setLineHeld(false);
+        setInView(Boolean(entry?.isIntersecting));
       },
       { threshold: frame2Config.line.viewShare },
     );
@@ -344,9 +393,11 @@ export function Frame2() {
     return () => observer.disconnect();
   }, []);
 
-  function dismissLine() {
-    setLineHeld(true);
-  }
+  const lineWasOn = useRef(false);
+  useLayoutEffect(() => {
+    if (lineOn && !lineWasOn.current) setArrowKey((key) => key + 1);
+    lineWasOn.current = lineOn;
+  }, [lineOn]);
 
   function requestClose() {
     setOpen((current) => {
@@ -500,7 +551,7 @@ export function Frame2() {
     "--fill-blur": `${frame2Config.image.fillBlur}px`,
     "--fill-dark": String(frame2Config.image.fillDark),
     "--open-blur": `${frame2Config.image.openBlur}px`,
-    "--open-brightness": String(frame2Config.image.openBrightness),
+    "--open-veil": motion.veil,
     "--dim-in": `${motion.openTime}s`,
     "--dim-out": `${motion.closeTime}s`,
     "--open-ease": motion.openEase,
@@ -518,9 +569,9 @@ export function Frame2() {
     "--open-body-opacity": String(motion.bodyOpacity),
     "--close-size": `${motion.close}px`,
     "--open-pad": `${motion.pad}px`,
+    "--open-gap": `${motion.gap}px`,
+    "--open-picture": `${frameHeight * motion.picture}px`,
     "--perspective": `${motion.perspective}px`,
-    "--fire-core": motion.fireCore,
-    "--fire-mid": motion.fire,
     "--hero-position": `${frame2Config.image.positionX * 100}% ${frame2Config.image.positionY * 100}%`,
     "--intro-left": `${frame2Config.intro.left * 100}%`,
     "--intro-top": `${frame2Config.intro.top * 100}%`,
@@ -550,9 +601,23 @@ export function Frame2() {
     "--line-shadow": frame2Config.line.shadow,
     "--line-shine": `${frame2Config.line.shine}s`,
     "--line-fade": `${frame2Config.line.fade}s`,
+    "--line-help-size": `${frame2Config.line.helperSize}px`,
+    "--line-help-weight": String(frame2Config.line.helperWeight),
+    "--line-help-opacity": String(frame2Config.line.helperOpacity),
+    "--line-help-gap": `${frame2Config.line.helperGap}px`,
+    "--arrow-draw": `${frame2Config.line.arrow.draw}s`,
+    "--arrow-length": `${frame2Config.line.arrow.length}px`,
+    "--arrow-width": `${frame2Config.line.arrow.width}px`,
   } as CSSProperties;
 
   const dimmed = !!open && (open.pose === "open" || (reduced && open.pose === "shut"));
+  const lineCopy =
+    seen.length === 0
+      ? frame2Config.line.before
+      : seen.length < frame2Config.cards.items.length
+        ? frame2Config.line.again
+        : frame2Config.line.done;
+  const showHelper = seen.length === 0;
   const sectionClass = [
     "frame2",
     dimmed ? "is-dim" : "",
@@ -593,10 +658,14 @@ export function Frame2() {
             }}
             onClick={(event) => {
               openerRef.current = event.currentTarget;
-              dismissLine();
+              setSeen((current) => (current.includes(card.id) ? current : [...current, card.id]));
               setOpen({ id: card.id, pose: "from" });
             }}
-          />
+          >
+            {seen.includes(card.id) ? (
+              <span className="frame2-seen" style={seenMark(card.points, place)} />
+            ) : null}
+          </button>
         ))}
         {middle ? (
           <div
@@ -642,15 +711,28 @@ export function Frame2() {
 
       <canvas ref={emberRef} className="frame2-embers" aria-hidden="true" />
       <canvas ref={grainRef} className="frame2-grain" aria-hidden="true" />
+      <div className="frame2-veil" aria-hidden="true" />
 
-      <p
+      <div
         ref={lineRef}
         className={lineOn ? "frame2-line" : "frame2-line is-hidden"}
         aria-hidden={lineOn ? undefined : true}
         style={lineBox ? { left: `${lineBox.left}px`, top: `${lineBox.top}px` } : { visibility: "hidden" }}
       >
-        <span className="frame2-line-text">{frame2Config.line.text}</span>
-      </p>
+        <p className="frame2-line-text">{lineCopy}</p>
+        {showHelper ? <p className="frame2-line-help">{frame2Config.line.helper}</p> : null}
+        <div className="frame2-arrow-space" />
+        {lineBox && lineBox.width > 0 ? (
+          <svg
+            key={arrowKey}
+            className="frame2-arrow"
+            viewBox={`0 0 ${lineBox.width} ${frame2Config.line.arrow.length}`}
+            aria-hidden="true"
+          >
+            <path d={arrowPath(lineBox.width, frame2Config.line.arrow.length)} pathLength={1} />
+          </svg>
+        ) : null}
+      </div>
 
       {open && active ? (
         <div
@@ -659,7 +741,6 @@ export function Frame2() {
             if (event.target === event.currentTarget) requestClose();
           }}
         >
-          <div className="frame2-fire" />
           <OpenCardView
             card={active}
             dx={atHand ? handOffset.dx : 0}
