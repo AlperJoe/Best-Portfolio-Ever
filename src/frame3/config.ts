@@ -103,8 +103,17 @@ export const frame3 = {
   visionStroke: 0.065,
   doorPad: 0.08,
   doorBar: 0.07,
-  /** Thickness of the single bar that shows an open door's remaining time. */
-  doorOpenBar: 0.045,
+  /** Open door outline, in screen pixels. It drains as the open steps run out. */
+  doorOutline: 2,
+  /** Footprints fade across this many steps after an agent leaves a tile. */
+  footprintSteps: 6,
+  footprintAlpha: 0.32,
+  /** How long the plate-to-door line stays up, in steps. */
+  plateLinkSteps: 1.5,
+  /** Plate-to-door line thickness, in screen pixels. */
+  plateLink: 1.5,
+  /** One chest sparkle at the start of the hold, before the run fades. */
+  sparkleSeconds: 0.7,
 
   white90: "rgba(255, 255, 255, 0.9)",
   white60: "rgba(255, 255, 255, 0.6)",

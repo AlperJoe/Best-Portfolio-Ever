@@ -6,6 +6,10 @@ export type Pose = {
   doors: number[];
   opacity: number;
   step: number;
+  /** 0 on this step's frame, 1 as the agents arrive at the next one. */
+  along: number;
+  /** 0 at the start of the chest sparkle, 1 at the end. -1 while it is off. */
+  sparkle: number;
 };
 
 function mix(from: number, to: number, t: number) {
@@ -33,11 +37,12 @@ export function poseAt(
   stepsPerSecond: number,
   holdSeconds: number,
   fadeSeconds: number,
+  sparkleSeconds: number,
 ): { pose: Pose; finished: boolean } {
   const first = frames[0];
   if (!first) {
     return {
-      pose: { a: [0, 0], b: [0, 0], doors: [], opacity: 1, step: 0 },
+      pose: { a: [0, 0], b: [0, 0], doors: [], opacity: 1, step: 0, along: 0, sparkle: -1 },
       finished: true,
     };
   }
@@ -49,9 +54,14 @@ export function poseAt(
   const last = frames[frames.length - 1];
 
   if (time >= moving || frames.length < 2) {
-    const intoFade = time - moving - holdSeconds;
+    const intoHold = time - moving;
+    const intoFade = intoHold - holdSeconds;
     const faded = fadeSeconds <= 0 ? 1 : Math.min(1, Math.max(0, intoFade / fadeSeconds));
     const opacity = time < moving + holdSeconds ? 1 : 1 - faded;
+    const sparkle =
+      sparkleSeconds > 0 && intoHold >= 0 && intoHold <= sparkleSeconds && intoFade < 0
+        ? intoHold / sparkleSeconds
+        : -1;
     return {
       pose: {
         a: [last.A[0], last.A[1]],
@@ -59,6 +69,8 @@ export function poseAt(
         doors: last.doorsOpenFor.slice(),
         opacity,
         step: frames.length - 1,
+        along: 0,
+        sparkle,
       },
       finished,
     };
@@ -78,6 +90,8 @@ export function poseAt(
       doors: from.doorsOpenFor.map((value, door) => mix(value, to.doorsOpenFor[door] ?? 0, t)),
       opacity: 1,
       step: index,
+      along: t,
+      sparkle: -1,
     },
     finished,
   };

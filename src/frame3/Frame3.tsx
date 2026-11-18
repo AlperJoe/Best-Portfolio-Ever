@@ -32,7 +32,14 @@ const NOTE =
 type PanelPhase = "closed" | "opening" | "open" | "closing";
 
 function restPose(): Pose {
-  return poseAt(run.frames, 0, frame3.stepsPerSecond, frame3.holdSeconds, frame3.fadeSeconds).pose;
+  return poseAt(
+    run.frames,
+    0,
+    frame3.stepsPerSecond,
+    frame3.holdSeconds,
+    frame3.fadeSeconds,
+    frame3.sparkleSeconds,
+  ).pose;
 }
 
 function AgentGlyph() {
@@ -213,6 +220,7 @@ export function Frame3() {
         frame3.stepsPerSecond,
         frame3.holdSeconds,
         frame3.fadeSeconds,
+        frame3.sparkleSeconds,
       );
       if (reducedNow && onceRef.current && next.finished) {
         onceRef.current = false;
@@ -416,7 +424,7 @@ export function Frame3() {
 
       <div className="frame3-stage">
         <div className="frame3-map" id="frame3-main-image" ref={mapRef}>
-          <LevelMap pose={pose} watch={watch} />
+          <LevelMap pose={pose} watch={watch} motion={!reduced} />
           <AgentButton
             id="A"
             label="Agent A"
