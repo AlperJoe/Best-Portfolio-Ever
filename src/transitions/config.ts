@@ -2,7 +2,10 @@ import { frame5 } from "../frame5/config";
 import { frameOrder, type FrameId } from "../frameOrder";
 import type { Bezier } from "./math";
 
+/** The wagon pushes. */
 export type TransitionVariant = "a" | "b" | "c";
+/** Every variant the stage understands. d is the scroll-driven one with text interludes. */
+export type StageVariant = TransitionVariant | "d";
 
 export type PaletteBlob = {
   /** Center as a fraction of the screen. */
@@ -503,8 +506,43 @@ export function frameAt(index: number) {
   return transitionConfig.frames[frameOrder[index]];
 }
 
-export function readVariant(search = window.location.search): TransitionVariant {
+/**
+ * Variant d. No push: one scroll position runs from the start of Frame 1 to
+ * Frame 5, through the Frame 1 opening and the text interludes, and every
+ * bit of input moves it by a matching amount. Distances are in screen heights.
+ * The interlude copy lives in interludes.ts, the Frame 1 opening in frame1/config.ts.
+ */
+export const scrollConfig = {
+  /** After arriving at a frame, scroll input is ignored this long, so a fast flick cannot skip it. */
+  arrivalHoldMs: 400,
+  /** Scroll distance of each interlude line, in screen heights. */
+  perLine: 1,
+  /** Scroll distance over which an interlude fades in over the frame being left. */
+  enter: 0.45,
+  /** Scroll distance of a pair without an interlude, which crossfades through the dark. */
+  plain: 1,
+  /** Screen heights moved per pixel of wheel or touch input. 1 means one screen per screen of scroll. */
+  scrollScale: 1,
+  /** Space, Page Down and the arrow keys glide to the next stop over this long. */
+  keyMs: 500,
+  keyCurve: [0.45, 0, 0.25, 1] as Bezier,
+  /** A station click or Back to the beginning fades through black over this long, each way. */
+  jumpMs: 260,
+  /** Show the track at the right edge. Its carriage follows the scroll. */
+  showTrack: true,
+  /** With reduced motion, each stop crossfades to the next. */
+  reduced: {
+    ms: 320,
+    /** Scroll pixels that count as one step. */
+    threshold: 24,
+  },
+};
+
+/** Variant d tells Frame 1 its opening progress with this window event: 0 is the start state, 1 the full frame. */
+export const OPENING_EVENT = "tx:opening";
+
+export function readVariant(search = window.location.search): StageVariant {
   const value = new URLSearchParams(search).get("transition")?.toLowerCase();
-  if (value === "a" || value === "b" || value === "c") return value;
+  if (value === "a" || value === "b" || value === "c" || value === "d") return value;
   return transitionConfig.defaultVariant;
 }

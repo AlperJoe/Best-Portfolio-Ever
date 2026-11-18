@@ -6,7 +6,7 @@ export const frame1Config = {
   },
   /** Seam blend band as a fraction of the frame width. */
   blendWidth: 0.2,
-  /** Side focal lights stay off. The crown glow is the only added light. */
+  /** Side focal lights stay off. */
   lightStrength: 0,
   /** Share of the region tone in each side light. The rest is white. */
   lightToneMix: 0.58,
@@ -86,26 +86,15 @@ export const frame1Config = {
      */
     boxWidth: 0.5,
   },
-  /**
-   * A small glow centered on the apex, above the crown.
-   * Opacity is the center. Reach is how far it travels down the frame,
-   * as a fraction of the frame height, and it ends before the crown.
-   */
-  crownGlow: {
-    rgb: "255, 214, 170",
-    opacity: 0.16,
-    reach: 0.04,
-    shift: "-50%",
-  },
   portraitLayout: {
     /** Ceiling on enlargement. */
     maxScale: 1.35,
     naturalWidth: 1024,
     naturalHeight: 1026,
-    /** Top of the crown, as a fraction of the photo. */
-    crownTopY: 0.02,
-    /** Where that crown top sits, as a fraction of the frame height. */
-    crownFrame: 0.06,
+    /** Top of the hair, as a fraction of the photo. */
+    hairTopY: 0.25,
+    /** Where that hair top sits, as a fraction of the frame height. */
+    hairFrame: 0.26,
     /** Bottom of the chin and the top of the shoulders, as fractions of the photo. */
     chinY: 0.68,
     shoulderY: 0.8,
@@ -120,7 +109,7 @@ export const frame1Config = {
     /** How far the fade runs after the top of the name, as a fraction of frame height. */
     fadeSpan: 0.07,
     /**
-     * Soft oval that holds the crown, face and shoulders, and is fully
+     * Soft oval that holds the hair, face and shoulders, and is fully
      * transparent before the photo's straight edges.
      */
     mask: {
@@ -134,7 +123,7 @@ export const frame1Config = {
       sideClear: 0.1,
       /** Width of the fade that follows that clear band, as a share of the photo. */
       sideSoft: 0.16,
-      /** The strip above the crown fades out before the photo's top edge. */
+      /** The strip above the hair fades out before the photo's top edge. */
       topClear: 0,
       topSoft: 0.018,
     },
@@ -271,7 +260,9 @@ export const frame1Config = {
     buasLogo: `${import.meta.env.BASE_URL}assets/buas-logo.png`,
     bilkentCampus: `${import.meta.env.BASE_URL}assets/frame1/bilkent-campus.jpg`,
     bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
-    portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
+    portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait-nocrown.jpg`,
+    /** Shown only if portrait-nocrown.jpg fails to load. */
+    portraitFallback: `${import.meta.env.BASE_URL}assets/frame1/portrait.jpg`,
     research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
     research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
@@ -289,6 +280,40 @@ export const frame1Config = {
     every: 4,
     /** Fade after the first transition, in seconds. */
     fade: 0.6,
+  },
+  /**
+   * Opening driven by the scroll, used only with ?transition=d. It replaces
+   * the timed opening below and the scroll cue.
+   */
+  scrollOpening: {
+    /** Line under the name in the start state. */
+    hint: "Scroll me to know me better.",
+    /** Space between the name and that line, in pixels. */
+    hintGap: 12,
+    /** Scroll distance from the start state to the full frame, in screen heights. */
+    distance: 1.2,
+    /**
+     * Portrait size in the start state, as a multiple of its size in the full
+     * frame. It grows around the top of the hair and rises into the space
+     * above it, and the name moves down with it. It stays smaller when the
+     * name and the line would not fit.
+     */
+    portraitStart: 1.3,
+    /** In the start state the top of the hair stays at least this far below the top edge, as a fraction of the frame height. */
+    startHairMin: 0.06,
+    /**
+     * When each part comes in, as a share of the scroll distance. The hint
+     * fades out over its window, everything else fades in. The portrait
+     * shrinks to its place over its window.
+     */
+    order: [
+      { part: "hint", from: 0, to: 0.3 },
+      { part: "portrait", from: 0, to: 0.62 },
+      { part: "sides", from: 0.14, to: 0.62 },
+      { part: "tagline", from: 0.6, to: 0.8 },
+      { part: "icons", from: 0.68, to: 0.88 },
+      { part: "research", from: 0.78, to: 1 },
+    ] as Array<{ part: "hint" | "portrait" | "sides" | "tagline" | "icons" | "research"; from: number; to: number }>,
   },
   opening: {
     bilkent: 160,

@@ -208,3 +208,43 @@
   will-change: transform;
   pointer-events: none;
 }
+
+/* Variant d: the text interludes and the cover for jumps. */
+.txd-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 36;
+  visibility: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.txd-layer.is-on {
+  visibility: visible;
+}
+
+.txd-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.txd-line {
+  text-rendering: geometricPrecision;
+}
+
+.txd-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.txd-cover.is-on {
+  visibility: visible;
+}
