@@ -7,7 +7,6 @@ import "./Frame5.css";
 
 const A = frame5.endingA;
 const B = frame5.endingB;
-const CREDITS = frame5.credits;
 const OVERLAY = frame5.overlay;
 const ARROWS = frame5.arrows;
 const TICKET = A.hobbies.ticket;
@@ -224,23 +223,50 @@ function HobbyIcon({ id }: { id: HobbyIcon }) {
   );
 }
 
-/** A static hook from under the heading down into the first ticket, drawn like the title arrows. */
-function HobbyArrow() {
-  const { width, height } = A.hobbies.arrow;
-  const { head, headAngle } = ARROWS;
-  const start = { x: 9, y: 1 };
-  const control = { x: 7, y: height - 6 };
-  const end = { x: width - 2, y: height - 7 };
-  const angle = Math.atan2(end.y - control.y, end.x - control.x);
-  const spread = (headAngle * Math.PI) / 180;
-  const wing = (side: number) => {
-    const a = angle + Math.PI + side * spread;
-    return `${(end.x + Math.cos(a) * head).toFixed(2)} ${(end.y + Math.sin(a) * head).toFixed(2)}`;
-  };
+/** A thin, slightly uneven gold stroke. It draws only on hover or keyboard focus. */
+function CtaLine() {
   return (
-    <svg className="frame5-hobby-arrow" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={`M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`} />
-      <path d={`M ${wing(-1)} L ${end.x} ${end.y} L ${wing(1)}`} />
+    <svg className="frame5-cta-line" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">
+      <path
+        vectorEffect="non-scaling-stroke"
+        d="M0.4 5.4 C 14 2.1, 24 6.6, 40 3.5 C 54 1.4, 66 6.5, 82 3.3 C 91 2.1, 96 5.6, 99.6 4.1"
+      />
+    </svg>
+  );
+}
+
+function CtaLabel({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const label = ref.current;
+    const path = label?.querySelector("path");
+    if (!label || !path) return;
+    const sync = () => {
+      const frame = label.closest(".frame5");
+      const scale = frame && frame.clientWidth ? frame.getBoundingClientRect().width / frame.clientWidth : 1;
+      const length = Math.ceil(path.getBoundingClientRect().width / (scale || 1)) + 2;
+      label.style.setProperty("--cta-len", `${length}px`);
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(label);
+    document.fonts?.ready.then(sync);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <span ref={ref} className="frame5-cta-label">
+      {children}
+      <CtaLine />
+    </span>
+  );
+}
+
+/** Small hand-drawn arrow pointing up. It does not animate. */
+function UpArrow() {
+  return (
+    <svg className="frame5-cta-arrow" viewBox="0 0 12 16" width="12" height="16" aria-hidden="true">
+      <path d="M6.15 14.7 C 5.45 10.8, 6.7 6.8, 6 2.15" />
+      <path d="M2.25 5.45 C 3.7 3.55, 5.15 2.45, 6 2.15 C 6.9 2.6, 8.4 3.75, 9.9 5.6" />
     </svg>
   );
 }
@@ -270,8 +296,6 @@ export function Frame5() {
   const frameRef = useRef<HTMLElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
   const linesRef = useRef<HTMLUListElement>(null);
-  const rollRef = useRef<HTMLDivElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -283,7 +307,6 @@ export function Frame5() {
   const [copied, setCopied] = useState(false);
   const [arrowLength, setArrowLength] = useState(ARROWS.minLength);
   const [photoRight, setPhotoRight] = useState(A.photoPlacement === "right");
-  const [rolled, setRolled] = useState(false);
   const [overlay, setOverlay] = useState<OverlayState>(null);
   const [longOpen, setLongOpen] = useState(false);
   const [hot, setHot] = useState<string | null>(null);
@@ -301,41 +324,12 @@ export function Frame5() {
     return () => window.clearTimeout(id);
   }, [copied]);
 
-  useEffect(() => {
-    if (!shown) setRolled(false);
-  }, [shown]);
-
   const layout = useCallback(() => {
     const frame = frameRef.current;
     if (!frame) return;
     const width = frame.clientWidth;
-    const height = frame.clientHeight;
 
     setArrowLength(Math.round(Math.min(ARROWS.maxLength, Math.max(ARROWS.minLength, width * ARROWS.length))));
-
-    // A wrapped label keeps its full max width; hug the longest line so the stubs stay snug.
-    const scale = frame.getBoundingClientRect().width / width || 1;
-    for (const label of frame.querySelectorAll<HTMLElement>(".frame5-ticket-label")) {
-      label.style.width = "";
-      const range = document.createRange();
-      range.selectNodeContents(label);
-      const widest = Math.max(...[...range.getClientRects()].map((rect) => rect.width));
-      if (Number.isFinite(widest)) label.style.width = `${Math.ceil(widest / scale)}px`;
-    }
-
-    // Give the tickets the dark room under them when a short screen would clip a second row.
-    const naturalBand = Math.min(CREDITS.maxHeight, Math.max(CREDITS.minHeight, height * CREDITS.height));
-    const contentTop = height * frame5.content.top;
-    const bandBottom = height * CREDITS.bottom;
-    const roomFor = (band: number) => height - contentTop - bandBottom - frame5.content.bottomGap - band;
-    const endingHeight = Math.max(
-      frame.querySelector<HTMLElement>(".frame5-ending-a")?.offsetHeight ?? 0,
-      frame.querySelector<HTMLElement>(".frame5-ending-b")?.offsetHeight ?? 0,
-    );
-    const overflow = endingHeight - roomFor(naturalBand);
-    const band =
-      overflow > 1 ? Math.max(CREDITS.minFitHeight, Math.round(naturalBand - overflow - 2)) : naturalBand;
-    frame.style.setProperty("--band-h", `${band}px`);
 
     if (A.photoPlacement === "auto") {
       const lines = linesRef.current?.offsetWidth ?? 0;
@@ -344,12 +338,14 @@ export function Frame5() {
       setPhotoRight(lines + A.photoGap + photo <= room);
     }
 
-    const roll = rollRef.current;
-    const end = endRef.current;
-    if (roll && end) {
-      const to = (band - end.offsetHeight) / 2 - end.offsetTop;
-      frame.style.setProperty("--roll-from", `${band}px`);
-      frame.style.setProperty("--roll-to", `${to}px`);
+    // One height for every ticket, including the short labels on the second row.
+    const papers = [...frame.querySelectorAll<HTMLElement>(".frame5-ticket-paper")];
+    for (const paper of papers) paper.style.minHeight = "";
+    let tallest = 0;
+    for (const paper of papers) tallest = Math.max(tallest, paper.offsetHeight);
+    if (tallest > 0) {
+      const height = `${tallest}px`;
+      for (const paper of papers) paper.style.minHeight = height;
     }
   }, []);
 
@@ -360,7 +356,6 @@ export function Frame5() {
     const observer = new ResizeObserver(layout);
     observer.observe(frame);
     if (linesRef.current) observer.observe(linesRef.current);
-    if (rollRef.current) observer.observe(rollRef.current);
     document.fonts?.ready.then(layout);
     return () => observer.disconnect();
   }, [layout, contact]);
@@ -509,7 +504,11 @@ export function Frame5() {
     "--f5-arrow-line-ms": `${Math.round(ARROWS.drawSeconds * ARROWS.lineShare * 1000)}ms`,
     "--f5-arrow-head-ms": `${Math.round(ARROWS.drawSeconds * (1 - ARROWS.lineShare) * 1000)}ms`,
     "--f5-content-top": `${frame5.content.top * 100}%`,
-    "--f5-content-gap": `${frame5.content.bottomGap}px`,
+    "--f5-cta": frame5.cta.color,
+    "--f5-cta-size": frame5.cta.size,
+    "--f5-cta-draw": frame5.cta.draw,
+    "--f5-warning-size": frame5.warning.size,
+    "--f5-warning-color": frame5.warning.color,
     "--f5-label-size": frame5.label.size,
     "--f5-label-weight": String(frame5.label.weight),
     "--f5-label-tracking": frame5.label.tracking,
@@ -544,7 +543,6 @@ export function Frame5() {
     "--f5-ticket-paper": TICKET.paper,
     "--f5-ticket-ink": TICKET.ink,
     "--f5-ticket-size": TICKET.textSize,
-    "--f5-ticket-label-w": `${TICKET.labelWidth}px`,
     "--f5-ticket-band-h": TICKET.band,
     "--f5-ticket-tear-r": `${TICKET.tearRadius}px`,
     "--f5-ticket-tear-step": `${TICKET.tearStep}px`,
@@ -554,7 +552,6 @@ export function Frame5() {
     "--f5-stamp-size": `${TICKET.stamp.size}px`,
     "--f5-stamp-font": TICKET.stamp.fontSize,
     "--f5-stamp-tilt": `${TICKET.stamp.tilt}deg`,
-    "--f5-hobby-arrow-w": `${A.hobbies.arrow.width}px`,
     "--f5-b-left": `${B.left * 100}%`,
     "--f5-b-right": `${B.right * 100}%`,
     "--f5-b-size": B.lineSize,
@@ -588,24 +585,14 @@ export function Frame5() {
     "--f5-ov-close": `${OVERLAY.closeSize}px`,
     "--f5-ov-fade": `${OVERLAY.fadeMs}ms`,
     "--f5-ov-from": String(OVERLAY.fromScale),
-    "--f5-band-bottom": `${CREDITS.bottom * 100}%`,
-    "--f5-band-fade": `${CREDITS.fade * 100}%`,
-    "--f5-credit-size": CREDITS.size,
-    "--f5-credit-tracking": CREDITS.tracking,
-    "--f5-credit-color": CREDITS.color,
-    "--f5-credit-line": String(CREDITS.lineHeight),
-    "--f5-credit-still-line": String(CREDITS.stillLineHeight),
-    "--f5-credit-gap": `${CREDITS.gap}px`,
-    "--f5-end-gap": `${CREDITS.endGap}px`,
-    "--f5-end-size": CREDITS.endSize,
-    "--f5-back-size": CREDITS.backSize,
+    "--f5-back-bottom": `${frame5.back.bottom}px`,
+    "--f5-back-clearance": `${frame5.back.clearance}px`,
   } as CSSProperties;
 
   const classes = [
     "frame5",
     locked ? "is-locked" : "",
     reduced ? "is-reduced" : "",
-    rolled ? "is-rolled" : "",
     photoRight ? "is-photo-right" : "is-photo-above",
   ]
     .filter(Boolean)
@@ -642,8 +629,8 @@ export function Frame5() {
                 >
                   {contact?.email}
                 </button>
-                <a className="frame5-write" href={contact ? `mailto:${contact.email}` : undefined}>
-                  {A.writeLabel}
+                <a className="frame5-cta" href={contact ? `mailto:${contact.email}` : undefined}>
+                  <CtaLabel>{A.writeLabel}</CtaLabel>
                 </a>
                 <span className="frame5-copied">
                   <span className="frame5-copied-room" aria-hidden="true">
@@ -662,8 +649,8 @@ export function Frame5() {
               </li>
               <li>
                 <DocumentIcon />
-                <a className="frame5-link" href={A.cv} target="_blank" rel="noopener noreferrer">
-                  {A.cvLabel}
+                <a className="frame5-cta" href={A.cv} target="_blank" rel="noopener noreferrer">
+                  <CtaLabel>{A.cvLabel}</CtaLabel>
                 </a>
               </li>
               <li className="frame5-social">
@@ -695,7 +682,6 @@ export function Frame5() {
               </h3>
               <p className="frame5-hobby-line">{A.hobbies.line}</p>
             </div>
-            <HobbyArrow />
             <ul className="frame5-tickets">
               {A.hobbies.items.map((item) => {
                 const look = TICKET.look[item.id];
@@ -774,29 +760,10 @@ export function Frame5() {
         </div>
       </div>
 
-      <div className="frame5-band">
-        <div className="frame5-roll" ref={rollRef}>
-          <dl className="frame5-credits">
-            {CREDITS.lines.map(([role, name]) => (
-              <div className="frame5-credit" key={role}>
-                <dt>{role}</dt>
-                <dd>{name}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="frame5-end" ref={endRef}>
-            <p className="frame5-end-line">{CREDITS.endLine}</p>
-            <button
-              type="button"
-              className="frame5-back"
-              onFocus={() => setRolled(true)}
-              onClick={() => goToFrame(frame5.backTo)}
-            >
-              {CREDITS.backLabel}
-            </button>
-          </div>
-        </div>
-      </div>
+      <button type="button" className="frame5-cta frame5-back" onClick={() => goToFrame(frame5.backTo)}>
+        <CtaLabel>{frame5.back.label}</CtaLabel>
+        <UpArrow />
+      </button>
 
       <canvas className="frame5-grain" ref={grainRef} aria-hidden="true" />
 
@@ -840,12 +807,12 @@ export function Frame5() {
                 <p className="frame5-dialog-body">{activeFilm.personal}</p>
                 <button
                   type="button"
-                  className="frame5-more"
+                  className="frame5-cta frame5-more"
                   aria-expanded={longOpen}
                   aria-controls={longOpen ? "frame5-long-text" : undefined}
                   onClick={() => setLongOpen((open) => !open)}
                 >
-                  {longOpen ? OVERLAY.lessLabel : OVERLAY.moreLabel}
+                  <CtaLabel>{longOpen ? OVERLAY.lessLabel : OVERLAY.moreLabel}</CtaLabel>
                 </button>
                 {longOpen ? (
                   <div className="frame5-long" id="frame5-long-text">

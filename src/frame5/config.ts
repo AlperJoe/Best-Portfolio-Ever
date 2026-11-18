@@ -82,19 +82,34 @@ export const frame5 = {
     lineShare: 0.8,
   },
 
-  /** Area both halves share, between the title and the credits. */
+  /** Area both halves share, between the title and the back link. */
   content: {
     /** Top, as a fraction of the frame height. */
-    top: 0.15,
-    /** Gap above the credits band, in pixels. */
-    bottomGap: 8,
+    top: 0.125,
   },
 
+  /**
+   * Small label above each ending, and the subheads inside a film note.
+   * Same size, weight and letter spacing so the hierarchy matches.
+   */
   label: {
     size: "14px",
     weight: 600,
-    tracking: "0.04em",
-    gap: "12px",
+    tracking: "0.12em",
+    gap: "10px",
+  },
+
+  /** Invitations to act. The underline draws only on hover or keyboard focus. */
+  cta: {
+    color: "#EFC785",
+    size: "20px",
+    draw: "0.2s",
+  },
+
+  /** The egg-film line, on the card and above the player. Sentence case. */
+  warning: {
+    size: "13px",
+    color: "#C17B74",
   },
 
   endingA: {
@@ -110,7 +125,7 @@ export const frame5 = {
     minWidth: 560,
     lineSize: "clamp(30px, 3vw, 52px)",
     lineHeight: 1.1,
-    lineGap: "16px",
+    lineGap: "12px",
     /** Photo beside the contact lines, or above them. "auto" picks what fits. */
     photoPlacement: "auto" as "auto" | "right" | "above",
     photo: asset("contact-photo.webp"),
@@ -145,7 +160,7 @@ export const frame5 = {
     githubColor: "#181717",
     linkedinBackground: "#0A66C2",
     linkedinColor: "#FFFFFF",
-    /** Small block under the contact lines. */
+    /** Block under the contact details and the photo, across this half. */
     hobbies: {
       heading: "Know me better.",
       line: "Let's talk about hobbies. This is what I do every week.",
@@ -156,12 +171,12 @@ export const frame5 = {
         { id: "mat", label: "Yoga" },
         { id: "piece", label: "Board games" },
       ] satisfies { id: HobbyIcon; label: string }[],
-      /** Display face, kept well under the ending line. */
-      headingSize: "clamp(18px, 1.35vw, 22px)",
-      /** Archivo, smaller than the contact lines. */
+      /** Display face, about 30px, under the ending line. */
+      headingSize: "30px",
+      /** Archivo, on its own line under the heading. */
       textSize: "13px",
-      /** Space between the contact block and this heading, in pixels. */
-      topGap: "8px",
+      /** Clear space between the contact block and this heading, in pixels. */
+      topGap: "22px",
       iconSize: "32px",
       /** Each hobby is a ticket stub, pinned under the contact details. */
       ticket: {
@@ -169,8 +184,6 @@ export const frame5 = {
         ink: "#2B211A",
         /** At least 13px, and about 30% above the previous 11.5px stubs. */
         textSize: "15px",
-        /** Widest the label may run before it wraps, in pixels. About 30% wider. */
-        labelWidth: 135,
         band: "6.5px",
         /** Radius of the half circles along the torn edge, and their spacing, in pixels. */
         tearRadius: 3.4,
@@ -194,8 +207,6 @@ export const frame5 = {
           tilt: -14,
         },
       },
-      /** The small arrow from the heading down to the first ticket, in pixels. */
-      arrow: { width: 40, height: 46 },
     },
   },
 
@@ -308,41 +319,16 @@ export const frame5 = {
     focusGuardMs: 4000,
   },
 
-  credits: {
-    /** Height of the band, clamped in pixels, as a fraction of the frame height. */
-    height: 0.22,
-    minHeight: 150,
-    maxHeight: 230,
+  /** "Back to the beginning", centered near the bottom of the frame. */
+  back: {
+    label: "Back to the beginning",
+    /** Distance from the bottom edge, in pixels. */
+    bottom: 18,
     /**
-     * Shortest the roll may get when the tickets need the room under them.
-     * The roll still plays; the window is just shorter on a short screen.
+     * Room kept above the link so the endings never sit on it.
+     * Counts the link itself plus a gap, in pixels.
      */
-    minFitHeight: 96,
-    bottom: 0.025,
-    /** Share of the band, at each edge, that fades out. */
-    fade: 0.24,
-    size: "13px",
-    tracking: "0.08em",
-    color: "rgba(255, 255, 255, 0.7)",
-    lineHeight: 1.85,
-    /** Gap between the role and the name, in pixels. */
-    gap: 22,
-    lines: [
-      ["Starring", "Alper Bozkurt"],
-      ["Cards dealt by", "Pedro"],
-      ["Doors held open by", "Agent A and Agent B"],
-      ["Levels tested by", "Behavioural agents"],
-      ["Scrolled by", "You"],
-    ] as const,
-    /** Space between the last credit and "End of the line.", in pixels. */
-    endGap: 34,
-    endLine: "End of the line.",
-    endSize: "22px",
-    backLabel: "Back to the beginning ↑",
-    backSize: "13px",
-    /** The roll follows the scroll past this frame, set by scrollConfig.tail in transitions/config.ts. */
-    /** Reduced motion: line height of the still list. */
-    stillLineHeight: 1.5,
+    clearance: 54,
   },
 
   /** The frame Back to the beginning returns to. */
