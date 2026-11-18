@@ -31,12 +31,18 @@ export const scrollConfig = {
   },
 
   /**
-   * Trackpad momentum. Wheel events that arrive less than pauseMs apart and
-   * keep getting smaller are the tail of a flick: they stop at a frame and do
-   * not carry past it. Every other input passes at once.
+   * Catching a frame. A wheel, trackpad or touch gesture that reaches a frame,
+   * in either direction, stops on it and the rest of that gesture is ignored.
+   * The next gesture moves on from there. A wheel or trackpad gesture ends
+   * after quietMs without input. A touch gesture ends when the finger lifts.
+   * Keys are not gestures, and an interlude's resting place is not a frame,
+   * so neither of those catches.
    */
-  momentum: {
-    pauseMs: 150,
+  gesture: {
+    /** No wheel or trackpad input for this long ends the gesture, in milliseconds. */
+    quietMs: 200,
+    /** Most the scene moves during a gesture, in screen heights per second. */
+    maxPerSecond: 2.5,
   },
 
   /** Scroll lengths of an interlude, in screen heights. */

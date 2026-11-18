@@ -20,26 +20,35 @@ export const WHY_LAYER = "why-layer";
 
 let count = 0;
 
+const CLOSE = `<svg viewBox="0 0 16 16" aria-hidden="true">
+  <path d="M3.3 3.6l9.2 8.6M12.4 3.5L3.5 12.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+</svg>`;
+
 /** Applies the shared look as CSS variables. Call once before the first paint. */
 export function applyWhyNoteStyle() {
   const root = document.documentElement;
   const s = whyNoteStyle;
-  root.style.setProperty("--why-size", `${s.size}px`);
-  root.style.setProperty("--why-weight", String(s.weight));
-  root.style.setProperty("--why-navy", s.navy);
-  root.style.setProperty("--why-border", s.border);
-  root.style.setProperty("--why-radius", `${s.radius}px`);
-  root.style.setProperty("--why-pad", s.pad);
+  root.style.setProperty("--why-font", `"${s.font}", serif`);
+  root.style.setProperty("--why-invite-size", `${s.size}px`);
+  root.style.setProperty("--why-gold", s.gold);
+  root.style.setProperty("--why-draw", `${s.drawMs}ms`);
+  root.style.setProperty("--why-paper", s.paper);
+  root.style.setProperty("--why-ink", s.ink);
   root.style.setProperty("--why-text-size", `${s.textSize}px`);
   root.style.setProperty("--why-text-line", String(s.textLine));
-  root.style.setProperty("--why-text-color", s.textColor);
-  root.style.setProperty("--why-fade", `${s.fadeMs}ms`);
+  root.style.setProperty("--why-max", `${s.maxWidth}px`);
+  root.style.setProperty("--why-tilt", `${s.tilt}deg`);
+  root.style.setProperty("--why-unfold", `${s.unfoldMs}ms`);
+  root.style.setProperty("--why-shadow", s.shadow);
+  root.style.setProperty("--why-quote", `${s.quote}px`);
+  root.style.setProperty("--why-edge", `${s.edge}px`);
 }
 
 /**
  * Turns `button` into a "Why I say this" control. A click, Enter or Space
- * opens the note in a small panel inside `host`, placed under the button, or
- * above it when there is no room. Escape or a click outside closes it.
+ * opens the note on a paper card inside `host`, under the button, or above
+ * it when there is no room. Escape, a click outside or the close mark
+ * folds it shut.
  */
 export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, options: WhyNoteOptions): WhyNote {
   const id = `why-note-${(count += 1)}`;
@@ -47,27 +56,52 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
   let layer: HTMLDivElement | null = null;
   let panel: HTMLDivElement | null = null;
   let pinned = false;
+  let closing = false;
   let closeTimer = 0;
-  let fadeFrame = 0;
+  let removeTimer = 0;
+  let openFrame = 0;
+  let onFoldEnd: ((event: Event) => void) | null = null;
 
   button.setAttribute("aria-expanded", "false");
 
   const inside = (target: EventTarget | null) =>
     target instanceof Node && (button.contains(target) || Boolean(panel?.contains(target)));
 
+  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   const place = () => {
     if (!panel) return;
     const box = host.getBoundingClientRect();
     const at = button.getBoundingClientRect();
-    panel.style.maxWidth = `${Math.max(120, Math.min(s.maxWidth, box.width - 2 * s.edge))}px`;
+    const edge = s.edge;
+    const tilt = (Math.abs(s.tilt) * Math.PI) / 180;
+    const roomW = Math.max(120, box.width - 2 * edge);
+    const roomH = Math.max(80, box.height - 2 * edge);
+    panel.style.maxWidth = `${Math.min(s.maxWidth, roomW)}px`;
+    panel.style.maxHeight = `${roomH}px`;
     const width = panel.offsetWidth;
     const height = panel.offsetHeight;
+    const padX = (height * Math.sin(tilt)) / 2;
+    const padY = (width * Math.sin(tilt)) / 2;
+    const minLeft = edge + padX;
+    const maxLeft = Math.max(minLeft, box.width - edge - padX - width);
     const center = at.left + at.width / 2 - box.left;
-    const left = Math.max(s.edge, Math.min(box.width - s.edge - width, center - width / 2));
+    const left = Math.min(maxLeft, Math.max(minLeft, center - width / 2));
+    const minTop = edge + padY;
+    const maxTop = Math.max(minTop, box.height - edge - padY - height);
     let top = at.bottom - box.top + s.gap;
-    if (top + height > box.height - s.edge) top = Math.max(s.edge, at.top - box.top - s.gap - height);
+    let origin = "50% 0%";
+    if (top > maxTop) {
+      top = at.top - box.top - s.gap - height;
+      origin = "50% 100%";
+    }
+    if (top < minTop) {
+      top = minTop;
+      origin = "50% 0%";
+    }
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
+    panel.style.setProperty("--why-origin", origin);
   };
 
   const swallowClick = (event: Event) => {
@@ -99,43 +133,18 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     if (!pinned) closeTimer = window.setTimeout(close, s.hoverCloseMs);
   };
 
-  function open(pin: boolean) {
-    cancelClose();
-    pinned ||= pin;
-    if (!panel) {
-      layer = document.createElement("div");
-      layer.className = WHY_LAYER;
-      panel = document.createElement("div");
-      panel.className = "why-panel";
-      panel.id = id;
-      panel.tabIndex = -1;
-      panel.setAttribute("role", "dialog");
-      panel.setAttribute("aria-label", options.label);
-      const text = document.createElement("p");
-      text.textContent = options.note;
-      panel.append(text);
-      panel.addEventListener("pointerenter", cancelClose);
-      panel.addEventListener("pointerleave", closeSoon);
-      panel.addEventListener("focusout", onFocusOut);
-      layer.append(panel);
-      host.append(layer);
-      place();
-      fadeFrame = requestAnimationFrame(() => layer?.classList.add("is-on"));
-      button.setAttribute("aria-expanded", "true");
-      button.setAttribute("aria-controls", id);
-      document.addEventListener("keydown", onKey, true);
-      document.addEventListener("pointerdown", onPointerDown, true);
-      window.addEventListener("resize", place);
-    }
-    if (pin) panel.focus({ preventScroll: true });
-  }
+  const cancelFold = () => {
+    window.clearTimeout(removeTimer);
+    if (panel && onFoldEnd) panel.removeEventListener("transitionend", onFoldEnd);
+    onFoldEnd = null;
+  };
 
-  function close() {
-    cancelClose();
-    pinned = false;
+  const drop = () => {
+    cancelFold();
+    closing = false;
     if (!layer) return;
     const hadFocus = layer.contains(document.activeElement);
-    cancelAnimationFrame(fadeFrame);
+    cancelAnimationFrame(openFrame);
     layer.remove();
     layer = null;
     panel = null;
@@ -144,11 +153,91 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("pointerdown", onPointerDown, true);
     window.removeEventListener("resize", place);
-    if (hadFocus) button.focus({ preventScroll: true });
+    if (hadFocus && button.isConnected) button.focus({ preventScroll: true });
+  };
+
+  const reveal = () => {
+    if (!layer) return;
+    if (reducedMotion()) {
+      layer.classList.add("is-on");
+      return;
+    }
+    void layer.offsetWidth;
+    openFrame = requestAnimationFrame(() => layer?.classList.add("is-on"));
+  };
+
+  function open(pin: boolean) {
+    cancelClose();
+    cancelFold();
+    closing = false;
+    pinned ||= pin;
+    if (!panel || !layer) {
+      layer = document.createElement("div");
+      layer.className = WHY_LAYER;
+      panel = document.createElement("div");
+      panel.className = "why-panel";
+      panel.id = id;
+      panel.tabIndex = -1;
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-label", options.label);
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "why-close";
+      closeButton.setAttribute("aria-label", "Close");
+      closeButton.innerHTML = CLOSE;
+      closeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      });
+      const quote = document.createElement("span");
+      quote.className = "why-quote";
+      quote.setAttribute("aria-hidden", "true");
+      quote.textContent = "“";
+      const text = document.createElement("p");
+      text.textContent = options.note;
+      panel.append(closeButton, quote, text);
+      panel.addEventListener("pointerenter", cancelClose);
+      panel.addEventListener("pointerleave", closeSoon);
+      panel.addEventListener("focusout", onFocusOut);
+      layer.append(panel);
+      host.append(layer);
+      place();
+      button.setAttribute("aria-expanded", "true");
+      button.setAttribute("aria-controls", id);
+      document.addEventListener("keydown", onKey, true);
+      document.addEventListener("pointerdown", onPointerDown, true);
+      window.addEventListener("resize", place);
+    } else {
+      place();
+    }
+    reveal();
+    if (pin) panel.focus({ preventScroll: true });
+  }
+
+  function close() {
+    cancelClose();
+    pinned = false;
+    if (!layer || !panel || closing) return;
+    if (reducedMotion()) {
+      drop();
+      return;
+    }
+    closing = true;
+    const panelEl = panel;
+    cancelAnimationFrame(openFrame);
+    layer.classList.remove("is-on");
+    onFoldEnd = (event: Event) => {
+      if (!(event instanceof TransitionEvent)) return;
+      if (event.target !== panelEl || event.propertyName !== "transform") return;
+      drop();
+    };
+    panelEl.addEventListener("transitionend", onFoldEnd);
+    removeTimer = window.setTimeout(drop, s.unfoldMs + 80);
   }
 
   const onClick = () => {
-    if (panel && pinned) close();
+    if (panel && pinned && !closing) close();
     else open(true);
   };
   const onEnter = (event: PointerEvent) => {
@@ -169,7 +258,8 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     isOpen: () => panel !== null,
     close,
     destroy: () => {
-      close();
+      cancelClose();
+      drop();
       button.removeEventListener("click", onClick);
       button.removeEventListener("focusout", onFocusOut);
       button.removeEventListener("pointerenter", onEnter);

@@ -78,9 +78,6 @@ export class InterludeScene {
     this.root.style.setProperty("--txd-rule-w", `${style.rule.width}px`);
     this.root.style.setProperty("--txd-tip", `${style.rule.tip}px`);
     this.root.style.setProperty("--txd-glow", style.rule.glow);
-    this.root.style.setProperty("--why-color", interludeWhy.color);
-    this.root.style.setProperty("--why-size", `${interludeWhy.size}px`);
-    this.root.style.setProperty("--why-weight", String(interludeWhy.weight));
     this.root.style.setProperty("--txd-why-gap", `${interludeWhy.gap}px`);
     this.edges.style.setProperty("--txd-rule", style.rule.color);
     this.edges.style.setProperty("--txd-rule-w", `${style.rule.width}px`);
