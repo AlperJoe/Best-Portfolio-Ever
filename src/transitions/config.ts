@@ -241,8 +241,8 @@ const variantA: VariantConfig = {
   },
   motionBlur: {
     max: 7,
-    from: 0.7,
-    to: 2.6,
+    from: 0.45,
+    to: 1.1,
     steps: 6,
     smoothing: 0.06,
   },
@@ -339,8 +339,8 @@ const variantC: VariantConfig = {
   },
   motionBlur: {
     max: 9,
-    from: 0.6,
-    to: 2.4,
+    from: 0.25,
+    to: 0.75,
     steps: 6,
     smoothing: 0.06,
   },
