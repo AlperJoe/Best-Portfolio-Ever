@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject, type TransitionEvent } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
+import { attachWhyNote } from "../whyNote/whyNote";
 import { frame2Config, type CardPoint, type Frame2Card, type Frame2CardId } from "./config";
 import { createEmbers, drawEmbers, stepEmbers, type Ember } from "./embers";
 import { placeHero, placeHeroPhone, type HeroPlacement } from "./placeHero";
@@ -428,15 +429,72 @@ function MarkedCopy({ body, marks }: { body: string; marks: readonly string[] })
   return <p>{parts}</p>;
 }
 
-function Headline({ text, gold }: { text: string; gold: string }) {
+function Headline({ text, gold, trailing }: { text: string; gold: string; trailing?: ReactNode }) {
   const at = text.indexOf(gold);
-  if (at < 0) return text;
+  if (at < 0) {
+    return (
+      <>
+        {text}
+        {trailing}
+      </>
+    );
+  }
+  const phraseAt = text.lastIndexOf("with ", at);
+  const before = phraseAt >= 0 ? text.slice(0, phraseAt) : text.slice(0, at);
+  const phrase = phraseAt >= 0 ? text.slice(phraseAt, at) : "";
   return (
     <>
-      {text.slice(0, at)}
-      <span className="frame2-gold">{gold}</span>
-      {text.slice(at + gold.length)}
+      {before}
+      <span className="frame2-love-keep">
+        {phrase}
+        <span className="frame2-gold">{gold}</span>
+        {text.slice(at + gold.length)}
+        {trailing}
+      </span>
     </>
+  );
+}
+
+/** Gold circled i, about the height of a lowercase letter in the headline. */
+function LoveInfo({ buttonRef }: { buttonRef: RefObject<HTMLButtonElement | null> }) {
+  return (
+    <button ref={buttonRef} type="button" className="frame2-info" aria-label={frame2Config.intro.love.label}>
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <circle cx="10" cy="10" r="8.15" fill="none" stroke="currentColor" strokeWidth="1.35" />
+        <circle cx="10" cy="6.35" r="1.05" fill="currentColor" />
+        <path d="M10 9.15v5.05" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </button>
+  );
+}
+
+function LeadCopy() {
+  return (
+    <div className="frame2-lead">
+      {frame2Config.intro.lead.paragraphs.map((paragraph) => (
+        <p key={paragraph.map((part) => part.text).join("")}>
+          {paragraph.map((part, index) => {
+            const key = `${index}-${part.text}`;
+            if (part.gold) {
+              return (
+                <span key={key} className="frame2-gold">
+                  {part.text}
+                </span>
+              );
+            }
+            if (part.bold) {
+              return (
+                <strong key={key} className="is-bold">
+                  {part.text}
+                </strong>
+              );
+            }
+            if (part.emphasis) return <strong key={key}>{part.text}</strong>;
+            return <span key={key}>{part.text}</span>;
+          })}
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -484,6 +542,7 @@ export function Frame2() {
   const grainRef = useRef<HTMLCanvasElement>(null);
   const emberRef = useRef<HTMLCanvasElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const loveRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const flightRef = useRef<HTMLDivElement>(null);
@@ -566,15 +625,11 @@ export function Frame2() {
      */
     const placePhoneLine = () => {
       const settings = frame2Config.phone;
-      const hairLeft = place.left + settings.lineHairX * place.width;
-      line.style.setProperty("--line-max", `${Math.max(120, hairLeft - settings.lineLeft - settings.lineFaceGap)}px`);
       const frameRect = frame.getBoundingClientRect();
       const middleCard = frame2Config.cards.items[1];
       const middleNode = buttonRefs.current[middleCard.id];
       const cardMid = middleNode ? liveTopMid(middleCard, middleNode, frameRect) : cardTopMid(middleCard.points, place);
-      const lastText =
-        line.querySelector<HTMLElement>(".frame2-line-help") ??
-        line.querySelector<HTMLElement>(".frame2-line-text");
+      const lastText = line.querySelector<HTMLElement>(".frame2-line-text");
       const textBottom = lastText ? lastText.offsetTop + lastText.offsetHeight : 0;
       const lineWidth = line.offsetWidth;
       const { min, startGap, cardGap } = frame2Config.line.arrow;
@@ -601,7 +656,6 @@ export function Frame2() {
         placePhoneLine();
         return;
       }
-      line.style.removeProperty("--line-max");
       const logoTop = place.top + frame2Config.regions.logo.y * place.height;
       const hairLeft = place.left + frame2Config.regions.hairX * place.width;
       const cardTop = Math.min(
@@ -656,9 +710,7 @@ export function Frame2() {
       const cardMid = middleNode
         ? liveTopMid(middleCard, middleNode, frameRect)
         : cardTopMid(middleCard.points, place);
-      const lastText =
-        line.querySelector<HTMLElement>(".frame2-line-help") ??
-        line.querySelector<HTMLElement>(".frame2-line-text");
+      const lastText = line.querySelector<HTMLElement>(".frame2-line-text");
       const textBottom = lastText ? lastText.offsetTop + lastText.offsetHeight : 0;
       const placed = placeLine({
         intro: introBox,
@@ -854,6 +906,15 @@ export function Frame2() {
   useEffect(() => {
     const img = new Image();
     img.src = frame2Config.assets.cardBack;
+  }, []);
+
+  useEffect(() => {
+    const button = loveRef.current;
+    const host = frameRef.current;
+    if (!button || !host) return;
+    const { note, label } = frame2Config.intro.love;
+    const attached = attachWhyNote(button, host, { note, label, hover: true });
+    return () => attached.destroy();
   }, []);
 
   useEffect(() => {
@@ -1071,9 +1132,11 @@ export function Frame2() {
     "--lead-size": `${lead.size}px`,
     "--lead-weight": String(lead.weight),
     "--lead-strong": String(lead.emphasis),
+    "--lead-bold": String(lead.bold),
     "--lead-line": String(lead.line),
     "--lead-opacity": String(lead.opacity),
     "--lead-gap": `${lead.gap}px`,
+    "--lead-paragraph-gap": `${lead.paragraphGap}px`,
     "--store-h": `${storeHeight}px`,
     "--store-gap": `${frame2Config.intro.stores.gap}px`,
     "--store-lift": `${frame2Config.intro.stores.lift}px`,
@@ -1086,10 +1149,6 @@ export function Frame2() {
     "--line-color": frame2Config.line.color,
     "--line-shadow": frame2Config.line.shadow,
     "--line-fade": `${frame2Config.line.fade}s`,
-    "--line-help-size": `${frame2Config.line.helperSize}px`,
-    "--line-help-weight": String(frame2Config.line.helperWeight),
-    "--line-help-color": frame2Config.line.helperColor,
-    "--line-help-gap": `${frame2Config.line.helperGap}px`,
     "--invite-draw": `${frame2Config.line.inviteDraw}s`,
     "--arrow-room": `${frame2Config.line.arrow.room}px`,
     "--arrow-stroke": `${frame2Config.line.arrow.stroke}px`,
@@ -1114,7 +1173,6 @@ export function Frame2() {
       : seen.length < frame2Config.cards.items.length
         ? frame2Config.line.again
         : frame2Config.line.done;
-  const showHelper = seen.length === 0;
   const arrow = (() => {
     if (!lineBox || lineBox.width <= 0 || lineBox.textBottom <= 0) return null;
     const { startGap, cardGap } = frame2Config.line.arrow;
@@ -1205,13 +1263,9 @@ export function Frame2() {
         ) : null}
         <div ref={introRef} className="frame2-intro">
           <h2 className="frame2-headline">
-            <Headline text={headline.text} gold={headline.gold} />
+            <Headline text={headline.text} gold={headline.gold} trailing={<LoveInfo buttonRef={loveRef} />} />
           </h2>
-          <p className="frame2-lead">
-            {lead.parts.map((part) =>
-              part.emphasis ? <strong key={part.text}>{part.text}</strong> : <span key={part.text}>{part.text}</span>,
-            )}
-          </p>
+          <LeadCopy />
           <div className="frame2-stores">
             <a
               className="frame2-store"
@@ -1254,7 +1308,6 @@ export function Frame2() {
           {lineCopy}
           <InviteRule />
         </p>
-        {showHelper ? <p className="frame2-line-help">{frame2Config.line.helper}</p> : null}
         <div className="frame2-arrow-space" />
         {lineBox && arrow ? (
           <svg

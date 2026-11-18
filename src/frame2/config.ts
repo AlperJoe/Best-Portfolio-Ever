@@ -9,6 +9,16 @@ export type ImageBox = {
 
 export type CardPoint = [number, number];
 
+export type LeadPart = {
+  text: string;
+  /** Drawn in gold (#EFC785). */
+  gold?: boolean;
+  /** Bold. A step above the heavier phrases. */
+  bold?: boolean;
+  /** Heavier than the body, in the body's own color. */
+  emphasis?: boolean;
+};
+
 export const frame2Config = {
   image: {
     width: 2560,
@@ -54,27 +64,44 @@ export const frame2Config = {
       line: 1.05,
       maxWidth: 0.46,
     },
+    /** Circled i right after "with no game tools". The note opens from attachWhyNote. */
+    love: {
+      label: "About LÖVE",
+      note: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. It has no cards, no tables and no animations, so I built every other part of Pedro myself.",
+    },
     lead: {
       size: 17,
       weight: 400,
       /** Heavier than the body, in the body's own color. */
       emphasis: 650,
+      /** "by hand" is bold, a step above the heavier phrases. */
+      bold: 700,
       line: 1.55,
       opacity: 0.88,
       /** Matches the gap above the store badges. */
       gap: 22,
-      parts: [
-        {
-          text: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. I wrote everything else myself in about ",
-          emphasis: false,
-        },
-        { text: "18,000 lines of Lua", emphasis: true },
-        { text: ", including card motion and layout, the rules, the bots and ", emphasis: false },
-        { text: "an online server", emphasis: true },
-        { text: ". Pedro is ", emphasis: false },
-        { text: "live on iOS and Android", emphasis: true },
-        { text: ".", emphasis: false },
-      ],
+      /** Space between the two short paragraphs. */
+      paragraphGap: 11,
+      paragraphs: [
+        [
+          { text: "I wrote about " },
+          { text: "18,000 lines of Lua", gold: true },
+          { text: " " },
+          { text: "by hand", bold: true },
+          { text: ", without AI coding assistants." },
+        ],
+        [
+          { text: "That code covers " },
+          { text: "card motion and layout", emphasis: true },
+          { text: ", " },
+          { text: "the rules", emphasis: true },
+          { text: ", " },
+          { text: "the bots", emphasis: true },
+          { text: " and " },
+          { text: "an online server", emphasis: true },
+          { text: "." },
+        ],
+      ] as LeadPart[][],
     },
     stores: {
       height: 52,
@@ -97,14 +124,8 @@ export const frame2Config = {
     again: "Pick another card.",
     /** After all three cards have been opened. */
     done: "That's my whole hand.",
-    /** Shown under the line until the first card opens. */
-    helper: "Each card opens a part I built.",
-    helperSize: 14,
-    helperWeight: 400,
-    /** Warm light, so the helper reads with the invitation. */
-    helperColor: "#F6E7D0",
-    helperGap: 10,
-    size: 20,
+    /** 1.6× the previous 20px invitation. */
+    size: 32,
     line: 1.2,
     color: "#EFC785",
     shadow: "drop-shadow(0 2px 12px rgba(0, 0, 0, 0.82))",
@@ -339,12 +360,10 @@ export const frame2Config = {
     fade: 90,
     /**
      * "Pick a card." sits this far from the left edge and from the top of the
-     * stage, and its helper wraps before Pedro's hair, at lineHairX of the image.
+     * stage. The curve still lands on the middle card.
      */
     lineLeft: 18,
     lineTop: 10,
-    lineHairX: 0.66,
-    lineFaceGap: 10,
     /** The open card sheet. */
     sheet: {
       background: "#1E0E0B",
