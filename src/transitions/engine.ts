@@ -2,6 +2,7 @@ import { transitionConfig, type TransitionVariant, type VariantConfig } from "./
 import { clamp } from "./math";
 import { createMotion, keyRate, type Motion } from "./motion";
 import { Scene } from "./scene";
+import { Track } from "./track";
 
 type Phase = "idle" | "push" | "settle" | "fade";
 
@@ -21,6 +22,11 @@ export class TransitionEngine {
   private dir = 1;
   private motion: Motion | null = null;
   private readonly scene: Scene;
+  private readonly track: Track;
+  private readonly overlays: MutationObserver;
+  /** Frame a clicked station asked for. Reached one push at a time. */
+  private goal: number | null = null;
+  private chainTimer = 0;
   private readonly cfg: VariantConfig;
   private reduced: boolean;
   private readonly media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -52,8 +58,12 @@ export class TransitionEngine {
     this.cfg = transitionConfig.variants[variant];
     this.reduced = this.media.matches;
     this.scene = new Scene(stage);
+    this.track = new Track(stage, slots.length, this.onPick);
+    this.overlays = new MutationObserver(this.syncOverlay);
     stage.dataset.transition = variant;
     slots.forEach((slot, index) => this.park(slot, index !== 0));
+    this.track.setActive(0);
+    this.track.place(0);
     this.report();
   }
 
@@ -66,6 +76,7 @@ export class TransitionEngine {
     window.addEventListener("touchcancel", this.onTouchEnd);
     window.addEventListener("resize", this.onResize);
     this.media.addEventListener("change", this.onMotionPreference);
+    this.slots.forEach((slot) => this.overlays.observe(slot, { childList: true, subtree: true }));
   }
 
   detach() {
@@ -77,10 +88,13 @@ export class TransitionEngine {
     window.removeEventListener("touchcancel", this.onTouchEnd);
     window.removeEventListener("resize", this.onResize);
     this.media.removeEventListener("change", this.onMotionPreference);
+    this.overlays.disconnect();
     if (this.frameId) cancelAnimationFrame(this.frameId);
     this.frameId = 0;
+    this.clearGoal();
     this.scene.end();
     this.scene.destroy();
+    this.track.destroy();
   }
 
   private park(slot: HTMLElement, parked: boolean) {
@@ -93,17 +107,73 @@ export class TransitionEngine {
   private report() {
     this.stage.dataset.active = String(this.active);
     this.stage.dataset.phase = this.phase;
+    this.track.setBusy(this.phase !== "idle");
   }
 
   private overlayOpen() {
     return Boolean(this.slots[this.active]?.querySelector(transitionConfig.overlays));
   }
 
-  /** A crossfade instead of a push: reduced motion, and Frame 3 until its push is built. */
-  private fadeFor(to: number) {
-    if (this.reduced) return transitionConfig.reduced;
-    if (this.active === 2 || to === 2) return transitionConfig.placeholder;
-    return null;
+  /** With reduced motion, a crossfade instead of a push. */
+  private fadeFor() {
+    return this.reduced ? transitionConfig.reduced : null;
+  }
+
+  private syncOverlay = () => {
+    this.track.setHidden(this.overlayOpen());
+  };
+
+  private clearGoal() {
+    this.goal = null;
+    if (this.chainTimer) window.clearTimeout(this.chainTimer);
+    this.chainTimer = 0;
+  }
+
+  /** A station was clicked: push toward it, one frame per push. */
+  private onPick = (index: number) => {
+    if (this.overlayOpen() || (index === this.active && this.phase === "idle")) return;
+    this.goal = index;
+    if (this.phase === "idle") {
+      this.advance();
+      return;
+    }
+    const motion = this.motion;
+    if (this.phase !== "push" || !motion || motion.committed) return;
+    const toward = Math.sign(index - this.active);
+    if (toward === this.dir) this.keyDrive = true;
+    else {
+      // The other way: let this push roll back, then head for the station.
+      this.keyDrive = false;
+      this.fling = 0;
+      this.lastInput = -Infinity;
+    }
+  };
+
+  /** Starts the next push toward the clicked station, if there is one. */
+  private advance() {
+    this.chainTimer = 0;
+    if (this.goal === null || this.phase !== "idle") return;
+    if (this.goal === this.active || this.overlayOpen()) {
+      this.goal = null;
+      return;
+    }
+    const dir = Math.sign(this.goal - this.active);
+    const now = performance.now();
+    if (this.fadeFor()) {
+      this.startFade(this.active + dir, transitionConfig.reduced.ms, now);
+      return;
+    }
+    this.startPush(dir, now);
+    this.keyDrive = true;
+  }
+
+  private continueGoal() {
+    if (this.goal === null) return;
+    if (this.goal === this.active) {
+      this.goal = null;
+      return;
+    }
+    this.chainTimer = window.setTimeout(() => this.advance(), transitionConfig.track.chainPauseMs);
   }
 
   private onMotionPreference = () => {
@@ -111,7 +181,9 @@ export class TransitionEngine {
   };
 
   private onResize = () => {
+    this.track.measure();
     if (this.phase === "push" || this.phase === "settle") this.scene.measure();
+    if (this.phase === "idle") this.track.place(this.active);
   };
 
   private onWheel = (event: WheelEvent) => {
@@ -125,7 +197,10 @@ export class TransitionEngine {
     const max = transitionConfig.input.maxDelta;
     delta = clamp(delta, -max, max);
     const now = performance.now();
-    if (this.passesGate(delta, now)) this.feed(delta, now);
+    if (this.passesGate(delta, now)) {
+      this.clearGoal();
+      this.feed(delta, now);
+    }
   };
 
   /**
@@ -169,7 +244,7 @@ export class TransitionEngine {
       const dir = delta > 0 ? 1 : -1;
       const to = this.active + dir;
       if (to < 0 || to >= this.slots.length) return;
-      const fade = this.fadeFor(to);
+      const fade = this.fadeFor();
       if (fade) {
         if (now - this.lastInput > transitionConfig.input.quietMs || Math.sign(this.stepSum) !== dir) {
           this.stepSum = 0;
@@ -197,7 +272,8 @@ export class TransitionEngine {
     this.keyDrive = false;
     this.phase = "push";
     this.slots[this.active].toggleAttribute("inert", true);
-    this.scene.begin(this.slots[this.active], this.slots[this.target], this.active, this.target, this.cfg);
+    this.scene.begin(this.slots[this.active], this.slots[this.target], this.active, this.target, dir, this.cfg);
+    this.track.render(this.active, this.target, 0);
     this.lastInput = now;
     this.report();
     this.run();
@@ -230,7 +306,7 @@ export class TransitionEngine {
     this.last = now;
 
     if (this.phase === "push" && this.motion) this.stepPush(dt, now);
-    else if (this.phase === "settle") this.stepSettle(now);
+    else if (this.phase === "settle") this.stepSettle(dt, now);
     else if (this.phase === "fade") this.stepFade(now);
 
     if (this.phase !== "idle") this.frameId = requestAnimationFrame(this.tick);
@@ -261,28 +337,36 @@ export class TransitionEngine {
     if (end === "back") {
       this.scene.render(0);
       this.scene.end();
+      this.track.place(this.active);
       this.slots[this.active].toggleAttribute("inert", false);
       this.motion = null;
       this.fling = 0;
+      this.keyDrive = false;
       this.phase = "idle";
       this.report();
+      this.continueGoal();
       return;
     }
     if (end === "forward") {
       this.phase = "settle";
       this.settleStart = now;
-      this.scene.render(1, 0, motion.impact);
+      this.scene.render(1, 0, motion.impact, dt);
+      this.track.render(this.active, this.target, 1, 0, motion.impact);
       this.report();
       return;
     }
-    this.scene.render(motion.p);
+    this.scene.render(motion.p, -1, 1, dt);
+    this.track.render(this.active, this.target, motion.p);
   }
 
-  private stepSettle(now: number) {
+  private stepSettle(dt: number, now: number) {
     const elapsed = now - this.settleStart;
     const lock = this.cfg.lock;
     const reveal = this.cfg.reveal;
-    this.scene.render(1, clamp(elapsed / lock.ms), this.motion?.impact ?? 1);
+    const latch = clamp(elapsed / lock.ms);
+    const impact = this.motion?.impact ?? 1;
+    this.scene.render(1, latch, impact, dt);
+    this.track.render(this.active, this.target, 1, latch, impact);
     if (elapsed >= reveal.delay) this.scene.reveal((elapsed - reveal.delay) / reveal.ms);
     if (elapsed >= Math.max(lock.ms, reveal.delay + reveal.ms)) this.finish();
   }
@@ -290,7 +374,9 @@ export class TransitionEngine {
   private stepFade(now: number) {
     const x = clamp((now - this.fadeStart) / this.fadeMs);
     const dest = this.slots[this.target];
-    dest.style.opacity = (x * x * (3 - 2 * x)).toFixed(4);
+    const eased = x * x * (3 - 2 * x);
+    dest.style.opacity = eased.toFixed(4);
+    this.track.render(this.active, this.target, eased);
     if (x < 1) return;
     dest.classList.remove("is-fading");
     dest.style.opacity = "";
@@ -308,8 +394,12 @@ export class TransitionEngine {
     this.keyDrive = false;
     this.fling = 0;
     this.phase = "idle";
+    this.track.setActive(this.active);
+    this.track.place(this.active);
     to.focus({ preventScroll: true });
     this.report();
+    this.syncOverlay();
+    this.continueGoal();
   }
 
   private onKey = (event: KeyboardEvent) => {
@@ -328,11 +418,12 @@ export class TransitionEngine {
     event.preventDefault();
     if (event.repeat) return;
     const now = performance.now();
+    this.clearGoal();
 
     if (this.phase === "idle") {
       const to = this.active + dir;
       if (to < 0 || to >= this.slots.length) return;
-      const fade = this.fadeFor(to);
+      const fade = this.fadeFor();
       if (fade) {
         this.startFade(to, fade.ms, now);
         return;
@@ -354,6 +445,7 @@ export class TransitionEngine {
     this.touchSpeed = 0;
     this.fling = 0;
     if (this.phase === "idle") this.gated = false;
+    if (!(event.target instanceof Element && event.target.closest(".tx-track"))) this.clearGoal();
   };
 
   private onTouchMove = (event: TouchEvent) => {

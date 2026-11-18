@@ -93,26 +93,81 @@ export type VariantConfig = {
   commitAt: number;
   /** Seconds without input before an unfinished push counts as let go. Touch lets go on lift. */
   releaseMs: number;
-  depth: {
-    /** Size of the incoming object at the start, as a fraction of its final size. */
+  /** Camera distance for every tilt, as a multiple of the screen height. Smaller is stronger. */
+  lens: number;
+  /**
+   * The incoming object. Scrolling down it enters from below the bottom edge,
+   * scrolling up from above the top edge, and it travels on an S-shaped track
+   * to its place, rising like a card that stands up on rails.
+   */
+  path: {
+    /** Size at the start, as a fraction of its final size. */
     startScale: number;
     /** 1 grows like a real object coming closer at a steady speed. 0 grows evenly. */
     perspective: number;
-    /** Point the object comes from, as a fraction of the screen. */
-    vanishX: number;
-    vanishY: number;
-    /** Progress over which the object fades in from the distance. */
+    /** Gap between the screen edge and the object at the start, as a fraction of the screen height. */
+    startGap: number;
+    /** How far the start is pulled toward the horizontal center. 0 enters straight under its place. */
+    startToCenter: number;
+    /** Sideways bow of the track, as a fraction of the screen width. */
+    bow: number;
+    /** How long the track runs straight out of the edge and into its place. 0 to 1. */
+    straight: number;
+    /** Tilt back at the start, in degrees. It straightens on the way. */
+    tilt: number;
+    /** Curve of the straightening. Higher stays tilted longer. */
+    tiltCurve: number;
+    /** Progress over which the object fades in at the edge. */
     fadeIn: number;
   };
+  /** Soft shadow on the ground under the incoming object. */
+  shadow: {
+    /** Darkness when the object arrives. */
+    opacity: number;
+    /** Width, as a fraction of the object width. */
+    width: number;
+    /** Height, as a fraction of the object width. */
+    height: number;
+  };
+  /** Blur along the direction of travel while the speed is high. */
+  motionBlur: {
+    /** Strongest blur, in pixels. */
+    max: number;
+    /** Screen heights per second where it starts and where it is strongest. */
+    from: number;
+    to: number;
+    /** Number of blur levels. Fewer is cheaper. */
+    steps: number;
+    /** Seconds the blur takes to follow the speed. */
+    smoothing: number;
+  };
+  /** Two faint rails that show the track of the incoming object. */
+  rails: {
+    color: string;
+    /** Opacity at full strength. */
+    opacity: number;
+    /** Line width, in pixels. */
+    width: number;
+    /** Gap between the rails, as a fraction of the object width. */
+    gauge: number;
+    /** Progress over which they appear. They fade out through the lock. */
+    fadeIn: number;
+  };
+  /** The frame you leave is pushed away the other way and sinks into the background. */
   source: {
-    /** Blur on the frame you leave, in pixels, when it is fully covered. */
-    blur: number;
-    /** Scale of the frame you leave when it is fully covered. Above 1 passes the camera. */
+    /** Travel, as a fraction of the screen height, when the push is complete. */
+    travel: number;
+    /** Scale when the push is complete. */
     scale: number;
-    /** Downward drift of the frame you leave, as a fraction of the screen height. */
-    drift: number;
-    /** Progress at which the blurred color field fully covers the frame you leave. */
-    coverAt: number;
+    /** Tilt back, in degrees, when the push is complete. */
+    tilt: number;
+    /** Darkening when the push is complete. 1 is black. */
+    darken: number;
+    /** Blur, in pixels, when the push is complete. */
+    blur: number;
+    /** Progress where it starts to fade into the background, and where it is gone. */
+    fadeFrom: number;
+    fadeTo: number;
   };
   field: {
     /** Progress where the destination colors start to mix in, and where they take over. */
@@ -126,7 +181,7 @@ export type VariantConfig = {
     ms: number;
     /** Extra scale the object carries into the latch before it seats. */
     kick: number;
-    /** Vertical jolt of the whole view, in pixels. */
+    /** Jolt of the whole view along the direction of travel, in pixels. */
     shake: number;
     /** Darkening at the moment of the lock. 0 turns it off. */
     shade: number;
@@ -167,18 +222,45 @@ const variantA: VariantConfig = {
   motion: followA,
   commitAt: 0.5,
   releaseMs: 240,
-  depth: {
-    startScale: 0.16,
-    perspective: 0.75,
-    vanishX: 0.5,
-    vanishY: 0.46,
-    fadeIn: 0.14,
+  lens: 1.6,
+  path: {
+    startScale: 0.42,
+    perspective: 0.6,
+    startGap: 0.03,
+    startToCenter: 0.55,
+    bow: 0.035,
+    straight: 0.45,
+    tilt: 34,
+    tiltCurve: 1.4,
+    fadeIn: 0.05,
+  },
+  shadow: {
+    opacity: 0.55,
+    width: 0.9,
+    height: 0.09,
+  },
+  motionBlur: {
+    max: 7,
+    from: 0.45,
+    to: 1.1,
+    steps: 6,
+    smoothing: 0.06,
+  },
+  rails: {
+    color: "#ffffff",
+    opacity: 0.16,
+    width: 1,
+    gauge: 0.72,
+    fadeIn: 0.12,
   },
   source: {
-    blur: 18,
-    scale: 1.06,
-    drift: 0,
-    coverAt: 0.55,
+    travel: 0.42,
+    scale: 0.8,
+    tilt: 16,
+    darken: 0.65,
+    blur: 8,
+    fadeFrom: 0.5,
+    fadeTo: 0.95,
   },
   field: {
     mixFrom: 0.1,
@@ -238,18 +320,45 @@ const variantC: VariantConfig = {
   },
   commitAt: 0.5,
   releaseMs: 240,
-  depth: {
-    startScale: 0.14,
-    perspective: 0.85,
-    vanishX: 0.5,
-    vanishY: 0.6,
-    fadeIn: 0.12,
+  lens: 1.4,
+  path: {
+    startScale: 0.36,
+    perspective: 0.75,
+    startGap: 0.03,
+    startToCenter: 0.6,
+    bow: 0.05,
+    straight: 0.5,
+    tilt: 42,
+    tiltCurve: 1.7,
+    fadeIn: 0.05,
+  },
+  shadow: {
+    opacity: 0.7,
+    width: 0.95,
+    height: 0.11,
+  },
+  motionBlur: {
+    max: 9,
+    from: 0.25,
+    to: 0.75,
+    steps: 6,
+    smoothing: 0.06,
+  },
+  rails: {
+    color: "#ffffff",
+    opacity: 0.2,
+    width: 1,
+    gauge: 0.72,
+    fadeIn: 0.1,
   },
   source: {
-    blur: 22,
-    scale: 1.16,
-    drift: 0.05,
-    coverAt: 0.5,
+    travel: 0.48,
+    scale: 0.74,
+    tilt: 22,
+    darken: 0.75,
+    blur: 10,
+    fadeFrom: 0.45,
+    fadeTo: 0.92,
   },
   field: {
     mixFrom: 0.05,
@@ -339,10 +448,34 @@ export const transitionConfig = {
     threshold: 24,
   },
 
-  /** Frame 3 is not part of the push yet. It crossfades until a variant is chosen. */
-  placeholder: {
-    ms: 420,
-    threshold: 40,
+  /**
+   * The slim track at the right edge. Its carriage runs on the same progress
+   * as the push, so it shows every bit of resistance, roll-back and lock.
+   */
+  track: {
+    /** Gap to the right edge of the screen, in pixels. */
+    right: 16,
+    /** Length, as a fraction of the screen height. It is vertically centered. */
+    length: 0.3,
+    color: "#ffffff",
+    /** Opacity at rest, and while a push is happening. */
+    idleOpacity: 0.4,
+    busyOpacity: 0.75,
+    /** Milliseconds to brighten or dim. */
+    fadeMs: 280,
+    /** Opacity of the line itself. */
+    lineOpacity: 0.35,
+    /** Diameter of a station, in pixels. */
+    station: 5,
+    /** Clickable area around each station, in pixels. */
+    hitArea: 24,
+    /** Carriage size, in pixels. */
+    carriageWidth: 3,
+    carriageLength: 14,
+    /** How far the carriage seats into the station at the lock, in pixels. */
+    latchNudge: 2.5,
+    /** Pause between pushes when a station two frames away is clicked, in milliseconds. */
+    chainPauseMs: 120,
   },
 };
 
