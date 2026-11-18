@@ -1,6 +1,8 @@
 /**
  * Every tunable for Frame 3. Layout, color, type, and playback live here.
- * The text column ends at 31% and the map column starts at 34%.
+ * The text column ends at 31% and the map column starts at 33.5%.
+ * The map uses the width that column leaves, so a shorter text column
+ * lets the map stand taller in the frame.
  */
 export const frame3 = {
   background: "#12151A",
@@ -18,19 +20,21 @@ export const frame3 = {
   agentB: "#FF7B67",
   eye: "#12151A",
   warmWhite: "#F2EEE6",
-  panel: "#1B2030",
+  /** Words inside a point that carry the claim. */
+  gold: "#EFC785",
 
   /** Text column, as fractions of the frame width. */
   textStart: 0.05,
   textEnd: 0.31,
   /** Map column. The map sits on the column's right edge. */
-  mapStart: 0.34,
-  mapEnd: 0.95,
+  mapStart: 0.335,
+  mapEnd: 0.975,
   /**
    * Map width is the smaller of the column and twice this share of the
-   * frame height, so the map stays 2:1.
+   * frame height, so the map stays 2:1. The share is high so the map
+   * fills the height the shorter text column leaves free.
    */
-  mapHeight: 0.78,
+  mapHeight: 0.86,
   mapFloor: "#222833",
   /** Framed map: 10px corners, a 12% white edge, inner padding, and a soft shadow. */
   mapBorder: "rgba(255, 255, 255, 0.12)",
@@ -44,11 +48,9 @@ export const frame3 = {
   edgeFade: 0.42,
   /** Grid line on the dim tiles outside the playable map. */
   outsideGrid: "rgba(255, 255, 255, 0.055)",
-  columnGap: "3%",
-  refsRight: "5%",
+  columnGap: "2.5%",
   /** Focus ring for keyboard controls. */
   focus: "#3CC8B4",
-  refsBottom: "4%",
 
   /**
    * When the text column is taller than the frame minus this share at the top
@@ -87,6 +89,9 @@ export const frame3 = {
   bullet: "5px",
   stackSize: "14px",
   stackWeight: 500,
+  /** Info notes under the points: a small gold circled i and a short label. */
+  infoSize: "14px",
+  infoGap: "16px",
   /** Shared invitation: Instrument Serif italic, gold, with a drawn underline. */
   inviteSize: "20px",
   inviteColor: "#EFC785",
@@ -106,12 +111,6 @@ export const frame3 = {
   noteInset: 8,
   noteMax: 220,
   noteMaxHeight: 96,
-  panelTextSize: "14px",
-  panelLine: 1.5,
-  panelRadius: "10px",
-  panelWidth: "380px",
-  panelPad: "16px 18px",
-  panelFadeMs: 200,
 
   stepsPerSecond: 4,
   holdSeconds: 1.5,
@@ -135,7 +134,6 @@ export const frame3 = {
   white90: "rgba(255, 255, 255, 0.9)",
   white60: "rgba(255, 255, 255, 0.6)",
   white55: "rgba(255, 255, 255, 0.55)",
-  white88: "rgba(255, 255, 255, 0.88)",
   white15: "rgba(255, 255, 255, 0.15)",
   noteColor: "rgba(255, 255, 255, 0.92)",
 
@@ -158,19 +156,45 @@ export const frame3 = {
   copy: {
     eyebrow: "PressurePlate · Bilkent course project, 2023",
     title: "Teaching two AI agents to work together",
-    intro:
-      "In this puzzle, a door opens only while an agent stands on its pressure plate. One agent has to hold the door so the other can pass, and neither can reach the treasure alone.",
-    didLabel: "What I did",
-    did: [
-      "I rebuilt what each agent sees. Five map layers became one small grid around the agent, plus its position and how long it can still hold a door open.",
-      "I redesigned the level to make it harder than the original, with a 28×14 map and five doors.",
+    intro: "Two AI agents learn to open doors for each other so they can reach the treasure.",
+    showsLabel: "What this project shows",
+    shows: [
+      {
+        text: "I designed what an AI agent sees, a small grid around it with its position and how long it can still hold a door open.",
+        mark: "what an AI agent sees",
+      },
+      {
+        text: "I rebuilt the level to make it harder than the original, a 28×14 map with five doors.",
+        mark: "harder than the original",
+      },
+      {
+        text: "After training, the two agents solved it in about 25 steps instead of hitting the 100-step limit.",
+        mark: "about 25 steps",
+      },
+      {
+        text: "I built it in a team of three, with Kaan Ünlü and Mert Kaan Er.",
+        mark: "a team of three",
+      },
     ],
-    trainedLabel: "How we trained",
-    trained:
-      "We trained both agents with MADDPG. Each agent acts only on what it sees, but during training it learns from what both agents see.",
-    resultLabel: "Result",
-    result:
-      "After training, the two agents finished the evaluation run in about 25 steps instead of hitting the 100-step limit.",
+    notes: [
+      {
+        label: "How the puzzle works",
+        note: "In this puzzle, a door opens only while an agent stands on its pressure plate. One agent has to hold the door so the other can pass, and neither can reach the treasure alone.",
+      },
+      {
+        label: "How we trained",
+        note: "We trained both agents with MADDPG. Each agent acts only on what it sees, but during training it learns from what both agents see.",
+      },
+      {
+        label: "References",
+        note: [
+          "Course project for CS 449/549 Learning for Robotics, Bilkent University, 2023.",
+          "Team: Kaan Ünlü, Mert Kaan Er and Alper Bozkurt.",
+          "Built on PressurePlate by Trevor McInroe and Filippos Christianos, Autonomous Agents Research Group, University of Edinburgh.",
+          'MADDPG code from "Revisiting the Gumbel-Softmax in MADDPG" by Callum Rhys Tilbury, Filippos Christianos and Stefano V. Albrecht, 2023.',
+        ].join("\n\n"),
+      },
+    ],
     stack: "Python, PyTorch, MADDPG",
     project: "View the project",
     caption: "Illustration: a solved run of the level, played back with the level's own rules.",

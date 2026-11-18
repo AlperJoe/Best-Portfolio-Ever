@@ -273,8 +273,7 @@
   gap: var(--item-gap);
 }
 
-.frame3-list li,
-.frame3-result {
+.frame3-list li {
   position: relative;
   margin: 0;
   font-family: var(--font-text), sans-serif;
@@ -282,6 +281,10 @@
   font-size: var(--body-size);
   line-height: var(--body-line);
   color: var(--white-90);
+}
+
+.frame3-gold {
+  color: var(--gold, #efc785);
 }
 
 .frame3-list li {
@@ -298,9 +301,35 @@
   background: var(--agent-a);
 }
 
-.frame3-result {
+.frame3-infos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
   max-width: var(--body-measure, 52ch);
-  margin-top: var(--label-gap);
+  margin: var(--info-gap, 16px) 0 0;
+}
+
+/* Same invitation as the other notes, with a gold circled i in place of the question mark. */
+.frame3-info.why-button {
+  font-size: var(--info-size, 14px);
+  gap: 0.38em;
+  padding-bottom: 0.28em;
+}
+
+.frame3-info.why-button::before {
+  width: 1.15em;
+  height: 1.15em;
+  background: center / contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M12.2 2.6c4.9-.4 9.2 3.1 9.5 8.2.3 5.2-3.6 9.6-8.8 9.8-5.3.3-9.7-3.6-9.9-8.9C2.8 6.2 6.8 3 12.2 2.6z' stroke='%23EFC785' stroke-width='1.35' stroke-linecap='round'/><path d='M12.05 10.7v5.7' stroke='%23EFC785' stroke-width='1.55' stroke-linecap='round'/><circle cx='12.1' cy='7.85' r='0.95' fill='%23EFC785'/></svg>");
+}
+
+.frame3-info.why-button::after {
+  left: calc(1.15em + 0.38em);
+  height: 0.28em;
+}
+
+.frame3 .why-panel p {
+  white-space: pre-line;
 }
 
 .frame3-stack {
@@ -387,54 +416,11 @@
   outline: none;
 }
 
-.frame3-refs {
-  position: absolute;
-  right: var(--refs-right);
-  bottom: var(--refs-bottom);
-  z-index: 5;
-}
-
-.frame3-refs-button {
-  margin: 0;
-  padding: 0;
-}
-
-.frame3-panel {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 12px);
-  width: var(--panel-width);
-  max-width: min(var(--panel-width), 70vw);
-  box-sizing: border-box;
-  padding: var(--panel-pad);
-  background: var(--panel);
-  border: 1px solid var(--white-15);
-  border-radius: var(--panel-radius);
-  opacity: 0;
-  transition: opacity var(--panel-fade) linear;
-}
-
-.frame3-panel[data-open="1"] {
-  opacity: 1;
-}
-
-.frame3-panel p {
-  margin: 0 0 10px;
-  font-family: var(--font-text), sans-serif;
-  font-size: var(--panel-text);
-  font-weight: 400;
-  line-height: var(--panel-line);
-  color: var(--white-88);
-}
-
-.frame3-panel p:last-child {
-  margin-bottom: 0;
-}
-
 /*
-  Phones: one column in reading order. The label, the title and the intro,
-  then the map with its legend, then the rest of the copy, the tools line and
-  the two invitations. The frame grows as tall as its content.
+  Phones: one column in reading order. The label, the title and the one line,
+  then the map with its legend and caption, then what the project shows,
+  the info notes, the tools line and the project link. The frame grows
+  as tall as its content.
 */
 @media (max-width: 699.98px) {
   .frame3 {
@@ -472,8 +458,7 @@
   }
 
   .frame3-stage,
-  .frame3-below,
-  .frame3-refs {
+  .frame3-below {
     position: relative;
     top: auto;
     right: auto;
@@ -483,8 +468,7 @@
 
   .frame3-copy > *,
   .frame3-stage,
-  .frame3-below,
-  .frame3-refs {
+  .frame3-below {
     position: relative;
     z-index: 4;
     order: 5;
@@ -523,26 +507,7 @@
     align-self: flex-start;
   }
 
-  .frame3-refs {
-    order: 7;
-    align-self: flex-start;
-    margin-top: 16px;
-  }
-
-  .frame3-panel {
-    left: 0;
-    right: auto;
-    width: calc(100vw - 2 * var(--phone-margin));
-    max-width: none;
-  }
-
   .frame3-note {
     max-width: min(220px, 70%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .frame3-panel {
-    transition: none;
   }
 }
