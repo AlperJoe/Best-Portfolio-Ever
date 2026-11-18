@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
+import { attachWhyNote } from "../whyNote/whyNote";
 import { frame3 } from "./config";
 import { level, run, type AgentId } from "./data";
 import { LevelMap, noteStyle } from "./LevelMap";
@@ -18,13 +19,6 @@ const GRAIN = {
   seamBottom: 0.05,
   seamSteam: 1,
 } as const;
-
-const REFERENCES = [
-  "Course project for CS 449/549 Learning for Robotics, Bilkent University, 2023.",
-  "Team: Kaan Ünlü, Mert Kaan Er and Alper Bozkurt.",
-  "Built on PressurePlate by Trevor McInroe and Filippos Christianos, Autonomous Agents Research Group, University of Edinburgh.",
-  'MADDPG code from "Revisiting the Gumbel-Softmax in MADDPG" by Callum Rhys Tilbury, Filippos Christianos and Stefano V. Albrecht, 2023.',
-];
 
 const NOTE =
   "What this agent sees: 7×7 tiles in one layer, its position and how long it can keep a door open. 52 numbers in total.";
@@ -44,11 +38,11 @@ const FIT_SIZES: Array<[string, string]> = [
   ["--body-size", frame3.bodySize],
   ["--item-gap", frame3.itemGap],
   ["--stack-size", frame3.stackSize],
+  ["--info-size", frame3.infoSize],
+  ["--info-gap", frame3.infoGap],
   ["--invite-size", frame3.inviteSize],
   ["--link-gap", frame3.linkGap],
 ];
-
-type PanelPhase = "closed" | "opening" | "open" | "closing";
 
 function restPose(): Pose {
   return poseAt(
@@ -156,9 +150,7 @@ export function Frame3() {
   const mapRef = useRef<HTMLDivElement>(null);
   const belowRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const refsRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const refsButtonRef = useRef<HTMLButtonElement>(null);
+  const infoRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const elapsedRef = useRef(0);
   const onceRef = useRef(false);
   const touchRef = useRef(false);
@@ -173,7 +165,6 @@ export function Frame3() {
   const [pose, setPose] = useState<Pose>(restPose);
   const [watch, setWatch] = useState<AgentId | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [panel, setPanel] = useState<PanelPhase>("closed");
 
   const onScreenRef = useRef(onScreen);
   const reducedRef = useRef(reduced);
@@ -237,10 +228,6 @@ export function Frame3() {
           if (fit >= 1) copy.style.removeProperty(name);
           else copy.style.setProperty(name, `calc(${value} * ${fit.toFixed(3)})`);
         }
-        const refs = refsRef.current;
-        if (!refs) return;
-        if (fit >= 1) refs.style.removeProperty("--invite-size");
-        else refs.style.setProperty("--invite-size", `calc(${frame3.inviteSize} * ${fit.toFixed(3)})`);
       };
       let fit = 1;
       scale(fit);
@@ -255,7 +242,6 @@ export function Frame3() {
       const map = mapRef.current;
       const copy = textRef.current;
       if (copy) for (const [name] of FIT_SIZES) copy.style.removeProperty(name);
-      refsRef.current?.style.removeProperty("--invite-size");
       for (const name of ["--text-width", "--map-w", "--group-top", "--caption-top"]) frame.style.removeProperty(name);
       if (!map) return;
       const rect = frame.getBoundingClientRect();
@@ -399,43 +385,17 @@ export function Frame3() {
   }, []);
 
   useEffect(() => {
-    if (panel !== "opening") return;
-    let second = 0;
-    const first = requestAnimationFrame(() => {
-      second = requestAnimationFrame(() => setPanel("open"));
+    const host = frameRef.current;
+    if (!host) return;
+    const notes = COPY.notes.map((item, index) => {
+      const button = infoRefs.current[index];
+      if (!button) return null;
+      return attachWhyNote(button, host, { note: item.note, label: item.label });
     });
     return () => {
-      cancelAnimationFrame(first);
-      cancelAnimationFrame(second);
+      for (const note of notes) note?.destroy();
     };
-  }, [panel]);
-
-  useEffect(() => {
-    if (panel !== "closing") return;
-    const id = window.setTimeout(() => setPanel("closed"), frame3.panelFadeMs);
-    return () => window.clearTimeout(id);
-  }, [panel]);
-
-  useEffect(() => {
-    if (panel === "closed") return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPanel("closing");
-      if (event.key === "Tab") touchRef.current = false;
-    };
-    const onPointer = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (panelRef.current?.contains(target)) return;
-      if (refsButtonRef.current?.contains(target)) return;
-      setPanel("closing");
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onPointer);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onPointer);
-    };
-  }, [panel]);
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -450,10 +410,6 @@ export function Frame3() {
     onceRef.current = true;
     setPlaying(true);
     setPose(restPose());
-  };
-
-  const togglePanel = () => {
-    setPanel((current) => (current === "open" || current === "opening" ? "closing" : "opening"));
   };
 
   const showAgent = (id: AgentId) => setWatch(id);
@@ -523,8 +479,7 @@ export function Frame3() {
     "--outside-mix": String(frame3.outsideMix),
     "--outside-grid": frame3.outsideGrid,
     "--column-gap": frame3.columnGap,
-    "--refs-right": frame3.refsRight,
-    "--refs-bottom": frame3.refsBottom,
+    "--gold": frame3.gold,
     "--eyebrow-size": frame3.eyebrowSize,
     "--eyebrow-weight": String(frame3.eyebrowWeight),
     "--eyebrow-gap": frame3.eyebrowGap,
@@ -550,6 +505,8 @@ export function Frame3() {
     "--bullet": frame3.bullet,
     "--stack-size": frame3.stackSize,
     "--stack-weight": String(frame3.stackWeight),
+    "--info-size": frame3.infoSize,
+    "--info-gap": frame3.infoGap,
     "--link-gap": frame3.linkGap,
     "--caption-size": frame3.captionSize,
     "--note-size": frame3.noteSize,
@@ -561,17 +518,9 @@ export function Frame3() {
     "--note-radius": frame3.noteRadius,
     "--note-pad-y": frame3.notePadY,
     "--note-pad-x": frame3.notePadX,
-    "--panel-width": frame3.panelWidth,
-    "--panel-pad": frame3.panelPad,
-    "--panel-radius": frame3.panelRadius,
-    "--panel-text": frame3.panelTextSize,
-    "--panel-line": String(frame3.panelLine),
-    "--panel-fade": `${frame3.panelFadeMs}ms`,
-    "--panel": frame3.panel,
     "--white-90": frame3.white90,
     "--white-60": frame3.white60,
     "--white-55": frame3.white55,
-    "--white-88": frame3.white88,
     "--white-15": frame3.white15,
     "--phone-margin": frame3.phone.margin,
     "--phone-title": frame3.phone.titleSize,
@@ -675,16 +624,28 @@ export function Frame3() {
         <p className="frame3-eyebrow">{COPY.eyebrow}</p>
         <h2 className="frame3-title">{COPY.title}</h2>
         <p className="frame3-intro">{COPY.intro}</p>
-        <p className="frame3-label">{COPY.didLabel}</p>
+        <p className="frame3-label">{COPY.showsLabel}</p>
         <ul className="frame3-list">
-          {COPY.did.map((line) => (
-            <li key={line}>{line}</li>
+          {COPY.shows.map((point) => (
+            <li key={point.mark}>
+              <MarkedLine text={point.text} mark={point.mark} />
+            </li>
           ))}
         </ul>
-        <p className="frame3-label">{COPY.trainedLabel}</p>
-        <p className="frame3-result">{COPY.trained}</p>
-        <p className="frame3-label">{COPY.resultLabel}</p>
-        <p className="frame3-result">{COPY.result}</p>
+        <div className="frame3-infos">
+          {COPY.notes.map((item, index) => (
+            <button
+              key={item.label}
+              type="button"
+              className="why-button frame3-info"
+              ref={(node) => {
+                infoRefs.current[index] = node;
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
         <p className="frame3-stack">{COPY.stack}</p>
         <a className="frame3-invite frame3-project" href={frame3.projectUrl} target="_blank" rel="noreferrer">
           <span className="frame3-invite-label">
@@ -694,35 +655,20 @@ export function Frame3() {
           <InviteArrow />
         </a>
       </div>
-
-      <div className="frame3-refs" ref={refsRef}>
-        <button
-          className="frame3-invite frame3-refs-button"
-          type="button"
-          ref={refsButtonRef}
-          aria-expanded={panel === "open" || panel === "opening"}
-          onClick={togglePanel}
-        >
-          <span className="frame3-invite-label">
-            References
-            <InviteLine />
-          </span>
-        </button>
-        {panel !== "closed" && (
-          <div
-            className="frame3-panel"
-            ref={panelRef}
-            role="dialog"
-            aria-label="References"
-            data-open={panel === "open" ? "1" : "0"}
-          >
-            {REFERENCES.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-          </div>
-        )}
-      </div>
     </section>
+  );
+}
+
+/** One phrase in a point, drawn in gold. The rest of the sentence stays as written. */
+function MarkedLine({ text, mark }: { text: string; mark: string }) {
+  const at = text.indexOf(mark);
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="frame3-gold">{mark}</span>
+      {text.slice(at + mark.length)}
+    </>
   );
 }
 
