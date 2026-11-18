@@ -57,6 +57,18 @@ export const frame1Config = {
     mark: 22,
     /** Stacked cards when the frame is narrower than this, or taller than it is wide. */
     stackBelow: 1000,
+    /**
+     * From stackBelow through this width, the name is smaller and the middle
+     * column is only the gap between the two panels' text. If the name or its
+     * icons still meet that text, the cards use the stacked layout.
+     */
+    mediumUntil: 1280,
+    /** Largest scale of the name in that band, before it shrinks further to stay clear. */
+    mediumNameScale: 0.78,
+    /** Smallest the name may be in that band, in pixels, before the cards stack. */
+    mediumNameMin: 32,
+    /** Clear space between the name row and the panel text, in pixels. */
+    mediumClearance: 14,
     /** No text on this frame goes below this size, in pixels. */
     minText: 13,
     /** Where the top of the hair sits in the full frame, as a fraction of the frame height. */
@@ -175,6 +187,53 @@ export const frame1Config = {
     /** Scale of the panel when it is still at the button. */
     fromScale: 0.08,
   },
+  /**
+   * The research panel. Live text, in place of the school work-plan pages.
+   * The strings are the plan as a visitor should read it.
+   */
+  researchPlan: {
+    title: "My research plan",
+    intro:
+      "I want a tool that builds dungeon levels the way a designer asks for them. Before a level reaches the designer, computer players with different play styles, called behavioural agents, play it to check that it works as asked.",
+    steps: [
+      {
+        title: "Connect the level builder to simple controls",
+        text: "I start from an existing dungeon generator, LevelScript by Bojan, and learn how it places rooms, enemies, items and the exit. Then I turn settings like the number of enemies and items into controls I can change on screen.",
+        result: "Maps built from the settings on screen",
+      },
+      {
+        title: "Turn the maps into a game",
+        text: "The generator only draws maps. I add simple turn-based rules for moving, collecting treasure, fighting monsters and reaching the exit, so the computer players have a game to play.",
+        result: "Playable dungeon levels",
+      },
+      {
+        title: "Build the first computer player",
+        text: "I design one player with a clear style from research, such as a Treasure Collector or a Monster Killer, and give it a way to choose its moves. I test it until it plays in that style.",
+        result: "A computer player that plays as intended",
+      },
+      {
+        title: "Pick one goal and how to check it",
+        text: "I choose one goal that describes how a level should play. I decide which computer players test it, and which results prove it, such as how much treasure they collect and whether they reach the exit.",
+        result: "Which players test it, and which results count",
+      },
+      {
+        title: "Find a level that meets the goal",
+        text: "The chosen players play many generated levels. The tool returns the level whose results meet the goal, and shows whether each player succeeded or failed.",
+        result: "A matching level, with each player's result",
+      },
+      {
+        title: "Grow to three goals",
+        text: "I add two more goals, each with its own players and checks, and make all three selectable on screen.",
+        result: "Pick a goal, and a matching level comes back",
+      },
+      {
+        title: "Let the tool create the players",
+        text: "Until this step I build the players by hand. Now the tool creates the right players by itself from the goal the designer picks, and I compare its results with the hand-made ones.",
+        result: "Goal in, players created, level out",
+      },
+    ],
+    footer: "Alper Bozkurt, Master Game Technology, Breda University of Applied Sciences",
+  },
   /** Line under the name in the full frame. */
   tagline: "I'm a game programmer. I build gameplay systems and game AI.",
   /** First sentence, shown alone on a compact card. The rest follows in the full text. */
@@ -215,8 +274,6 @@ export const frame1Config = {
     bilkentCampus: `${import.meta.env.BASE_URL}assets/frame1/bilkent-campus.jpg`,
     bilkentLogo: `${import.meta.env.BASE_URL}assets/bilkent-logo.png`,
     portrait: `${import.meta.env.BASE_URL}assets/frame1/portrait-nocrown.jpg`,
-    research1: `${import.meta.env.BASE_URL}assets/frame1/research-plan-1.webp`,
-    research2: `${import.meta.env.BASE_URL}assets/frame1/research-plan-2.webp`,
   },
   scrollCue: {
     text: "Scroll to continue",
