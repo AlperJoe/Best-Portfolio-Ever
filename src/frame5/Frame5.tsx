@@ -8,6 +8,7 @@ import "./Frame5.css";
 const A = frame5.endingA;
 const B = frame5.endingB;
 const OVERLAY = frame5.overlay;
+const GATE = frame5.warning.gate;
 const ARROWS = frame5.arrows;
 const TICKET = A.hobbies.ticket;
 
@@ -292,6 +293,17 @@ function PlayMark() {
   );
 }
 
+/** A slightly uneven warning triangle, drawn like the other hand-drawn marks. */
+function WarningMark() {
+  return (
+    <svg className="frame5-gate-mark" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24.2 5.6 C 16.9 17.4, 10.4 30.1, 6.7 40.7 C 16.8 42.6, 31.6 42.35, 41.4 40.2 C 35.8 28.2, 29.6 16.2, 24.2 5.6 Z" />
+      <path d="M24.05 17.4 C 24.55 21.8, 23.7 27.2, 24.25 31.7" />
+      <path className="frame5-gate-dot" d="M24.2 36.15 v0.2" />
+    </svg>
+  );
+}
+
 export function Frame5() {
   const frameRef = useRef<HTMLElement>(null);
   const grainRef = useRef<HTMLCanvasElement>(null);
@@ -310,6 +322,7 @@ export function Frame5() {
   const [overlay, setOverlay] = useState<OverlayState>(null);
   const [longOpen, setLongOpen] = useState(false);
   const [hot, setHot] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
 
   const shownRef = useRef(shown);
   const reducedRef = useRef(reduced);
@@ -405,6 +418,7 @@ export function Frame5() {
   const openFilm = (film: Film, opener: HTMLElement | null) => {
     openerRef.current = opener;
     setLongOpen(false);
+    setStarted(false);
     setOverlay({ film, phase: "opening" });
   };
 
@@ -451,7 +465,7 @@ export function Frame5() {
     };
     window.addEventListener("blur", onBlur);
     return () => window.removeEventListener("blur", onBlur);
-  }, [overlayOpen]);
+  }, [overlayOpen, started]);
 
   useEffect(() => {
     if (!overlay) return;
@@ -509,6 +523,11 @@ export function Frame5() {
     "--f5-cta-draw": frame5.cta.draw,
     "--f5-warning-size": frame5.warning.size,
     "--f5-warning-color": frame5.warning.color,
+    "--f5-gate-veil": GATE.veil,
+    "--f5-gate-pool": GATE.pool,
+    "--f5-gate-mark": `${GATE.markSize}px`,
+    "--f5-gate-text": GATE.textSize,
+    "--f5-gate-ink": GATE.textColor,
     "--f5-label-size": frame5.label.size,
     "--f5-label-weight": String(frame5.label.weight),
     "--f5-label-tracking": frame5.label.tracking,
@@ -787,9 +806,21 @@ export function Frame5() {
             </button>
             <div className="frame5-dialog-scroll">
               <div className="frame5-dialog-media">
-                {activeFilm.warning ? <p className="frame5-dialog-warning">{activeFilm.warning}</p> : null}
                 <div className="frame5-video">
-                  {overlay.phase !== "closing" ? (
+                  {activeFilm.warning && !started ? (
+                    <div className="frame5-gate">
+                      <img src={B.cover(activeFilm.videoId)} alt="" draggable={false} />
+                      <div className="frame5-gate-copy">
+                        <div className="frame5-gate-stack">
+                          <WarningMark />
+                          <p className="frame5-gate-warning">{activeFilm.warning}</p>
+                          <button type="button" className="frame5-cta frame5-gate-watch" onClick={() => setStarted(true)}>
+                            <CtaLabel>{GATE.watchLabel}</CtaLabel>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : overlay.phase !== "closing" ? (
                     <iframe
                       key={activeFilm.videoId}
                       src={B.embed(activeFilm.videoId)}

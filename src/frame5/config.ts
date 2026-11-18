@@ -13,7 +13,10 @@ export type Film = {
   title: string;
   year: number;
   videoId: string;
-  /** Small line on the card and above the video. */
+  /**
+   * Small line on the card. When set, the same sentence covers the video
+   * until the visitor chooses to watch.
+   */
   warning?: string;
   /** The line under the title on the card. */
   summary: string;
@@ -106,10 +109,24 @@ export const frame5 = {
     draw: "0.2s",
   },
 
-  /** The egg-film line, on the card and above the player. Sentence case. */
+  /**
+   * The egg film. The small line stays on the card. The same sentence,
+   * a mark, and the invitation to watch cover the video until it starts.
+   */
   warning: {
     size: "13px",
     color: "#C17B74",
+    gate: {
+      watchLabel: "Watch the film",
+      /** Warning mark, in pixels. */
+      markSize: 48,
+      /** Dark veil over the cover image. */
+      veil: "rgba(8, 6, 8, 0.72)",
+      /** Softer dark pool behind the mark, the sentence and the button. */
+      pool: "radial-gradient(ellipse at center, rgba(6, 5, 8, 0.94) 0%, rgba(6, 5, 8, 0.86) 42%, rgba(6, 5, 8, 0.4) 68%, rgba(6, 5, 8, 0) 82%)",
+      textSize: "16px",
+      textColor: "#F2EEE6",
+    },
   },
 
   endingA: {
