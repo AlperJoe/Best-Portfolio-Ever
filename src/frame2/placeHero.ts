@@ -18,10 +18,25 @@ export type PlaceHeroOptions = {
   face: ImageBox;
 };
 
+function pick(
+  preferred: number,
+  regionMin: number,
+  regionMax: number,
+  coverMin: number,
+  coverMax: number,
+) {
+  if (regionMin <= regionMax) {
+    const min = Math.max(coverMin, regionMin);
+    const max = Math.min(coverMax, regionMax);
+    if (min <= max) return Math.min(max, Math.max(min, preferred));
+  }
+  return Math.min(coverMax, Math.max(coverMin, preferred));
+}
+
 /**
- * Largest scale at or below cover. The painted title stays inset from the
- * left, and both the title and the face stay above clearBottom.
- * Position stays as close as possible to object-position.
+ * Cover scale, so the painting always fills the frame. The title and the face
+ * stay on screen when that still covers. Position stays as close as possible
+ * to object-position.
  */
 export function placeHero(
   frameW: number,
@@ -35,79 +50,36 @@ export function placeHero(
   }
 
   const safeBottom = Math.max(0, frameH - clearBottom);
-  const cover = Math.max(frameW / imageW, frameH / imageH);
+  const scale = Math.max(frameW / imageW, frameH / imageH);
+  const renderedW = imageW * scale;
+  const renderedH = imageH * scale;
+  const preferredLeft = (frameW - renderedW) * positionX;
+  const preferredTop = (frameH - renderedH) * positionY;
 
-  const fits = (scale: number, left: number, top: number) => {
-    const titleLeft = left + title.x * imageW * scale;
-    const titleRight = left + (title.x + title.w) * imageW * scale;
-    const titleTop = top + title.y * imageH * scale;
-    const titleBottom = top + (title.y + title.h) * imageH * scale;
-    const faceLeft = left + face.x * imageW * scale;
-    const faceRight = left + (face.x + face.w) * imageW * scale;
-    const faceTop = top + face.y * imageH * scale;
-    const faceBottom = top + (face.y + face.h) * imageH * scale;
-    return (
-      titleLeft >= titleInset &&
-      titleRight <= frameW &&
-      titleTop >= -0.5 &&
-      titleBottom <= safeBottom + 0.5 &&
-      faceLeft >= -0.5 &&
-      faceRight <= frameW &&
-      faceTop >= -0.5 &&
-      faceBottom <= safeBottom + 0.5
-    );
-  };
+  const coverMinLeft = Math.min(0, frameW - renderedW);
+  const coverMaxLeft = 0;
+  const coverMinTop = Math.min(0, frameH - renderedH);
+  const coverMaxTop = 0;
 
-  const placeAt = (scale: number) => {
-    const renderedW = imageW * scale;
-    const renderedH = imageH * scale;
-    const preferredLeft = (frameW - renderedW) * positionX;
-    const preferredTop = (frameH - renderedH) * positionY;
-    const minLeft = Math.max(
-      titleInset - title.x * renderedW,
-      -face.x * renderedW,
-      -title.x * renderedW,
-    );
-    const maxLeft = Math.min(
-      frameW - (title.x + title.w) * renderedW,
-      frameW - (face.x + face.w) * renderedW,
-    );
-    const minTop = Math.max(-title.y * renderedH, -face.y * renderedH);
-    const maxTop = Math.min(
-      safeBottom - (title.y + title.h) * renderedH,
-      safeBottom - (face.y + face.h) * renderedH,
-    );
-    if (minLeft > maxLeft || minTop > maxTop + 0.5) return null;
-    const left = Math.min(maxLeft, Math.max(minLeft, preferredLeft));
-    let top = Math.min(maxTop, Math.max(minTop, preferredTop));
-    // A centered short image leaves a dark band above the art. Pull it up
-    // to the top of the frame when the title and face still fit.
-    if (top > 0 && minTop <= 0) top = 0;
-    if (!fits(scale, left, top)) return null;
-    return { left, top };
-  };
+  const regionMinLeft = Math.max(titleInset - title.x * renderedW, -face.x * renderedW);
+  const regionMaxLeft = Math.min(
+    frameW - (title.x + title.w) * renderedW,
+    frameW - (face.x + face.w) * renderedW,
+  );
+  const regionMinTop = Math.max(-title.y * renderedH, -face.y * renderedH);
+  const regionMaxTop = Math.min(
+    safeBottom - (title.y + title.h) * renderedH,
+    safeBottom - (face.y + face.h) * renderedH,
+  );
 
-  let scale = cover;
-  let placed = placeAt(scale);
-  if (!placed) {
-    let low = 0.15;
-    let high = cover;
-    for (let step = 0; step < 22; step += 1) {
-      const mid = (low + high) / 2;
-      if (placeAt(mid)) low = mid;
-      else high = mid;
-    }
-    scale = low;
-    placed = placeAt(scale);
-  }
+  const left = pick(preferredLeft, regionMinLeft, regionMaxLeft, coverMinLeft, coverMaxLeft);
+  const top = pick(preferredTop, regionMinTop, regionMaxTop, coverMinTop, coverMaxTop);
 
-  const left = placed?.left ?? 0;
-  const top = placed?.top ?? 0;
   return {
     left,
     top,
-    width: imageW * scale,
-    height: imageH * scale,
+    width: renderedW,
+    height: renderedH,
     scale,
   };
 }

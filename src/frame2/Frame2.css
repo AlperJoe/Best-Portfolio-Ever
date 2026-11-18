@@ -49,10 +49,10 @@
 
 .frame2-fill {
   position: absolute;
-  left: -6%;
-  top: -6%;
-  width: 112%;
-  height: 112%;
+  left: -18%;
+  top: -18%;
+  width: 136%;
+  height: 136%;
   object-fit: cover;
   object-position: var(--hero-position);
   filter: blur(var(--fill-blur));
