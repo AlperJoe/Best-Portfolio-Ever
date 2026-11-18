@@ -4,14 +4,6 @@ export const frame1Config = {
     bilkentTone: "#001489",
     middleTone: "#F2EEE6",
   },
-  /** Seam blend band as a fraction of the frame width. */
-  blendWidth: 0.2,
-  /** Side focal lights stay off. The crown glow is the only added light. */
-  lightStrength: 0,
-  /** Share of the region tone in each side light. The rest is white. */
-  lightToneMix: 0.58,
-  /** Radius of each focal light as a fraction of the frame width. */
-  lightRadius: 0.42,
   links: {
     github: "https://github.com/AlperJoe",
     linkedin: "https://www.linkedin.com/in/alperbozkurt/",
@@ -22,188 +14,90 @@ export const frame1Config = {
   portraitGrade: "saturate(1.08)",
   /** Focus ring used by every keyboard-focusable control. */
   focus: "#F2EEE6",
-  /** object-position kept for the portrait asset. The face is placed in layout. */
-  portraitPosition: "50% 46%",
-  colorOverlay: {
-    opacity: 0.84,
-    blendMode: "multiply" as const,
-  },
-  /** Darkness under the lights, multiplied by lightStrength. */
-  shadeAmount: 0.16,
-  /** The portrait is shaded less so the face stays clear. */
-  portraitShadeAmount: 0.05,
-  /** The seam light band is off. */
-  edgeGlowReach: 0.22,
-  edgeGlowStrength: 0,
-  /** Two-sided edge light on the portrait stays off. */
-  portraitEdgeStrength: 0,
-  /** Largest shift of the focal lights toward the cursor, as a fraction of frame width. */
-  cursorLightShift: 0,
-  /** Largest shift of the campus photos away from the cursor, in pixels. */
-  cursorPhotoShift: 10,
-  /**
-   * Black veil over each campus photo. The text sits in the dark top,
-   * and the buildings show through the lighter lower half.
-   */
-  veil: {
-    top: 0.9,
-    bottom: 0.28,
-  },
-  badge: {
-    plate: "#F2EEE6",
-    plateOpacity: 0.92,
-    /** Same inner padding on every side, in pixels. */
-    pad: 8,
-    radius: 8,
-    /** Shared plate size, as fractions of the frame. */
-    width: 0.12,
-    height: 0.055,
-    /** Space between a text block and its badge, in pixels. */
-    gap: 24,
-    /** Lift on hover and keyboard focus, in pixels. */
-    lift: 2,
-    /** School color mixed into the plate on hover and focus. */
-    tint: 0.18,
-    buasTint: "#ED7624",
-    bilkentTint: "#0053A0",
-  },
   duotone: {
     contrast: 1.35,
     buasHighlight: 0.52,
     buasShadow: 0.4,
     bilkentHighlight: 0.3,
     bilkentShadow: 1,
-    buasShade: 0.48,
-    bilkentShade: 0.8,
-  },
-  campus: {
-    /** Soft fade at the top of each photo, as a fraction of the frame height. */
-    fade: 0.1,
-    /**
-     * Each photo covers its triangle's box: this share of the frame width,
-     * and the full frame height. object-fit cover, anchored to the bottom
-     * corner so cropping takes sky.
-     */
-    boxWidth: 0.5,
   },
   /**
-   * A small glow centered on the apex, above the crown.
-   * Opacity is the center. Reach is how far it travels down the frame,
-   * as a fraction of the frame height, and it ends before the crown.
+   * Full frame: portrait at the top, a card on each side.
+   * The three card margins (top, bottom, outer) are one length.
    */
-  crownGlow: {
-    rgb: "255, 214, 170",
-    opacity: 0.16,
-    reach: 0.04,
-    shift: "-50%",
+  layout: {
+    /** Each card, as a fraction of the frame width. */
+    cardWidth: 0.3,
+    /** Portrait height in the full frame, as a fraction of the frame height. */
+    portrait: 0.34,
+    /** Largest the portrait gets in the start state, as a fraction of the frame height. */
+    portraitStart: 0.66,
+    /** Top, bottom and outer margins, as a fraction of the frame height. */
+    margin: 0.056,
+    marginMin: 52,
+    marginMax: 72,
+    radius: 12,
+    /** How far a photo may cross the inner edge, as a fraction of the card width. */
+    spill: 0.42,
+    /** Soft fade at the inner edge of a card, in pixels. */
+    edgeFade: 72,
+    /** Gap between the portrait and the name, in pixels. */
+    nameGap: 14,
+    /** Gap between the name and the line under it, in pixels. */
+    lineGap: 10,
+    /** Clear space between the center column and each card, in pixels. */
+    columnGutter: 16,
+    /** School marks, in pixels. They sit in the bottom margin. */
+    mark: 22,
   },
   portraitLayout: {
-    /** Ceiling on enlargement. */
-    maxScale: 1.35,
     naturalWidth: 1024,
     naturalHeight: 1026,
-    /** Top of the crown, as a fraction of the photo. */
-    crownTopY: 0.02,
-    /** Where that crown top sits, as a fraction of the frame height. */
-    crownFrame: 0.06,
-    /** Bottom of the chin and the top of the shoulders, as fractions of the photo. */
-    chinY: 0.68,
-    shoulderY: 0.8,
-    /** The chin and the shoulders stay this many pixels above the name. */
-    chinGap: 8,
-    shoulderGap: 14,
-    /** Where the eyes sit in the photo, as a fraction of its height. */
-    eyeY: 0.44,
-    /** Sides of the face at eye level, as fractions of the photo width. */
-    faceLeft: 0.373,
-    faceRight: 0.691,
-    /** How far the fade runs after the top of the name, as a fraction of frame height. */
-    fadeSpan: 0.07,
-    /**
-     * Soft oval that holds the crown, face and shoulders, and is fully
-     * transparent before the photo's straight edges.
-     */
-    mask: {
-      cx: 0.5,
-      cy: 0.46,
-      rx: 0.78,
-      ry: 0.7,
-      /** Opaque inside this share of the oval. Outside it, the edge falls away. */
-      solid: 0.78,
-      /** Outer share of the photo that stays fully transparent. */
-      sideClear: 0.1,
-      /** Width of the fade that follows that clear band, as a share of the photo. */
-      sideSoft: 0.16,
-      /** The strip above the crown fades out before the photo's top edge. */
-      topClear: 0,
-      topSoft: 0.018,
-    },
   },
   middle: {
-    /** Bottom of the line under the name, as a fraction of the frame height. */
-    bottom: 0.06,
-    /** Widest the block may be, as a fraction of the frame width. */
-    maxWidth: 0.44,
-    /** Clear space kept between this block and each seam. */
-    seamGap: 20,
-    /** Clear space kept between this block and a side block. */
-    blockGap: 16,
-    nameSize: "clamp(56px, 5.2vw, 96px)",
-    nameLine: 1,
+    nameSize: "clamp(40px, 4.4vw, 80px)",
+    nameLine: 1.05,
     nameColor: "#F2EEE6",
-    nameGap: 10,
-    lineSize: 19,
+    lineSize: 18,
     lineWeight: 400,
     lineLine: 1.45,
     lineOpacity: 0.88,
   },
   icons: {
-    size: 48,
+    size: 40,
     /** Lift on hover and keyboard focus, in pixels. */
     lift: 2,
     /** Space between each mark and the name, in pixels. */
-    nameGap: 28,
-    /** Clear space kept between a mark and a seam, in pixels. */
-    seamGap: 16,
+    nameGap: 14,
     linkedin: "#0A66C2",
     radius: 8,
-    glow: 16,
   },
   text: {
-    /** Side blocks sit this far in from the left and right edges. */
-    insetX: 0.05,
-    /** Both blocks start this far below the top edge. */
-    insetY: 0.07,
-    /** Shared rhythm: under the title, under the divider, under the label, above the button. */
     spaceDivider: 12,
-    spaceLabel: 16,
+    spaceLabel: 14,
     spaceBody: 8,
-    spaceButton: 24,
-    /** Lines stop this far before the seam, as a fraction of the frame width. */
-    seamInset: 0.04,
-    titleLine: 1.05,
-    buasTitleSize: "clamp(32px, 3vw, 56px)",
+    spaceButton: 20,
+    titleLine: 1.12,
+    buasTitleSize: "clamp(24px, 2.05vw, 42px)",
     buasTitleWeight: 600,
-    bilkentTitleSize: "clamp(34px, 3.2vw, 60px)",
+    bilkentTitleSize: "clamp(26px, 2.2vw, 46px)",
     bilkentTitleWeight: 800,
-    labelSize: 18,
+    labelSize: 16,
     labelWeight: 600,
-    /** Same soft shadow the other Frame 1 text uses. */
     labelShadow: "0 1px 2px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.45)",
     buasLabel: "#FFC496",
     bilkentLabel: "#BFD0FF",
     ruleOpacity: 0.2,
-    bodySize: 20,
-    buttonSize: 17,
+    bodySize: 17,
+    buttonSize: 16,
     buttonPadY: 8,
     buttonPadX: 14,
     buttonRadius: 6,
     buttonBorder: "rgba(255, 255, 255, 0.4)",
     buttonWeight: 600,
-    buttonGap: 16,
     /** How far the research arrow travels on hover and focus, in pixels. */
     arrowShift: 4,
-    courseSize: 20,
+    courseSize: 16,
     courseCodeWeight: 600,
     courseCodeOpacity: 0.7,
     courseNameWeight: 400,
@@ -213,25 +107,6 @@ export const frame1Config = {
     bodyWeight: 400,
     bodyLine: 1.45,
     bodyOpacity: 0.94,
-    shade: 0.35,
-    shadeBlur: 26,
-  },
-  seams: {
-    /** Soft blend width at the top, as a fraction of the frame width. */
-    top: 0.22,
-    /** Soft blend width at the bottom, as a fraction of the frame width. */
-    bottom: 0.34,
-    campusReach: 0.034,
-    /**
-     * Share of edgeLimit the noise may use. The seam stays on the true
-     * line, with only a little roughness so it is not a ruler line.
-     */
-    noise: 0,
-    /** Largest shift of either seam from its true line, as a fraction of frame width. */
-    edgeLimit: 0,
-    columns: 5,
-    rows: 4,
-    steam: 1,
   },
   research: {
     /** How long the panel takes to grow out and shrink back, in seconds. */
@@ -249,7 +124,7 @@ export const frame1Config = {
     /** Scale of the panel when it is still at the button. */
     fromScale: 0.08,
   },
-  /** Line under the name. */
+  /** Line under the name in the full frame. */
   tagline: "I'm a game programmer. I build gameplay systems and game AI.",
   buasText:
     "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals. Agents with different play styles play every new level, so each level is already playtested when the designer sees it.",
@@ -291,52 +166,24 @@ export const frame1Config = {
   },
   scrollCue: {
     text: "Scroll to continue",
-    /** Inset from the right edge and the bottom edge, as fractions of the frame. */
     right: 0.04,
     bottom: 0.04,
     size: 13,
     weight: 500,
     opacity: 0.55,
-    /** How far the arrow nudges, in pixels, once each interval. */
     nudge: 3,
-    /** Seconds between nudges. */
     every: 4,
-    /** Fade after the first transition, in seconds. */
     fade: 0.6,
   },
   /**
-   * Opening driven by the scroll, used only with ?transition=d. It replaces
-   * the timed opening below and the scroll cue.
+   * Opening driven by the scroll, used only with ?transition=d.
+   * The window event is 0 at the start state and 1 at the full frame.
+   * Every part reads that value directly.
    */
   scrollOpening: {
-    /** Line under the name in the start state. */
     hint: "Scroll me to know me better.",
-    /** Space between the name and that line, in pixels. */
-    hintGap: 12,
     /** Scroll distance from the start state to the full frame, in screen heights. */
     distance: 1.2,
-    /**
-     * Portrait size in the start state, as a multiple of its size in the full
-     * frame. It grows around the top of the crown and rises toward the top
-     * edge, and the name moves down with it. It stays smaller when the
-     * name and the line would not fit.
-     */
-    portraitStart: 1.3,
-    /** In the start state the top of the crown stays at least this far below the top edge, as a fraction of the frame height. */
-    startTopMin: 0.02,
-    /**
-     * When each part comes in, as a share of the scroll distance. The hint
-     * fades out over its window, everything else fades in. The portrait
-     * shrinks to its place over its window.
-     */
-    order: [
-      { part: "hint", from: 0, to: 0.3 },
-      { part: "portrait", from: 0, to: 0.62 },
-      { part: "sides", from: 0.14, to: 0.62 },
-      { part: "tagline", from: 0.6, to: 0.8 },
-      { part: "icons", from: 0.68, to: 0.88 },
-      { part: "research", from: 0.78, to: 1 },
-    ] as Array<{ part: "hint" | "portrait" | "sides" | "tagline" | "icons" | "research"; from: number; to: number }>,
   },
   opening: {
     bilkent: 160,
@@ -346,13 +193,6 @@ export const frame1Config = {
     name: 2020,
   },
   effects: {
-    PORTRAIT_EDGE_LIGHT: false,
     OPENING_SEQUENCE: true,
-    CURSOR_REACTION: true,
-    FILM_GRAIN: true,
   },
-  /** Strength of the film grain over the frame. The portrait keeps only a share of it. */
-  grainAlpha: 0.11,
-  /** Share of the film grain kept on the portrait. Half strength at most. */
-  grainOnPortrait: 0.5,
 };
