@@ -156,6 +156,56 @@
   color: #efc785;
 }
 
+.frame2-love-keep {
+  white-space: nowrap;
+}
+
+/* Circled i, about one lowercase letter of the headline tall. */
+.frame2-info {
+  position: relative;
+  display: inline-block;
+  width: 1ex;
+  height: 1ex;
+  margin: 0 0 0 0.22em;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #efc785;
+  font-family: inherit;
+  font-size: 1em;
+  font-stretch: inherit;
+  font-weight: inherit;
+  font-style: normal;
+  line-height: 0;
+  vertical-align: baseline;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.frame2-info svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.frame2-info::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.frame2-info:hover,
+.frame2-info:focus-visible {
+  color: var(--gold-hot, #ffe7b5);
+}
+
+.frame2-info:focus-visible {
+  outline: 2px solid #efc785;
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+
 .frame2-lead {
   margin: var(--lead-gap) 0 0;
   /* Archivo at 17px: 46ch stays within 60 characters a line. */
@@ -166,9 +216,21 @@
   color: rgba(255, 255, 255, var(--lead-opacity));
 }
 
+.frame2-lead p {
+  margin: 0;
+}
+
+.frame2-lead p + p {
+  margin-top: var(--lead-paragraph-gap);
+}
+
 .frame2-lead strong {
   font-weight: var(--lead-strong);
   color: inherit;
+}
+
+.frame2-lead strong.is-bold {
+  font-weight: var(--lead-bold);
 }
 
 .frame2-stores {
@@ -229,8 +291,7 @@
   transition: opacity var(--line-fade) ease;
 }
 
-.frame2-line-text,
-.frame2-line-help {
+.frame2-line-text {
   margin: 0;
 }
 
@@ -287,17 +348,6 @@
 .frame2-line-text:hover .frame2-invite-rule path,
 .frame2-line-text:focus-visible .frame2-invite-rule path {
   stroke-dashoffset: 0;
-}
-
-.frame2-line-help {
-  margin-top: var(--line-help-gap);
-  font-family: var(--font-text), sans-serif;
-  font-style: normal;
-  font-weight: var(--line-help-weight);
-  font-size: var(--line-help-size);
-  line-height: 1.35;
-  color: var(--line-help-color);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.82);
 }
 
 .frame2-arrow-space {
@@ -640,16 +690,6 @@
 .frame2.is-phone .frame2-lead {
   max-width: none;
   font-size: var(--phone-lead);
-}
-
-.frame2.is-phone .frame2-line {
-  max-width: var(--line-max, 160px);
-}
-
-.frame2.is-phone .frame2-line-help {
-  white-space: normal;
-  text-align: center;
-  text-wrap: balance;
 }
 
 .frame2-open.is-sheet {
