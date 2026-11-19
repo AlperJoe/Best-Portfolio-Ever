@@ -32,23 +32,22 @@ export const frame1Config = {
     /** Each card at its bottom edge, as a fraction of the frame width. */
     cardWidth: 0.3,
     /**
-     * Narrowest a side panel may become so the larger portrait still clears it.
-     * Below this, the portrait stops growing instead.
+     * Portrait photo height in the full frame, as a fraction of the frame height.
+     * The visible face and shoulders are about 30% of the frame height.
+     * It is smaller where the panels or the text under the name need the room.
      */
-    cardWidthMin: 0.27,
-    /** Portrait height in the full frame, as a fraction of the frame height. */
     portrait: 0.48,
-    /**
-     * The full state aims for this multiple of `portrait`. It stops short
-     * where a larger portrait would cross a panel.
-     */
-    portraitScale: 1.4,
     /** Largest the portrait gets in the start state, as a fraction of the frame height. */
     portraitStart: 0.62,
-    /** Top, bottom and outer margins, as a fraction of the frame height. */
+    /**
+     * Space kept to the top, bottom and outer edges by the panel text, as a
+     * fraction of the frame height. The campus photos themselves run to the
+     * screen edges in the side-by-side layout.
+     */
     margin: 0.056,
     marginMin: 48,
     marginMax: 72,
+    /** Rounded corners of the stacked cards. Side-by-side panels meet the screen edges square. */
     radius: 12,
     /** Soft fade at the inner edge, as a fraction of the card's bottom width. */
     edgeFade: 0.15,
@@ -63,8 +62,10 @@ export const frame1Config = {
     lineGap: 10,
     /** Clear space between the center column and each card, in pixels. */
     columnGutter: 16,
-    /** School marks, in pixels. They sit in the bottom margin. */
+    /** School marks, in pixels. They sit in the bottom outer corners, on the photos. */
     mark: 44,
+    /** Space between each mark and the screen corner, in pixels. */
+    markInset: 20,
     /** Stacked cards when the frame is narrower than this, or taller than it is wide. */
     stackBelow: 1000,
     /**
@@ -83,6 +84,8 @@ export const frame1Config = {
     minText: 13,
     /** Where the top of the hair sits in the full frame, as a fraction of the frame height. */
     hairFrame: 0.048,
+    /** Least space under the middle text in the full frame, in pixels. */
+    bottomRoom: 24,
   },
   portraitLayout: {
     naturalWidth: 1254,
@@ -105,32 +108,6 @@ export const frame1Config = {
       /** Opaque through this share of the oval. The rest fades to clear. */
       solid: 0.78,
     },
-    /**
-     * How far the visible portrait reaches from its center, at each height
-     * fraction, after the oval mask. The full state grows until this outline
-     * meets a panel.
-     */
-    visibleHalf: [
-      [0.208, 0.024],
-      [0.25, 0.08],
-      [0.292, 0.124],
-      [0.333, 0.176],
-      [0.375, 0.196],
-      [0.417, 0.192],
-      [0.458, 0.188],
-      [0.5, 0.18],
-      [0.542, 0.168],
-      [0.583, 0.156],
-      [0.625, 0.124],
-      [0.667, 0.112],
-      [0.708, 0.112],
-      [0.75, 0.148],
-      [0.792, 0.22],
-      [0.833, 0.32],
-      [0.875, 0.339],
-      [0.917, 0.297],
-      [0.958, 0.242],
-    ],
   },
   /**
    * Campus photos are framed for the sloped panels: sky behind the text,
@@ -159,10 +136,22 @@ export const frame1Config = {
     nameSize: "clamp(40px, 4.4vw, 80px)",
     nameLine: 1.05,
     nameColor: "#F2EEE6",
-    lineSize: 18,
-    lineWeight: 400,
-    lineLine: 1.45,
-    lineOpacity: 0.88,
+    /** The first sentence under the name. Archivo, light text. */
+    leadSize: 20,
+    leadWeight: 400,
+    leadLine: 1.4,
+    leadColor: "#F2EEE6",
+    /** The paragraph under it. Archivo, muted. */
+    moreSize: 15,
+    moreWeight: 400,
+    moreLine: 1.55,
+    moreColor: "rgba(242, 238, 230, 0.68)",
+    /** Widest the paragraph may be, in characters. */
+    moreMeasure: 40,
+    /** Space between the sentence and the paragraph, in pixels. */
+    moreGap: 12,
+    /** Scroll hint in the start state. */
+    hintSize: 18,
   },
   icons: {
     size: 40,
@@ -249,7 +238,7 @@ export const frame1Config = {
       },
       {
         title: "Pick one goal and how to check it",
-        text: "I choose one goal that describes how a level should play. I decide which computer players test it, and which results prove it, such as how much treasure they collect and whether they reach the exit.",
+        text: "I choose one goal that describes how a level should play. I decide which computer players test it, and which results indicate that the goal has been met, such as how much treasure they collect and whether they reach the exit.",
         result: "Which players test it, and which results count",
       },
       {
@@ -270,24 +259,21 @@ export const frame1Config = {
     ],
     footer: "Alper Bozkurt, Master Game Technology, Breda University of Applied Sciences",
   },
-  /** Line under the name in the full frame. */
-  tagline: "I'm a game programmer. I build gameplay systems and game AI.",
-  /** Small labels under the tagline, in the full frame. */
-  chips: ["Gameplay systems", "Game AI", "Multiplayer servers"],
+  /** Under the name in the full frame: one sentence, then a short paragraph. */
+  intro: {
+    lead: "I’m a game programmer who enjoys turning ideas into something playable.",
+    more: "I like figuring out how things work, then building something of my own. That has taken me from publishing an online card game to researching how AI can help designers create levels.",
+  },
   /** First sentence, shown alone on a compact card. The rest follows in the full text. */
   buasLead:
-    "In my master's research, I explore how AI agents can help generate dungeon levels that match a designer's goals.",
+    "In my master’s research, I explore how AI agents can help generate dungeon levels that match a designer’s goals.",
   buasRest:
-    "Agents with different play styles play every new level, so each level is already playtested when the designer sees it.",
-  /** Line between the Bilkent divider and the course label, with its "Why I say this" note. */
+    "The aim is to use agents with different play styles to evaluate generated levels and find those that meet the selected goal.",
+  /** Line between the Bilkent divider and the course label, with its note. */
   bilkentWhy: {
     line: "These courses made me love this work.",
-    label: "Why I say this",
-    note: "Everything a computer does is an algorithm. At the lowest level, small blocks each make one exact piece, and engineers combine those pieces into new systems. Every one of those systems begins with someone who designs algorithms, big and small, and adapts them to the problem. These courses taught me to be that person.",
-  },
-  /** The "Why I say this" control: same color as the course codes nearby. */
-  why: {
-    color: "rgba(255, 255, 255, 0.7)",
+    label: "Read more",
+    note: "These courses helped me see the work behind a game as a series of problems I could reason about. Algorithms made me think about how to find a solution efficiently; automata theory, about how to express rules and states precisely; reinforcement learning, about how decisions can improve through experience. I’m drawn to how those ways of thinking become something playable: a card game that follows its rules, agents that learn to cooperate, or a tool that searches for a level a designer wants.",
   },
   courses: [
     {
@@ -330,7 +316,7 @@ export const frame1Config = {
    * Every part reads that value directly.
    */
   scrollOpening: {
-    hint: "Scroll me to know me better.",
+    hint: "Scroll to explore.",
     /** Scroll distance from the start state to the full frame, in screen heights. */
     distance: 1.2,
   },

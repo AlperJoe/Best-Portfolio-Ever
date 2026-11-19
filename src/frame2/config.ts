@@ -52,9 +52,13 @@ export const frame2Config = {
     logoGap: 18,
     hairGap: 16,
     headline: {
-      text: "Pedro is an online card game. I programmed all of it on a framework with no game tools.",
-      /** This phrase is gold. The rest of the sentence keeps the headline color. */
-      gold: "no game tools",
+      /** Two lines. The info marker sits at the end of the last one. */
+      lines: [
+        "Pedro is a published online card game.",
+        "I wrote all the code, from the card animations to the multiplayer server.",
+      ],
+      /** This phrase is gold. The rest of the headline keeps the headline color. */
+      gold: "all the code",
       color: "#F5EEE4",
       weight: 800,
       stretch: 80,
@@ -64,17 +68,17 @@ export const frame2Config = {
       line: 1.05,
       maxWidth: 0.46,
     },
-    /** Circled i right after "with no game tools". The note opens from attachWhyNote. */
+    /** Info marker at the end of the headline. The note opens from attachWhyNote. */
     love: {
       label: "About LÖVE",
-      note: "Pedro runs on LÖVE, the small Lua framework that Balatro was made with. LÖVE only draws, plays sound and reads input. It has no cards, no tables and no animations, so I built every other part of Pedro myself.",
+      note: "Pedro runs on LÖVE, the Lua framework also used to make Balatro. I built Pedro’s game-specific systems myself, including card animation, table layout, game rules, bots and multiplayer.",
     },
     lead: {
       size: 17,
       weight: 400,
       /** Heavier than the body, in the body's own color. */
       emphasis: 650,
-      /** "by hand" is bold, a step above the heavier phrases. */
+      /** Weight of a part marked bold, a step above the heavier phrases. */
       bold: 700,
       line: 1.55,
       opacity: 0.88,
@@ -84,22 +88,11 @@ export const frame2Config = {
       paragraphGap: 11,
       paragraphs: [
         [
-          { text: "I wrote about " },
+          { text: "About " },
           { text: "18,000 lines of Lua", gold: true },
-          { text: " " },
-          { text: "by hand", bold: true },
-          { text: ", without AI coding assistants." },
-        ],
-        [
-          { text: "That code covers " },
-          { text: "card motion and layout", emphasis: true },
-          { text: ", " },
-          { text: "the rules", emphasis: true },
-          { text: ", " },
-          { text: "the bots", emphasis: true },
-          { text: " and " },
-          { text: "an online server", emphasis: true },
-          { text: "." },
+          {
+            text: ", covering gameplay, bots, interface and networking. I wrote the code myself, using ChatGPT for support.",
+          },
         ],
       ] as LeadPart[][],
     },
@@ -191,7 +184,7 @@ export const frame2Config = {
         id: "play" as const,
         title: "Card motion and layout",
         /** Phrases drawn in gold. The body itself stays word for word. */
-        marks: ["animation system", "layout service", "input manager"],
+        marks: ["dealing, dragging and flipping cards"],
         points: [
           [0.4977, 0.6439],
           [0.5518, 0.6101],
@@ -204,7 +197,7 @@ export const frame2Config = {
         ] satisfies CardPoint[],
         video: true,
         image: null,
-        body: "LÖVE has no cards, no tables and no animations. I wrote my own animation system for dealing, dragging and flipping cards, a layout service that places the whole table from one set of coordinates on any screen size, and an input manager that sends every tap to the right layer.",
+        body: "I built the systems for dealing, dragging and flipping cards, arranging the table across different screen sizes, and routing taps to the correct interface layer.",
         links: [
           {
             label: "Read ui/CardAnimator.lua",
