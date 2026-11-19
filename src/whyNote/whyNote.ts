@@ -59,8 +59,9 @@ export function applyWhyNoteStyle() {
 
 /**
  * Turns `button` into the info marker. A click, Enter or Space opens the
- * note on a paper card inside `host`, under the button, or above it when
- * there is no room. Escape, a click outside or the close mark folds it shut.
+ * note on a paper card inside `host`. The note opens under the marker, and
+ * above it only when there is not enough room below. It always stays inside
+ * the frame. Escape, a click outside or the close mark folds it shut.
  * Once a note has been opened, the marker's folded corner turns gold.
  */
 export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, options: WhyNoteOptions): WhyNote {
@@ -88,31 +89,46 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     const box = host.getBoundingClientRect();
     const at = button.getBoundingClientRect();
     const edge = s.edge;
+    const gap = s.gap;
     const tilt = (Math.abs(s.tilt) * Math.PI) / 180;
     const roomW = Math.max(120, box.width - 2 * edge);
-    const roomH = Math.max(80, box.height - 2 * edge);
     panel.style.maxWidth = `${Math.min(s.maxWidth, roomW)}px`;
-    panel.style.maxHeight = `${roomH}px`;
+    // Natural height, before the frame caps it. A marker under text then keeps
+    // its note below, scrolled if the note is taller than the room under it.
+    panel.style.maxHeight = "none";
     const width = panel.offsetWidth;
+    const natural = panel.offsetHeight;
+    const padY = (width * Math.sin(tilt)) / 2;
+    const frameTop = edge + padY;
+    const frameBottom = Math.max(frameTop, box.height - edge - padY);
+    const belowTop = at.bottom - box.top + gap;
+    const aboveBottom = at.top - box.top - gap;
+    const spaceBelow = frameBottom - belowTop;
+    const spaceAbove = aboveBottom - frameTop;
+    // Shortest card still worth opening under the marker. Less than this, it opens upward.
+    const readable = Math.min(natural, 160);
+    const openBelow = spaceBelow + 0.5 >= natural || spaceBelow >= readable || spaceBelow >= spaceAbove;
+
+    let top = belowTop;
+    let origin = "50% 0%";
+    if (openBelow) {
+      panel.style.maxHeight = `${Math.max(1, spaceBelow)}px`;
+      const height = panel.offsetHeight;
+      if (top + height > frameBottom) top = Math.max(frameTop, frameBottom - height);
+    } else {
+      panel.style.maxHeight = `${Math.max(1, spaceAbove)}px`;
+      const height = panel.offsetHeight;
+      top = aboveBottom - height;
+      origin = "50% 100%";
+      if (top < frameTop) top = frameTop;
+    }
+
     const height = panel.offsetHeight;
     const padX = (height * Math.sin(tilt)) / 2;
-    const padY = (width * Math.sin(tilt)) / 2;
     const minLeft = edge + padX;
     const maxLeft = Math.max(minLeft, box.width - edge - padX - width);
     const center = at.left + at.width / 2 - box.left;
     const left = Math.min(maxLeft, Math.max(minLeft, center - width / 2));
-    const minTop = edge + padY;
-    const maxTop = Math.max(minTop, box.height - edge - padY - height);
-    let top = at.bottom - box.top + s.gap;
-    let origin = "50% 0%";
-    if (top > maxTop) {
-      top = at.top - box.top - s.gap - height;
-      origin = "50% 100%";
-    }
-    if (top < minTop) {
-      top = minTop;
-      origin = "50% 0%";
-    }
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
     panel.style.setProperty("--why-origin", origin);
