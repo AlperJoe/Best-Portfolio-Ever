@@ -1044,7 +1044,7 @@ export function Frame1() {
     const frame = frameRef.current;
     if (!button || !frame) return;
     const why = frame1Config.bilkentWhy;
-    const note = attachWhyNote(button, frame, { note: why.note, label: why.label, hover: true });
+    const note = attachWhyNote(button, frame, { note: why.note, label: why.label });
     return () => note.destroy();
   }, [detail, stacked]);
 

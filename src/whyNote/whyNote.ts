@@ -5,8 +5,6 @@ export type WhyNoteOptions = {
   note: string;
   /** Accessible name of the note panel. */
   label: string;
-  /** With a mouse, the note also opens on hover. */
-  hover?: boolean;
 };
 
 export type WhyNote = {
@@ -58,9 +56,10 @@ export function applyWhyNoteStyle() {
 }
 
 /**
- * Turns `button` into the info marker. A click, Enter or Space opens the
+ * Turns `button` into the info marker. A click, tap, Enter or Space opens the
  * note on a paper card inside `host`, under the button, or above it when
- * there is no room. Escape, a click outside or the close mark folds it shut.
+ * there is no room. Escape, the close mark, or a click outside folds it shut.
+ * That outside click still reaches what was clicked.
  * Once a note has been opened, the marker's folded corner turns gold.
  */
 export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, options: WhyNoteOptions): WhyNote {
@@ -68,9 +67,7 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
   const s = whyNoteStyle;
   let layer: HTMLDivElement | null = null;
   let panel: HTMLDivElement | null = null;
-  let pinned = false;
   let closing = false;
-  let closeTimer = 0;
   let removeTimer = 0;
   let openFrame = 0;
   let onFoldEnd: ((event: Event) => void) | null = null;
@@ -118,11 +115,6 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     panel.style.setProperty("--why-origin", origin);
   };
 
-  const swallowClick = (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
   const onKey = (event: KeyboardEvent) => {
     if (event.key !== "Escape") return;
     event.preventDefault();
@@ -133,18 +125,10 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
   const onPointerDown = (event: PointerEvent) => {
     if (inside(event.target)) return;
     close();
-    document.addEventListener("click", swallowClick, { capture: true, once: true });
-    window.setTimeout(() => document.removeEventListener("click", swallowClick, true), 400);
   };
 
   const onFocusOut = (event: FocusEvent) => {
     if (event.relatedTarget && !inside(event.relatedTarget)) close();
-  };
-
-  const cancelClose = () => window.clearTimeout(closeTimer);
-  const closeSoon = () => {
-    cancelClose();
-    if (!pinned) closeTimer = window.setTimeout(close, s.hoverCloseMs);
   };
 
   const cancelFold = () => {
@@ -180,11 +164,9 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
     openFrame = requestAnimationFrame(() => layer?.classList.add("is-on"));
   };
 
-  function open(pin: boolean) {
-    cancelClose();
+  function open() {
     cancelFold();
     closing = false;
-    pinned ||= pin;
     if (!panel || !layer) {
       layer = document.createElement("div");
       layer.className = WHY_LAYER;
@@ -211,8 +193,6 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
       const text = document.createElement("p");
       text.textContent = options.note;
       panel.append(closeButton, quote, text);
-      panel.addEventListener("pointerenter", cancelClose);
-      panel.addEventListener("pointerleave", closeSoon);
       panel.addEventListener("focusout", onFocusOut);
       layer.append(panel);
       host.append(layer);
@@ -227,12 +207,10 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
       place();
     }
     reveal();
-    if (pin) panel.focus({ preventScroll: true });
+    panel.focus({ preventScroll: true });
   }
 
   function close() {
-    cancelClose();
-    pinned = false;
     if (!layer || !panel || closing) return;
     if (reducedMotion()) {
       drop();
@@ -252,33 +230,20 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
   }
 
   const onClick = () => {
-    if (panel && pinned && !closing) close();
-    else open(true);
-  };
-  const onEnter = (event: PointerEvent) => {
-    if (event.pointerType === "mouse") open(false);
-  };
-  const onLeave = (event: PointerEvent) => {
-    if (event.pointerType === "mouse") closeSoon();
+    if (panel && !closing) close();
+    else open();
   };
 
   button.addEventListener("click", onClick);
   button.addEventListener("focusout", onFocusOut);
-  if (options.hover) {
-    button.addEventListener("pointerenter", onEnter);
-    button.addEventListener("pointerleave", onLeave);
-  }
 
   return {
     isOpen: () => panel !== null,
     close,
     destroy: () => {
-      cancelClose();
       drop();
       button.removeEventListener("click", onClick);
       button.removeEventListener("focusout", onFocusOut);
-      button.removeEventListener("pointerenter", onEnter);
-      button.removeEventListener("pointerleave", onLeave);
       button.removeAttribute("aria-expanded");
       button.classList.remove("why-read");
     },

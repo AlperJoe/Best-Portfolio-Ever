@@ -917,7 +917,7 @@ export function Frame2() {
     const host = frameRef.current;
     if (!button || !host) return;
     const { note, label } = frame2Config.intro.love;
-    const attached = attachWhyNote(button, host, { note, label, hover: true });
+    const attached = attachWhyNote(button, host, { note, label });
     return () => attached.destroy();
   }, []);
 
