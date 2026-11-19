@@ -62,8 +62,12 @@ export const frame2Config = {
       color: "#F5EEE4",
       weight: 800,
       stretch: 80,
-      min: 34,
-      preferred: 3.6,
+      /**
+       * 2.5vw is 36px at 1440. There the first sentence stays on one line and
+       * the second on two, and the same holds on wider screens.
+       */
+      min: 28,
+      preferred: 2.5,
       max: 64,
       line: 1.05,
       maxWidth: 0.46,
@@ -338,7 +342,8 @@ export const frame2Config = {
     /** Space around the intro column, in pixels. */
     margin: 24,
     top: 48,
-    headlineSize: 30,
+    /** Keeps both sentences within four lines at a phone width. */
+    headlineSize: 22,
     leadSize: 15,
     storeHeight: 44,
     /**
