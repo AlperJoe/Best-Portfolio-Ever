@@ -429,41 +429,45 @@ function MarkedCopy({ body, marks }: { body: string; marks: readonly string[] })
   return <p>{parts}</p>;
 }
 
-function Headline({ text, gold, trailing }: { text: string; gold: string; trailing?: ReactNode }) {
+function GoldPhrase({ text, gold }: { text: string; gold: string }) {
   const at = text.indexOf(gold);
-  if (at < 0) {
-    return (
-      <>
-        {text}
-        {trailing}
-      </>
-    );
-  }
-  const phraseAt = text.lastIndexOf("with ", at);
-  const before = phraseAt >= 0 ? text.slice(0, phraseAt) : text.slice(0, at);
-  const phrase = phraseAt >= 0 ? text.slice(phraseAt, at) : "";
+  if (at < 0) return <>{text}</>;
   return (
     <>
-      {before}
-      <span className="frame2-love-keep">
-        {phrase}
-        <span className="frame2-gold">{gold}</span>
-        {text.slice(at + gold.length)}
-        {trailing}
-      </span>
+      {text.slice(0, at)}
+      <span className="frame2-gold">{gold}</span>
+      {text.slice(at + gold.length)}
     </>
   );
 }
 
-/** Gold circled i, about the height of a lowercase letter in the headline. */
+/** One line per entry. The last word of the last line keeps the trailing marker beside it. */
+function Headline({ lines, gold, trailing }: { lines: readonly string[]; gold: string; trailing?: ReactNode }) {
+  return (
+    <>
+      {lines.map((line, index) => {
+        const last = index === lines.length - 1;
+        const cut = last ? line.lastIndexOf(" ") + 1 : line.length;
+        return (
+          <span key={line} className="frame2-headline-line">
+            <GoldPhrase text={line.slice(0, cut)} gold={gold} />
+            {last ? (
+              <span className="frame2-love-keep">
+                {line.slice(cut)} {trailing}
+              </span>
+            ) : null}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** The info marker after the headline. Its look comes from whyNote. */
 function LoveInfo({ buttonRef }: { buttonRef: RefObject<HTMLButtonElement | null> }) {
   return (
-    <button ref={buttonRef} type="button" className="frame2-info" aria-label={frame2Config.intro.love.label}>
-      <svg viewBox="0 0 20 20" aria-hidden="true">
-        <circle cx="10" cy="10" r="8.15" fill="none" stroke="currentColor" strokeWidth="1.35" />
-        <circle cx="10" cy="6.35" r="1.05" fill="currentColor" />
-        <path d="M10 9.15v5.05" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
+    <button ref={buttonRef} type="button" className="frame2-info">
+      {frame2Config.intro.love.label}
     </button>
   );
 }
@@ -1263,7 +1267,7 @@ export function Frame2() {
         ) : null}
         <div ref={introRef} className="frame2-intro">
           <h2 className="frame2-headline">
-            <Headline text={headline.text} gold={headline.gold} trailing={<LoveInfo buttonRef={loveRef} />} />
+            <Headline lines={headline.lines} gold={headline.gold} trailing={<LoveInfo buttonRef={loveRef} />} />
           </h2>
           <LeadCopy />
           <div className="frame2-stores">

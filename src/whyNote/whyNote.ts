@@ -24,14 +24,27 @@ const CLOSE = `<svg viewBox="0 0 16 16" aria-hidden="true">
   <path d="M3.3 3.6l9.2 8.6M12.4 3.5L3.5 12.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
 </svg>`;
 
+/** Class every button gets once attachWhyNote is attached to it. */
+export const WHY_MARKER = "why-button";
+
 /** Applies the shared look as CSS variables. Call once before the first paint. */
 export function applyWhyNoteStyle() {
   const root = document.documentElement;
   const s = whyNoteStyle;
+  const m = s.marker;
   root.style.setProperty("--why-font", `"${s.font}", serif`);
-  root.style.setProperty("--why-invite-size", `${s.size}px`);
   root.style.setProperty("--why-gold", s.gold);
-  root.style.setProperty("--why-draw", `${s.drawMs}ms`);
+  root.style.setProperty("--why-marker-h", `${m.height}px`);
+  root.style.setProperty("--why-marker-radius", `${m.radius}px`);
+  root.style.setProperty("--why-marker-tilt", `${m.tilt}deg`);
+  root.style.setProperty("--why-marker-lift", `${m.lift}px`);
+  root.style.setProperty("--why-marker-ms", `${m.hoverMs}ms`);
+  root.style.setProperty("--why-marker-size", `${m.labelSize}px`);
+  root.style.setProperty("--why-marker-icon", `${m.icon}px`);
+  root.style.setProperty("--why-marker-fold", `${m.fold}px`);
+  root.style.setProperty("--why-marker-fold-color", m.foldColor);
+  root.style.setProperty("--why-marker-shadow", m.shadow);
+  root.style.setProperty("--why-marker-shadow-hover", m.shadowHover);
   root.style.setProperty("--why-paper", s.paper);
   root.style.setProperty("--why-ink", s.ink);
   root.style.setProperty("--why-text-size", `${s.textSize}px`);
@@ -45,10 +58,10 @@ export function applyWhyNoteStyle() {
 }
 
 /**
- * Turns `button` into a "Why I say this" control. A click, Enter or Space
- * opens the note on a paper card inside `host`, under the button, or above
- * it when there is no room. Escape, a click outside or the close mark
- * folds it shut.
+ * Turns `button` into the info marker. A click, Enter or Space opens the
+ * note on a paper card inside `host`, under the button, or above it when
+ * there is no room. Escape, a click outside or the close mark folds it shut.
+ * Once a note has been opened, the marker's folded corner turns gold.
  */
 export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, options: WhyNoteOptions): WhyNote {
   const id = `why-note-${(count += 1)}`;
@@ -62,6 +75,7 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
   let openFrame = 0;
   let onFoldEnd: ((event: Event) => void) | null = null;
 
+  button.classList.add(WHY_MARKER);
   button.setAttribute("aria-expanded", "false");
 
   const inside = (target: EventTarget | null) =>
@@ -205,6 +219,7 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
       place();
       button.setAttribute("aria-expanded", "true");
       button.setAttribute("aria-controls", id);
+      button.classList.add("why-read");
       document.addEventListener("keydown", onKey, true);
       document.addEventListener("pointerdown", onPointerDown, true);
       window.addEventListener("resize", place);
@@ -265,6 +280,7 @@ export function attachWhyNote(button: HTMLButtonElement, host: HTMLElement, opti
       button.removeEventListener("pointerenter", onEnter);
       button.removeEventListener("pointerleave", onLeave);
       button.removeAttribute("aria-expanded");
+      button.classList.remove("why-read");
     },
   };
 }

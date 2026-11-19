@@ -1,61 +1,119 @@
-/* An invitation: Instrument Serif italic in gold, with a hand-drawn mark and underline. */
+/*
+  The info marker: the corner of a small cream paper note peeking out, with
+  its top-right corner folded. A gold "i" in a dark circle, then the label in
+  Instrument Serif italic. The doubled class keeps the one look on every
+  button attachWhyNote is attached to, whatever frame styles it sits in.
+*/
 .why-button {
+  margin: 0;
+}
+
+button.why-button.why-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  margin: 0;
-  padding: 0;
+  gap: 7px;
+  box-sizing: border-box;
+  width: auto;
+  height: var(--why-marker-h, 30px);
+  padding: 0 13px 0 6px;
   border: 0;
-  background: transparent;
-  color: var(--why-gold, #efc785);
+  border-radius: var(--why-marker-radius, 6px);
+  background: linear-gradient(
+    225deg,
+    transparent 0 calc(var(--why-marker-fold, 10px) * 0.7071),
+    var(--why-paper, #f3ebdd) calc(var(--why-marker-fold, 10px) * 0.7071)
+  );
+  color: var(--why-ink, #2a2520);
   font-family: var(--why-font, "Instrument Serif"), serif;
   font-style: italic;
   font-weight: 400;
-  font-size: var(--why-invite-size, 20px);
+  font-size: var(--why-marker-size, 16px);
+  font-stretch: normal;
   font-synthesis: none;
   line-height: 1;
   letter-spacing: 0;
   text-decoration: none;
   text-shadow: none;
   white-space: nowrap;
-  vertical-align: baseline;
+  vertical-align: middle;
   cursor: pointer;
   appearance: none;
-  position: relative;
-  gap: 0.42em;
-  padding-bottom: 0.32em;
+  pointer-events: auto;
+  filter: var(--why-marker-shadow);
+  rotate: var(--why-marker-tilt, -2deg);
+  translate: 0 0;
+  transition:
+    rotate var(--why-marker-ms, 150ms) ease,
+    translate var(--why-marker-ms, 150ms) ease,
+    filter var(--why-marker-ms, 150ms) ease;
 }
 
-/* A small hand-drawn question mark in a circle, then the words. */
-.why-button::before {
+button.why-button.why-button::before {
   content: "";
-  width: 1.05em;
-  height: 1.05em;
+  position: static;
   flex: none;
-  background: center / contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path d='M12.2 2.6c4.9-.4 9.2 3.1 9.5 8.2.3 5.2-3.6 9.6-8.8 9.8-5.3.3-9.7-3.6-9.9-8.9C2.8 6.2 6.8 3 12.2 2.6z' stroke='%23EFC785' stroke-width='1.35' stroke-linecap='round'/><path d='M9.1 9.4c.2-2.2 1.9-3.6 4-3.4 2 .2 3.2 1.7 3 3.4-.2 1.5-1.3 2.3-2.5 3-1 .6-1.5 1.2-1.4 2.3' stroke='%23EFC785' stroke-width='1.35' stroke-linecap='round'/><circle cx='12.35' cy='17.15' r='0.85' fill='%23EFC785'/></svg>");
+  width: var(--why-marker-icon, 18px);
+  height: var(--why-marker-icon, 18px);
+  clip-path: none;
+  background: center / contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'><circle cx='9' cy='9' r='9' fill='%232A2520'/><circle cx='9.25' cy='5.2' r='1.25' fill='%23EFC785'/><path d='M7.6 8.1h2.15l-.55 4.9M7.55 13.15h3.1' fill='none' stroke='%23EFC785' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
-/* The underline is an SVG stroke. It draws left to right on hover and keyboard focus, and otherwise sits still. */
-.why-button::after {
+/* The folded corner: the flap of the missing top-right corner, in a darker cream. */
+button.why-button.why-button::after {
   content: "";
   position: absolute;
-  left: calc(1.05em + 0.42em);
+  top: 0;
   right: 0;
-  bottom: 0;
-  height: 0.32em;
-  background: center / 100% 100% no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 6' preserveAspectRatio='none' fill='none'><path d='M1 4.2C12 2.5 18 5.4 33 3.9 49 2.2 56 5.5 72 3.7 84 2.4 91 4.7 99 3.2' stroke='%23EFC785' stroke-width='1.15' stroke-linecap='round' vector-effect='non-scaling-stroke'/></svg>");
-  clip-path: inset(0 100% 0 0);
-  transition: clip-path var(--why-draw, 200ms) linear;
+  left: auto;
+  bottom: auto;
+  inset: 0 0 auto auto;
+  width: var(--why-marker-fold, 10px);
+  height: var(--why-marker-fold, 10px);
+  clip-path: none;
+  border-radius: 0 0 0 2px;
+  background: linear-gradient(to top right, var(--why-marker-fold-color, #d9c9ae) 50%, transparent 50%);
+  transition: none;
 }
 
-.why-button:hover::after,
-.why-button:focus-visible::after {
-  clip-path: inset(0 0 0 0);
+button.why-button.why-button.why-read::after {
+  background: linear-gradient(to top right, var(--why-gold, #efc785) 50%, transparent 50%);
 }
 
-.why-button:focus-visible {
+button.why-button.why-button:hover,
+button.why-button.why-button:focus-visible {
+  color: var(--why-ink, #2a2520);
+  rotate: 0deg;
+  translate: 0 calc(var(--why-marker-lift, 2px) * -1);
+  filter: var(--why-marker-shadow-hover);
+}
+
+button.why-button.why-button:focus-visible {
   outline: 2px solid var(--why-gold, #efc785);
-  outline-offset: 4px;
-  border-radius: 2px;
+  outline-offset: 3px;
+}
+
+button.why-button.why-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* The interlude marker also fades in and out with its line. */
+button.why-button.why-button.txd-why {
+  transition:
+    rotate var(--why-marker-ms, 150ms) ease,
+    translate var(--why-marker-ms, 150ms) ease,
+    filter var(--why-marker-ms, 150ms) ease,
+    opacity 160ms ease,
+    visibility 0s linear 160ms;
+}
+
+button.why-button.why-button.txd-why.is-on {
+  transition:
+    rotate var(--why-marker-ms, 150ms) ease,
+    translate var(--why-marker-ms, 150ms) ease,
+    filter var(--why-marker-ms, 150ms) ease,
+    opacity 160ms ease,
+    visibility 0s linear 0s;
 }
 
 .why-layer {
@@ -158,7 +216,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .why-button::after,
+  button.why-button.why-button,
+  button.why-button.why-button.txd-why,
+  button.why-button.why-button.txd-why.is-on,
   .why-layer .why-panel,
   .frame .why-layer .why-panel,
   .why-layer.is-on .why-panel {

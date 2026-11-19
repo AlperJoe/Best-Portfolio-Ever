@@ -19,7 +19,7 @@ export type InterludeLine = {
 export type Interlude = {
   /** One or more lines, shown together and lit word by word. */
   lines: InterludeLine[];
-  /** Opens from the "Why I say this" control under the gold line. */
+  /** Opens from the info marker centered under the gold line. */
   note?: string;
 };
 
@@ -28,35 +28,35 @@ export type FramePair = `${FrameId}>${FrameId}`;
 export const interludes: Partial<Record<FramePair, Interlude>> = {
   "frame1>frame2": {
     lines: [
-      { text: "I love problems I have never seen before.", focus: "problems" },
-      { text: "I break them into the right parts, then I act.", focus: "parts" },
+      { text: "I like taking on problems I haven’t solved before.", focus: "problems" },
+      { text: "I learn what I need, then work through them piece by piece.", focus: "learn" },
     ],
-    note: "Information is easy to reach today. That lets me jump into a problem I know nothing about, commit to it and learn on the way. I felt this when I worked part time as a network engineer, and again when I built a system in a low-level language for an industry that was new to me. To me, a problem is now a task. I split it into the right parts, and then I act on each part. My passion for this work comes from that. I am someone who loves solving problems.",
+    note: "I don’t need to know everything about a field to become interested in a problem within it. I enjoy figuring out what I need to learn, breaking the problem into smaller tasks, and working through them. That approach has helped me in different settings, including part-time work as a network engineer and building a system for an industry that was new to me. Being able to find information and put it to use gives me the confidence to get started.",
   },
   "frame2>frame3": {
     lines: [
-      { text: "I work ego-free.", focus: "ego-free" },
-      { text: "I take feedback as it is, and I use it.", focus: "feedback" },
+      { text: "I try to hear feedback without taking it personally.", focus: "feedback" },
+      { text: "It helps me see what I can do better.", focus: "better" },
     ],
-    note: "Group projects only work when people work together, and I believe communication matters a lot. Working ego-free is a state I try to reach through Buddhism. At work, it lets me hear feedback as it is. I do not take it personally, so I can use it in the best way.",
+    note: "Buddhism has influenced how I think about ego, including at work. I try to notice when I’m defending an idea simply because it is mine. That helps me listen to feedback, understand the reasoning behind it, and reconsider my approach. It is something I practise, and it shapes how I work with other people.",
   },
   "frame3>frame5": {
     lines: [
-      { text: "Happiness comes from perspective.", focus: "perspective" },
-      { text: "So I plan time to grow it.", focus: "plan" },
+      { text: "My perspective shapes how I experience life.", focus: "perspective" },
+      { text: "I make time for things that broaden it.", focus: "broaden" },
     ],
-    note: "I wrote a thesis on the idea that a person's happiness comes from their perspective, and it changed my life. I believe in self-confidence and self-actualization, so I spend time on things that make me happy and widen my perspective. With a busy work schedule, that only happens with a plan. Luckily, I love planning.",
+    note: "I once wrote a thesis about how our perspective shapes our happiness, and working on it changed how I live. I try to make room for things that make me happy and help me see things differently. When work gets busy, I plan that time instead of leaving it to whatever is left over. Luckily, I enjoy planning.",
   },
 };
 
 /**
- * The control under the gold line that opens the note. It appears once every
- * word is lit and stays through the hold. Its look is the shared invitation
- * in whyNote, so only the label and the gap live here.
+ * The info marker centered under the gold line that opens the note. It
+ * appears once every word is lit and stays through the hold. Its look is
+ * the shared marker in whyNote, so only the label and the gap live here.
  */
 export const interludeWhy = {
-  label: "Why I say this",
-  /** Space between the gold line and the control, in pixels. */
+  label: "Read more",
+  /** Space between the gold line and the marker, in pixels. */
   gap: 22,
 };
 

@@ -79,10 +79,12 @@ function applyProgress(element: HTMLElement, p: number, metrics: Metrics, reduce
   element.style.setProperty("--portrait-h", `${height.toFixed(2)}px`);
   element.style.setProperty("--portrait-top", `${top.toFixed(2)}px`);
   const hint = Math.min(1, Math.max(0, 1 - t / 0.28));
-  const line = Math.min(1, Math.max(0, (t - 0.22) / 0.45));
+  const line = Math.min(1, Math.max(0, (t - 0.22) / 0.4));
+  const more = Math.min(1, Math.max(0, (t - 0.38) / 0.4));
   const panel = Math.min(1, t / 0.7);
   element.style.setProperty("--op-hint", hint.toFixed(4));
   element.style.setProperty("--op-line", line.toFixed(4));
+  element.style.setProperty("--op-more", more.toFixed(4));
   element.style.setProperty("--op-panel", panel.toFixed(4));
   const on = t > 0.004 ? "1" : "0";
   element.dataset.side = on;
@@ -218,7 +220,7 @@ function fitCenter(
 ) {
   const name = frame.querySelector<HTMLElement>(".middle-name");
   if (!name) return true;
-  const minFit = frame1Config.layout.minText / frame1Config.middle.lineSize;
+  const minFit = frame1Config.layout.minText / frame1Config.middle.moreSize;
   let floor = minFit;
   let ceiling = 1;
   if (mode === "scale") {
@@ -265,7 +267,7 @@ function fitCenter(
 
 /** True when the name, the line under it, or an icon meets the panel text. */
 function centerHitsCopy(frame: HTMLElement) {
-  const centers = [".middle-name", ".middle-line", ".middle-chips", ".icon-github", ".icon-linkedin"]
+  const centers = [".middle-name", ".middle-lead", ".middle-more", ".icon-github", ".icon-linkedin"]
     .map((selector) => frame.querySelector<HTMLElement>(selector))
     .filter((node): node is HTMLElement => Boolean(node));
   const copies = frame.querySelectorAll<HTMLElement>(
@@ -357,134 +359,11 @@ function placePhoto(frame: HTMLElement, side: "left" | "right", mark: number) {
   frame.style.setProperty(side === "left" ? "--buas-scale" : "--bilkent-scale", scale.toFixed(3));
 }
 
-/** A little past the measured outline, so the shoulders stay off the panels. */
-const PORTRAIT_REACH = 0.016;
-const PORTRAIT_GAP = 18;
-
-function portraitHitsPanel(
-  width: number,
-  height: number,
-  margin: number,
-  cardW: number,
-  lean: number,
-  aspect: number,
-  fullH: number,
-  fullTop: number,
-) {
-  const panelTop = margin;
-  const panelH = Math.max(1, height - margin * 2);
-  const imgW = fullH * aspect;
-  const imgLeft = (width - imgW) / 2;
-  for (const [yFrac, half] of frame1Config.portraitLayout.visibleHalf) {
-    const y = fullTop + fullH * yFrac;
-    if (y < panelTop || y > panelTop + panelH) continue;
-    const t = (y - panelTop) / panelH;
-    const inner = margin + cardW + lean * (1 - t);
-    const left = imgLeft + imgW * (0.5 - (half + PORTRAIT_REACH));
-    if (left < inner + PORTRAIT_GAP) return true;
-  }
-  return false;
-}
-
-/**
- * Full-state portrait. It aims for `portraitScale` times the usual height
- * and drops just enough that the shoulders stay between the panels.
- * The name and the line under it travel with the bottom of the photo.
- */
-/** Portrait height the full state used before it grew, at the standard panel width. */
-function legacyPortraitHeight(width: number, height: number, margin: number, aspect: number) {
-  const layout = frame1Config.layout;
-  const cardW = width * layout.cardWidth;
-  const lean = layout.lean * width;
-  const textInner = margin + cardW + lean * 0.58 - 20;
-  const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
-  return Math.min(height * layout.portrait * aspect, maxW) / Math.max(aspect, 0.01);
-}
-
-function placeFullPortrait(
-  width: number,
-  height: number,
-  margin: number,
-  cardW: number,
-  lean: number,
-  aspect: number,
-  below: number,
-) {
-  const layout = frame1Config.layout;
-  const wantedH = legacyPortraitHeight(width, height, margin, aspect) * layout.portraitScale;
-  const spot = (fullH: number) => {
-    const anchor = topForHair(layout.hairFrame * height, fullH);
-    const low = height - below - fullH;
-    const to = Math.max(anchor, low);
-    for (let step = 0; step <= 20; step += 1) {
-      const top = anchor + ((to - anchor) * step) / 20;
-      if (top + fullH + below > height - 18) continue;
-      if (!portraitHitsPanel(width, height, margin, cardW, lean, aspect, fullH, top)) return top;
-    }
-    return null;
-  };
-  const direct = spot(wantedH);
-  if (direct != null) return { fullH: wantedH, fullTop: direct };
-
-  const textInner = margin + cardW + lean * 0.58 - 20;
-  const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
-  const floorH = Math.min(height * layout.portrait, maxW / Math.max(aspect, 0.01));
-  let low = Math.min(floorH, wantedH);
-  let high = wantedH;
-  let bestH = low;
-  let bestTop = spot(low) ?? topForHair(layout.hairFrame * height, low);
-  for (let step = 0; step < 14; step += 1) {
-    const mid = (low + high) / 2;
-    const top = spot(mid);
-    if (top != null) {
-      bestH = mid;
-      bestTop = top;
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-  return { fullH: bestH, fullTop: bestTop };
-}
-
-/** Widest panels that still leave room for the larger portrait. */
-function chooseCardFraction(
-  width: number,
-  height: number,
-  margin: number,
-  aspect: number,
-  below: number,
-) {
-  const layout = frame1Config.layout;
-  const wanted = legacyPortraitHeight(width, height, margin, aspect) * layout.portraitScale;
-  const fits = (fraction: number) => {
-    const cardW = width * fraction;
-    const lean = layout.lean * width;
-    return placeFullPortrait(width, height, margin, cardW, lean, aspect, below).fullH >= wanted - 1;
-  };
-  if (fits(layout.cardWidth)) return layout.cardWidth;
-  // Narrowing the panels is only worth it when that actually fits the larger portrait.
-  if (!fits(layout.cardWidthMin)) return layout.cardWidth;
-  let low = layout.cardWidthMin;
-  let high = layout.cardWidth;
-  let best = low;
-  for (let step = 0; step < 10; step += 1) {
-    const mid = (low + high) / 2;
-    if (fits(mid)) {
-      best = mid;
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-  return best;
-}
-
 /** Rebuilds each panel mask from the card's live box, so the slope follows a resize or the opening. */
 function refreshPanelMasks(element: HTMLElement) {
   const lean = Number.parseFloat(getComputedStyle(element).getPropertyValue("--lean")) || 0;
   const fade = Number.parseFloat(getComputedStyle(element).getPropertyValue("--edge-fade")) || 24;
-  const radius = frame1Config.layout.radius;
+  const radius = element.dataset.stack === "1" ? frame1Config.layout.radius : 0;
   for (const side of ["left", "right"] as const) {
     const card = element.querySelector<HTMLElement>(`.card-${side}`);
     if (!card) continue;
@@ -794,10 +673,11 @@ export function Frame1() {
 
         const name = element.querySelector<HTMLElement>(".middle-name");
         const under = element.querySelector<HTMLElement>(".under-name");
-        const chips = element.querySelector<HTMLElement>(".middle-chips");
+        const hint = element.querySelector<HTMLElement>(".middle-hint");
         const nameH = name?.offsetHeight ?? 48;
         const underH = under?.offsetHeight ?? 28;
-        const chipBlock = chips ? chips.offsetHeight + 12 : 0;
+        const bleed = stack ? 0 : margin;
+        element.style.setProperty("--bleed", `${bleed}px`);
 
         let cardW: number;
         let lean: number;
@@ -815,7 +695,7 @@ export function Frame1() {
           cardW = Math.max(120, roomW / 2);
           const topGap = gap - leanWanted * 2;
           lean = topGap < 12 ? Math.max(0, (gap - 12) / 2) : leanWanted;
-          const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + chipBlock + 18 + pad;
+          const chrome = pad + layout.nameGap + nameH + layout.lineGap + underH + 18 + pad;
           const roomH = Math.max(220, height - chrome);
           fullH = Math.min(height * 0.32, Math.max(140, roomH * 0.38));
           panelH = Math.max(168, roomH - fullH);
@@ -827,15 +707,13 @@ export function Frame1() {
           limitLeft = pad;
           limitRight = width - pad;
         } else {
-          const belowEstimate = layout.nameGap + nameH + layout.lineGap + underH + chipBlock + 8;
-          const fraction = chooseCardFraction(width, height, margin, aspect, belowEstimate);
-          cardW = width * fraction;
+          cardW = width * layout.cardWidth;
           lean = layout.lean * width;
-          panelH = Math.max(1, height - margin * 2);
+          panelH = height;
           const textInner = margin + cardW + lean * 0.58 - 20;
-          const placed = placeFullPortrait(width, height, margin, cardW, lean, aspect, belowEstimate);
-          fullH = placed.fullH;
-          fullTop = placed.fullTop;
+          const maxW = Math.max(160, (width / 2 - textInner - 12) / frame1Config.portraitLayout.mask.rx);
+          fullH = Math.min(height * layout.portrait * aspect, maxW) / Math.max(aspect, 0.01);
+          fullTop = topForHair(layout.hairFrame * height, fullH);
           if (medium) {
             limitLeft = textInner + layout.mediumClearance;
             limitRight = width - textInner - layout.mediumClearance;
@@ -847,7 +725,7 @@ export function Frame1() {
         }
 
         const fade = layout.edgeFade * cardW;
-        const panelW = cardW + lean;
+        const panelW = cardW + lean + bleed;
         element.style.setProperty("--card-w", `${cardW}px`);
         element.style.setProperty("--lean", `${lean}px`);
         element.style.setProperty("--edge-fade", `${fade}px`);
@@ -855,7 +733,7 @@ export function Frame1() {
         element.style.setProperty("--panel-h", `${panelH}px`);
         const leftCard = element.querySelector<HTMLElement>(".card-left");
         const rightCard = element.querySelector<HTMLElement>(".card-right");
-        const radius = layout.radius;
+        const radius = stack ? layout.radius : 0;
         if (leftCard) {
           leftCard.style.setProperty("--panel-mask", panelMask("left", panelW, panelH, lean, radius, fade));
         }
@@ -872,14 +750,19 @@ export function Frame1() {
         const inside = fitCenter(element, width, limitLeft, limitRight, medium ? "scale" : "fit");
         const identity = element.querySelector<HTMLElement>(".identity");
         const block = identity?.offsetHeight
-          || (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH) + chipBlock;
+          || (name?.offsetHeight ?? nameH) + layout.lineGap + (under?.offsetHeight ?? underH);
         const chrome = layout.nameGap + block;
+        const startChrome =
+          layout.nameGap + (name?.offsetHeight ?? nameH) + layout.lineGap + (hint?.offsetHeight ?? 28);
         if (!stack) {
-          const placed = placeFullPortrait(width, height, margin, cardW, lean, aspect, chrome);
-          fullH = placed.fullH;
-          fullTop = placed.fullTop;
-          element.style.setProperty("--portrait-h", `${fullH}px`);
-          element.style.setProperty("--portrait-top", `${fullTop}px`);
+          const hairY = layout.hairFrame * height;
+          const roomH = (height - layout.bottomRoom - chrome - hairY) / Math.max(0.45, 1 - hair);
+          if (roomH < fullH) {
+            fullH = Math.max(120, roomH);
+            fullTop = topForHair(hairY, fullH);
+            element.style.setProperty("--portrait-h", `${fullH}px`);
+            element.style.setProperty("--portrait-top", `${fullTop}px`);
+          }
         }
         const pad = stack ? Math.max(14, Math.round(Math.min(28, width * 0.04))) : 28;
         let startH: number;
@@ -889,9 +772,9 @@ export function Frame1() {
           element.style.setProperty("--stack-below", `${chrome}px`);
           element.style.setProperty("--stack-cards-top", `${cardsTop}px`);
           const startCap = height * layout.portraitStart;
-          const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+          const maxByRoom = (height - pad * 2 - startChrome) / Math.max(0.45, 1 - hair);
           startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
-          const stackHeight = (1 - hair) * startH + chrome;
+          const stackHeight = (1 - hair) * startH + startChrome;
           const hairY = Math.max(pad, (height - stackHeight) / 2);
           startTop = topForHair(hairY, startH);
           const startIdentity = startTop + startH + chrome;
@@ -899,15 +782,15 @@ export function Frame1() {
           element.style.setProperty("--stack-slide", `${slide}px`);
         } else {
           const startCap = height * layout.portraitStart;
-          const maxByRoom = (height - pad * 2 - chrome) / Math.max(0.45, 1 - hair);
+          const maxByRoom = (height - pad * 2 - startChrome) / Math.max(0.45, 1 - hair);
           startH = Math.max(fullH, Math.min(startCap, Math.max(fullH, maxByRoom)));
-          const stackHeight = (1 - hair) * startH + chrome;
+          const stackHeight = (1 - hair) * startH + startChrome;
           const hairY = Math.max(pad, (height - stackHeight) / 2);
           startTop = topForHair(hairY, startH);
         }
         placePhoto(element, "left", frame1Config.photos.buasMark);
         placePhoto(element, "right", frame1Config.photos.bilkentMark);
-        const enterLeft = leftCard ? leftCard.offsetLeft + leftCard.offsetWidth : panelW + margin;
+        const enterLeft = leftCard ? leftCard.offsetLeft + leftCard.offsetWidth : panelW;
         const enterRight = rightCard ? width - rightCard.offsetLeft : enterLeft;
         element.style.setProperty("--enter-left", `${Math.ceil(enterLeft + 2)}px`);
         element.style.setProperty("--enter-right", `${Math.ceil(enterRight + 2)}px`);
@@ -1068,10 +951,18 @@ export function Frame1() {
     "--name-size": frame1Config.middle.nameSize,
     "--name-line": String(frame1Config.middle.nameLine),
     "--name-color": frame1Config.middle.nameColor,
-    "--middle-line-size": `${frame1Config.middle.lineSize}px`,
-    "--middle-line-weight": String(frame1Config.middle.lineWeight),
-    "--middle-line-height": String(frame1Config.middle.lineLine),
-    "--middle-line-opacity": String(frame1Config.middle.lineOpacity),
+    "--lead-size": `${frame1Config.middle.leadSize}px`,
+    "--lead-weight": String(frame1Config.middle.leadWeight),
+    "--lead-line": String(frame1Config.middle.leadLine),
+    "--lead-color": frame1Config.middle.leadColor,
+    "--more-size": `${frame1Config.middle.moreSize}px`,
+    "--more-weight": String(frame1Config.middle.moreWeight),
+    "--more-line": String(frame1Config.middle.moreLine),
+    "--more-color": frame1Config.middle.moreColor,
+    "--more-measure": `${frame1Config.middle.moreMeasure}ch`,
+    "--more-gap": `${frame1Config.middle.moreGap}px`,
+    "--hint-size": `${frame1Config.middle.hintSize}px`,
+    "--mark-inset": `${frame1Config.layout.markInset}px`,
     "--icon-lift": `${frame1Config.icons.lift}px`,
     "--icon-linkedin": frame1Config.icons.linkedin,
     "--icon-radius": `${frame1Config.icons.radius}px`,
@@ -1095,7 +986,6 @@ export function Frame1() {
     "--cue-nudge": `${frame1Config.scrollCue.nudge}px`,
     "--cue-every": `${frame1Config.scrollCue.every}s`,
     "--cue-fade": `${frame1Config.scrollCue.fade}s`,
-    "--why-color": frame1Config.why.color,
   } as React.CSSProperties;
 
   useEffect(() => {
@@ -1307,18 +1197,16 @@ export function Frame1() {
         <div className="identity">
           <p className="middle-name">Alper Bozkurt</p>
           <div className="under-name">
-            <p className="middle-line">{frame1Config.tagline}</p>
+            <div className="middle-copy">
+              <p className="middle-lead">{frame1Config.intro.lead}</p>
+              <p className="middle-more">{frame1Config.intro.more}</p>
+            </div>
             {scrollOpening ? (
               <p className="middle-hint">
                 <Invite arrow="down">{frame1Config.scrollOpening.hint}</Invite>
               </p>
             ) : null}
           </div>
-          <ul className="middle-chips">
-            {frame1Config.chips.map((chip) => (
-              <li key={chip} className="middle-chip">{chip}</li>
-            ))}
-          </ul>
         </div>
 
         <a
