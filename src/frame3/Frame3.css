@@ -1,6 +1,6 @@
 .frame3 {
   position: relative;
-  height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   background: var(--frame3-bg);
   color: #fff;
@@ -63,7 +63,7 @@
 .frame3-stage {
   position: absolute;
   right: var(--map-right);
-  top: var(--group-top, 12%);
+  top: var(--map-top, 12%);
   width: var(--map-w, 61vw);
   z-index: 1;
 }
@@ -428,9 +428,9 @@
     flex-direction: column;
     align-items: stretch;
     height: auto;
-    min-height: 100dvh;
+    min-height: 100svh;
     box-sizing: border-box;
-    padding: 56px var(--phone-margin) 64px;
+    padding: 72px var(--phone-margin) 64px;
   }
 
   .frame3-world {

@@ -1,0 +1,182 @@
+/*
+  One normal document, one page under another. From 700px wide every page
+  is one screen tall and the document snaps to each page's top. Frame 1 is
+  two screens tall: its content stays at the top while the scroll inside it
+  plays the opening, and it snaps at its start state and at its full frame.
+  Below 700px nothing snaps and every page is as tall as its content.
+*/
+.page {
+  position: relative;
+  min-height: 100svh;
+}
+
+.page-opening {
+  height: 200svh;
+}
+
+.page-opening > .frame {
+  position: sticky;
+  top: 0;
+}
+
+.opening-stop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100svh;
+  pointer-events: none;
+}
+
+.opening-stop + .opening-stop {
+  top: 100svh;
+}
+
+@media (min-width: 700px) {
+  html {
+    scroll-snap-type: y mandatory;
+  }
+
+  .page:not(.page-opening) {
+    height: 100svh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .opening-stop {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+
+/* A quote page: the dark background, and the lines centered inside large gold quotation marks. */
+.quote {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--quote-bg);
+}
+
+.quote-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.quote-text {
+  margin: 0;
+  font-family: var(--quote-font);
+  font-weight: 400;
+  line-height: var(--quote-line);
+  color: var(--quote-text);
+  text-align: center;
+}
+
+.quote-line {
+  width: max-content;
+  margin: 0 auto;
+  white-space: nowrap;
+  text-rendering: geometricPrecision;
+}
+
+.quote.is-narrow .quote-line {
+  width: auto;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.quote.is-narrow .quote-line + .quote-line {
+  margin-top: 0.35em;
+}
+
+.quote-focus {
+  font-style: italic;
+  color: var(--quote-gold);
+}
+
+.quote-mark {
+  display: inline-block;
+  color: var(--quote-gold);
+  font-style: normal;
+  line-height: 0;
+}
+
+.quote-open {
+  margin-right: 0.06em;
+  font-size: calc(var(--quote-mark) * 1em);
+  vertical-align: -0.3em;
+}
+
+.quote-close {
+  margin-left: 0.04em;
+}
+
+.quote-why {
+  margin-top: var(--quote-why-gap);
+}
+
+/*
+  Light depth while a page moves. Every page is a view timeline, so a layer
+  reads how far its page has come in: 0% as the page's top meets the bottom
+  of the screen, 50% when it rests at its snap point, 100% as its bottom
+  leaves the top. At 50% every layer is exactly where it rests. Only
+  decorative layers that nothing can click take part.
+*/
+@supports (animation-timeline: view()) {
+  @media (min-width: 700px) and (prefers-reduced-motion: no-preference) {
+    .page {
+      view-timeline: --page block;
+    }
+
+    .depth-back,
+    .depth-title,
+    .depth-mark {
+      animation: page-depth linear both;
+      animation-timeline: --page;
+    }
+
+    .depth-back {
+      --depth: 8svh;
+    }
+
+    .depth-mark {
+      --depth: 6svh;
+    }
+
+    .quote-text {
+      animation: quote-in linear both;
+      animation-timeline: --page;
+    }
+  }
+}
+
+/* The layer trails its page: ahead of it on the way in, behind it on the way out. */
+@keyframes page-depth {
+  0% {
+    transform: translate3d(0, calc(-1 * var(--depth)), 0);
+  }
+  50% {
+    transform: none;
+  }
+  100% {
+    transform: translate3d(0, var(--depth), 0);
+  }
+}
+
+@keyframes quote-in {
+  0% {
+    opacity: 0.3;
+    transform: translate3d(0, 16px, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0.3;
+    transform: translate3d(0, -16px, 0);
+  }
+}

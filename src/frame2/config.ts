@@ -44,6 +44,14 @@ export const frame2Config = {
     /** Leftmost hair in the headline's vertical band, as a fraction of the image. */
     hairX: 0.59,
   },
+  /**
+   * The painted title trails the page while it moves, by at most `shift`
+   * of the screen height. Its cut fades out over `feather` pixels.
+   */
+  titleDepth: {
+    shift: 0.05,
+    feather: 18,
+  },
   intro: {
     left: 0.05,
     top: 0.12,
@@ -63,11 +71,12 @@ export const frame2Config = {
       weight: 800,
       stretch: 80,
       /**
-       * 2.5vw is 36px at 1440. There the first sentence stays on one line and
-       * the second on two, and the same holds on wider screens.
+       * 2.3vw is 33px at 1440. There the first sentence stays on one line
+       * with room to spare, even where the narrow width of the font does not
+       * apply, and the same holds on wider screens.
        */
       min: 28,
-      preferred: 2.5,
+      preferred: 2.3,
       max: 64,
       line: 1.05,
       maxWidth: 0.46,
@@ -341,7 +350,8 @@ export const frame2Config = {
     maxWidth: 700,
     /** Space around the intro column, in pixels. */
     margin: 24,
-    top: 48,
+    /** Clears the site menu in the top corner. */
+    top: 72,
     /** Keeps both sentences within four lines at a phone width. */
     headlineSize: 22,
     leadSize: 15,

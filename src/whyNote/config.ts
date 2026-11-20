@@ -1,7 +1,7 @@
 /**
  * Shared look of the info marker on every button attachWhyNote is attached
  * to, and of the paper note it opens. The copy lives with its owner:
- * frame1/config.ts for Frame 1, transitions/interludes.ts for the interludes.
+ * frame1/config.ts for Frame 1, transitions/interludes.ts for the quote pages.
  */
 export const whyNoteStyle = {
   font: "Instrument Serif",
@@ -48,6 +48,4 @@ export const whyNoteStyle = {
   /** Space between the marker and the note, and the least space kept inside the frame, in pixels. */
   gap: 10,
   edge: 16,
-  /** After the mouse leaves a note opened on hover, it closes after this long. */
-  hoverCloseMs: 140,
 };

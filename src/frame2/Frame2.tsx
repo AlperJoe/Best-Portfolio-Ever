@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject, type TransitionEvent } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
+import { useScrollLock } from "../transitions/scrollLock";
 import { attachWhyNote } from "../whyNote/whyNote";
 import { frame2Config, type CardPoint, type Frame2Card, type Frame2CardId } from "./config";
 import { createEmbers, drawEmbers, stepEmbers, type Ember } from "./embers";
@@ -917,7 +918,7 @@ export function Frame2() {
     const host = frameRef.current;
     if (!button || !host) return;
     const { note, label } = frame2Config.intro.love;
-    const attached = attachWhyNote(button, host, { note, label, hover: true });
+    const attached = attachWhyNote(button, host, { note, label });
     return () => attached.destroy();
   }, []);
 
@@ -933,6 +934,8 @@ export function Frame2() {
     observer.observe(frame);
     return () => observer.disconnect();
   }, []);
+
+  useScrollLock(Boolean(open));
 
   function requestClose() {
     setOpen((current) => {
@@ -1217,7 +1220,7 @@ export function Frame2() {
   return (
     <section ref={frameRef} className={sectionClass} style={style}>
       <div className="frame2-scene">
-        <img className="frame2-fill" src={frame2Config.assets.hero} alt="" aria-hidden="true" />
+        <img className="frame2-fill depth-back" src={frame2Config.assets.hero} alt="" aria-hidden="true" />
         <div className="frame2-fill-shade" />
         <img
           id="frame2-main-image"
@@ -1234,6 +1237,7 @@ export function Frame2() {
             WebkitMaskImage: heroFade,
           }}
         />
+        {phone ? null : <TitleDepth place={place} />}
         {frame2Config.cards.items.map((card, index) => (
           <button
             key={card.id}
@@ -1359,6 +1363,50 @@ export function Frame2() {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * The painted "Pedro!" title, cut from the same picture and laid exactly over
+ * it, so it can trail the page a little while the page moves. The cut reaches
+ * past the title by the most it moves, so the title under it never shows.
+ */
+function TitleDepth({ place }: { place: HeroPlacement }) {
+  const { title } = frame2Config.regions;
+  const { shift, feather } = frame2Config.titleDepth;
+  const reach = shift * window.innerHeight + feather;
+  const left = Math.max(0, Math.floor(title.x * place.width - feather));
+  const top = Math.max(0, Math.floor(title.y * place.height - reach));
+  const right = Math.min(place.width, Math.ceil((title.x + title.w) * place.width + feather));
+  const bottom = Math.min(place.height, Math.ceil((title.y + title.h) * place.height + reach));
+  const fade = `${feather}px`;
+  const mask = [
+    `linear-gradient(to right, transparent, #000 ${fade}, #000 calc(100% - ${fade}), transparent)`,
+    `linear-gradient(to bottom, transparent, #000 ${fade}, #000 calc(100% - ${fade}), transparent)`,
+  ].join(", ");
+  return (
+    <div
+      className="frame2-title-depth depth-title"
+      aria-hidden="true"
+      style={
+        {
+          left: `${place.left + left}px`,
+          top: `${place.top + top}px`,
+          width: `${right - left}px`,
+          height: `${bottom - top}px`,
+          maskImage: mask,
+          WebkitMaskImage: mask,
+          "--depth": `${shift * 100}svh`,
+        } as CSSProperties
+      }
+    >
+      <img
+        src={frame2Config.assets.hero}
+        alt=""
+        draggable={false}
+        style={{ left: `${-left}px`, top: `${-top}px`, width: `${place.width}px`, height: `${place.height}px` }}
+      />
+    </div>
   );
 }
 

@@ -35,6 +35,8 @@ export const frame3 = {
    * fills the height the shorter text column leaves free.
    */
   mapHeight: 0.86,
+  /** The map starts at least this far from the top so the site menu never covers it, and narrows if that pushes it off the bottom. */
+  menuClear: 72,
   mapFloor: "#222833",
   /** Framed map: 10px corners, a 12% white edge, inner padding, and a soft shadow. */
   mapBorder: "rgba(255, 255, 255, 0.12)",

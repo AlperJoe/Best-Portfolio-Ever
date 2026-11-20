@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
-import { goToFrame } from "../frameOrder";
+import { useScrollLock } from "../transitions/scrollLock";
+import { travelTo } from "../transitions/snapStop";
+import { usePageOnScreen } from "../transitions/usePageOnScreen";
 import { frame5, type Film, type HobbyIcon } from "./config";
 import "./Frame5.css";
 
@@ -40,34 +42,6 @@ function useReducedMotion() {
     return () => media.removeEventListener("change", apply);
   }, []);
   return reduced;
-}
-
-/**
- * Follows the stage slot around this frame. `shown` is true while the frame
- * is on screen at all; `locked` once it has fully arrived.
- */
-function useSlotState(ref: RefObject<HTMLElement | null>) {
-  const [state, setState] = useState({ shown: false, locked: false });
-  useEffect(() => {
-    const slot = ref.current?.closest<HTMLElement>(".tx-slot");
-    if (!slot) {
-      setState({ shown: true, locked: true });
-      return;
-    }
-    const read = () => {
-      const classes = slot.classList;
-      const shown = !classes.contains("is-parked");
-      const locked = shown && !classes.contains("is-revealing") && !classes.contains("is-fading");
-      setState((current) =>
-        current.shown === shown && current.locked === locked ? current : { shown, locked },
-      );
-    };
-    read();
-    const observer = new MutationObserver(read);
-    observer.observe(slot, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, [ref]);
-  return state;
 }
 
 function buildContact(): Contact {
@@ -337,7 +311,7 @@ export function Frame5() {
   const noteRef = useRef<HTMLDivElement>(null);
 
   const reduced = useReducedMotion();
-  const { shown, locked } = useSlotState(frameRef);
+  const shown = usePageOnScreen(frameRef);
   const [contact, setContact] = useState<Contact | null>(null);
   const [copied, setCopied] = useState(false);
   const [arrowLength, setArrowLength] = useState(ARROWS.minLength);
@@ -486,6 +460,7 @@ export function Frame5() {
   }, [overlay?.phase, reduced]);
 
   const overlayOpen = Boolean(overlay);
+  useScrollLock(overlayOpen);
   useEffect(() => {
     if (!overlayOpen) return;
     // The player focuses itself when it autoplays, which would swallow Escape.
@@ -654,7 +629,7 @@ export function Frame5() {
 
   const classes = [
     "frame5",
-    locked ? "is-locked" : "",
+    shown ? "is-locked" : "",
     reduced ? "is-reduced" : "",
     photoRight ? "is-photo-right" : "is-photo-above",
   ]
@@ -665,7 +640,7 @@ export function Frame5() {
 
   return (
     <section className={classes} ref={frameRef} style={style} aria-label="Pick your ending">
-      <div className="frame5-tint" aria-hidden="true" />
+      <div className="frame5-tint depth-back" aria-hidden="true" />
 
       <header className="frame5-head">
         <Arrow length={arrowLength} side="left" />
@@ -833,7 +808,7 @@ export function Frame5() {
         </div>
       </div>
 
-      <button type="button" className="frame5-cta frame5-back" onClick={() => goToFrame(frame5.backTo)}>
+      <button type="button" className="frame5-cta frame5-back" onClick={() => travelTo(0)}>
         <CtaLabel>{frame5.back.label}</CtaLabel>
         <UpArrow />
       </button>

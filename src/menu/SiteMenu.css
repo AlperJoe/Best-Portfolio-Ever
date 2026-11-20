@@ -1,0 +1,135 @@
+.site-menu {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  z-index: 40;
+  font-family: var(--font-text), sans-serif;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 260ms ease, visibility 0s linear 260ms;
+}
+
+.site-menu.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 260ms ease, visibility 0s linear 0s;
+}
+
+html[data-scroll-locked] .site-menu {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+
+.site-menu-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 4px 6px 4px 8px;
+  list-style: none;
+  border: 1px solid rgba(239, 199, 133, 0.16);
+  border-radius: 999px;
+  background: rgba(7, 7, 8, 0.58);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.site-menu-link {
+  margin: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(242, 238, 230, 0.72);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.site-menu-link:hover,
+.site-menu-link:focus-visible {
+  color: #f2eee6;
+}
+
+.site-menu-link[aria-current="true"] {
+  color: var(--menu-gold);
+}
+
+.site-menu-link:focus-visible,
+.site-menu-cv:focus-visible {
+  outline: 2px solid var(--menu-gold);
+  outline-offset: 1px;
+}
+
+/* CV: the gold invitation look of the frames, Instrument Serif italic with a hand-drawn underline. */
+.site-menu-cv {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px 4px 8px;
+  border-radius: 999px;
+  color: var(--menu-gold);
+  font-family: var(--font-frame5), "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--menu-cta-size);
+  line-height: 1.15;
+  text-decoration: none;
+}
+
+.site-menu-cv-label {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 3px;
+}
+
+.site-menu-cv-line {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 6px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.site-menu-cv-line path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15px;
+  stroke-linecap: round;
+  stroke-dasharray: 60px;
+  stroke-dashoffset: 60px;
+  opacity: 0;
+  transition: stroke-dashoffset var(--menu-cta-draw) linear;
+}
+
+.site-menu-cv:hover .site-menu-cv-line path,
+.site-menu-cv:focus-visible .site-menu-cv-line path {
+  stroke-dashoffset: 0;
+  opacity: 1;
+}
+
+@media (max-width: 699.98px) {
+  .site-menu {
+    top: 12px;
+    right: 12px;
+  }
+
+  .site-menu-item.is-wide {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-menu,
+  .site-menu.is-shown,
+  html[data-scroll-locked] .site-menu,
+  .site-menu-cv-line path {
+    transition: none;
+  }
+}
