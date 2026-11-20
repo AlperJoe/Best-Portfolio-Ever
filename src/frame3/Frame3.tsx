@@ -242,7 +242,7 @@ export function Frame3() {
       const map = mapRef.current;
       const copy = textRef.current;
       if (copy) for (const [name] of FIT_SIZES) copy.style.removeProperty(name);
-      for (const name of ["--text-width", "--map-w", "--group-top", "--caption-top"]) frame.style.removeProperty(name);
+      for (const name of ["--text-width", "--map-w", "--group-top", "--map-top", "--caption-top"]) frame.style.removeProperty(name);
       if (!map) return;
       const rect = frame.getBoundingClientRect();
       const mapRect = map.getBoundingClientRect();
@@ -271,12 +271,10 @@ export function Frame3() {
       }
       const rect = frame.getBoundingClientRect();
       const columnW = rect.width * (frame3.mapEnd - frame3.mapStart);
-      const mapW = Math.min(columnW, rect.height * frame3.mapHeight * 2);
+      let mapW = Math.min(columnW, rect.height * frame3.mapHeight * 2);
       const chrome = frame3.mapPad + frame3.mapBorderWidth;
-      const innerW = Math.max(0, mapW - chrome * 2);
-      const mapH = innerW / 2 + chrome * 2;
-      const right = rect.width * (1 - frame3.mapEnd);
-      const x = rect.width - right - mapW;
+      let innerW = Math.max(0, mapW - chrome * 2);
+      let mapH = innerW / 2 + chrome * 2;
       frame.style.setProperty("--text-width", `${rect.width * (frame3.textEnd - frame3.textStart)}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
       fitCopy(rect.height);
@@ -284,10 +282,19 @@ export function Frame3() {
       const belowH = belowRef.current?.offsetHeight ?? 0;
       const mapBlock = mapH + frame3.captionOffset + belowH;
       const top = Math.max(0, (rect.height - Math.max(textH, mapBlock)) / 2);
-      const y = top;
+      const y = Math.max(top, frame3.menuClear);
+      const roomH = rect.height - y - frame3.captionOffset - belowH - frame3.menuClear / 2;
+      if (mapH > roomH) {
+        innerW = Math.max(0, 2 * (roomH - chrome * 2));
+        mapW = innerW + chrome * 2;
+        mapH = innerW / 2 + chrome * 2;
+      }
+      const right = rect.width * (1 - frame3.mapEnd);
+      const x = rect.width - right - mapW;
       const cell = innerW / level.width;
       frame.style.setProperty("--group-top", `${top}px`);
-      frame.style.setProperty("--caption-top", `${top + mapH + frame3.captionOffset}px`);
+      frame.style.setProperty("--map-top", `${y}px`);
+      frame.style.setProperty("--caption-top", `${y + mapH + frame3.captionOffset}px`);
       frame.style.setProperty("--map-w", `${mapW}px`);
       frame.style.setProperty("--cell", `${cell}px`);
       frame.style.setProperty("--grid-x", `${x + chrome}px`);
@@ -538,7 +545,7 @@ export function Frame3() {
       data-vision={watch ?? ""}
       aria-label={COPY.title}
     >
-      <div className="frame3-world" aria-hidden="true" />
+      <div className="frame3-world depth-back" aria-hidden="true" />
 
       <div className="frame3-stage">
         <div className="frame3-map" id="frame3-main-image" ref={mapRef}>

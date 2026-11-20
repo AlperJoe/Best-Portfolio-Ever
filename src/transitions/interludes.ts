@@ -1,25 +1,24 @@
 import type { FrameId } from "../frameOrder";
 
 /**
- * Text interludes between frames.
+ * Quote pages between frames.
  *
  * Each entry is keyed by the frame pair it sits between, in frameOrder order:
- * "frame1>frame2" plays on the way from Frame 1 to Frame 2 and in reverse on
- * the way back. When Frame 4 exists and is added to frameOrder.ts, add
- * "frame3>frame4" and "frame4>frame5" here. A pair without an entry gets a
- * plain dark crossfade. Scroll lengths live in config.ts.
+ * "frame1>frame2" is its own page after Frame 1 and before Frame 2. When
+ * Frame 4 exists and is added to frameOrder.ts, add "frame3>frame4" and
+ * "frame4>frame5" here. A pair without an entry has no page between.
  */
 
 export type InterludeLine = {
   text: string;
-  /** Word or words inside text that light up in gold and italic. Must appear in text exactly once. */
+  /** Word or words inside text set in gold and italic. Must appear in text exactly once. */
   focus: string;
 };
 
 export type Interlude = {
-  /** One or more lines, shown together and lit word by word. */
+  /** One or more lines, shown together inside the quotation marks. */
   lines: InterludeLine[];
-  /** Opens from the info marker centered under the gold line. */
+  /** Opens from the info marker centered under the text. */
   note?: string;
 };
 
@@ -50,23 +49,22 @@ export const interludes: Partial<Record<FramePair, Interlude>> = {
 };
 
 /**
- * The info marker centered under the gold line that opens the note. It
- * appears once every word is lit and stays through the hold. Its look is
+ * The info marker centered under the text that opens the note. Its look is
  * the shared marker in whyNote, so only the label and the gap live here.
  */
 export const interludeWhy = {
   label: "Read more",
-  /** Space between the gold line and the marker, in pixels. */
+  /** Space between the text and the marker, in pixels. */
   gap: 22,
 };
 
 export const interludeStyle = {
   background: "#070708",
   textColor: "#F2EEE6",
-  /** Color of the focus word once lit. */
+  /** Color of the focus words and the quotation marks. */
   focusColor: "#EFC785",
-  /** Every word starts at this opacity and lights up to 1 with the scroll. */
-  dim: 0.15,
+  /** Size of the opening quotation mark, as a multiple of the text size. */
+  markScale: 2,
   /** Instrument Serif for the large text, the same family as fonts.name. */
   font: "Instrument Serif",
   /** Largest text size, in pixels, and as a share of the screen height. */
@@ -76,7 +74,7 @@ export const interludeStyle = {
   /** Least space kept to the screen edges, as a share of the width and of the height. */
   marginX: 0.1,
   marginY: 0.12,
-  /** Screens narrower than tall.maxWidth in config.ts. The lines wrap, centered, at a readable size. */
+  /** Screens narrower than phoneWidth in pages.ts. The lines wrap, centered, at a readable size. */
   phone: {
     /** Text size as a share of the screen width, held between these sizes, in pixels. */
     sizeShare: 0.08,
@@ -84,16 +82,5 @@ export const interludeStyle = {
     maxSize: 34,
     /** Side margins, in pixels. */
     marginX: 24,
-  },
-  /** The gold line under the text. */
-  rule: {
-    color: "#EFC785",
-    /** Thickness, in pixels. */
-    width: 1.5,
-    /** Space between the last line of text and the gold line, as a share of the text size. */
-    gap: 0.55,
-    /** Diameter of the glowing point at its tip, in pixels, and its glow. */
-    tip: 6,
-    glow: "0 0 6px 2px rgba(239, 199, 133, 0.75), 0 0 16px 4px rgba(239, 199, 133, 0.35)",
   },
 };

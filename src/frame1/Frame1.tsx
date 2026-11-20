@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { frame1Config } from "./config";
-import { OPENING_EVENT } from "../transitions/config";
+import { openingProgress } from "../transitions/pages";
+import { useScrollLock } from "../transitions/scrollLock";
 import { attachWhyNote } from "../whyNote/whyNote";
 import "./Frame1.css";
 
@@ -835,16 +836,21 @@ export function Frame1() {
 
   useLayoutEffect(() => {
     const element = frameRef.current;
-    if (!scrollOpening || !element) return;
-    applyProgress(element, progressRef.current, metricsRef.current, reduced);
-    const onOpening = (event: Event) => {
-      const value = (event as CustomEvent<number>).detail;
-      if (typeof value !== "number") return;
+    const page = element?.parentElement;
+    if (!scrollOpening || !element || !page) return;
+    const read = () => {
+      const value = openingProgress(page);
       progressRef.current = value;
       applyProgress(element, value, metricsRef.current, reducedRef.current);
+      setCueOn(value <= 0);
     };
-    window.addEventListener(OPENING_EVENT, onOpening);
-    return () => window.removeEventListener(OPENING_EVENT, onOpening);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    window.addEventListener("resize", read);
+    return () => {
+      window.removeEventListener("scroll", read);
+      window.removeEventListener("resize", read);
+    };
   }, [scrollOpening, reduced]);
 
   useEffect(() => {
@@ -882,20 +888,7 @@ export function Frame1() {
     };
   }, []);
 
-  useEffect(() => {
-    const stage = frameRef.current?.closest(".tx-stage");
-    if (!stage) return;
-    const hide = () => setCueOn(false);
-    const check = () => {
-      const active = stage.getAttribute("data-active");
-      const phase = stage.getAttribute("data-phase");
-      if ((active && active !== "0") || (phase && phase !== "idle")) hide();
-    };
-    const observer = new MutationObserver(check);
-    observer.observe(stage, { attributes: true, attributeFilter: ["data-active", "data-phase"] });
-    check();
-    return () => observer.disconnect();
-  }, []);
+  useScrollLock(Boolean(research || detail));
 
   const mask = frame1Config.portraitLayout.mask;
   const style = {
@@ -1044,7 +1037,7 @@ export function Frame1() {
     const frame = frameRef.current;
     if (!button || !frame) return;
     const why = frame1Config.bilkentWhy;
-    const note = attachWhyNote(button, frame, { note: why.note, label: why.label, hover: true });
+    const note = attachWhyNote(button, frame, { note: why.note, label: why.label });
     return () => note.destroy();
   }, [detail, stacked]);
 

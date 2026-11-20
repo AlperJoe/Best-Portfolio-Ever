@@ -326,7 +326,7 @@ export const frame5 = {
     focusGuardMs: 4000,
   },
 
-  /** "Back to the beginning", centered near the bottom of the frame. */
+  /** "Back to the beginning", centered near the bottom of the frame. It scrolls back to the top of the site. */
   back: {
     label: "Back to the beginning",
     /** Distance from the bottom edge, in pixels. */
@@ -350,7 +350,4 @@ export const frame5 = {
     contactSize: "16px",
     ticketSize: "14px",
   },
-
-  /** The frame Back to the beginning returns to. */
-  backTo: "frame1" as const,
 };

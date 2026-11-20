@@ -1,7 +1,7 @@
 .frame2 {
   position: relative;
   width: 100%;
-  height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   background: #1a0806;
   color: #fff;
@@ -69,6 +69,19 @@
   position: absolute;
   max-width: none;
   object-fit: fill;
+}
+
+.frame2-title-depth {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+.frame2-title-depth img {
+  position: absolute;
+  max-width: none;
 }
 
 .frame2-card {
@@ -627,7 +640,7 @@
   frame's height comes from Frame2.tsx.
 */
 .frame2.is-phone {
-  min-height: 100dvh;
+  min-height: 100svh;
 }
 
 .frame2.is-phone .frame2-intro {
@@ -650,10 +663,10 @@
   font-size: var(--phone-lead);
 }
 
+/* The sheet covers the screen wherever the page has scrolled to. */
 .frame2-open.is-sheet {
-  top: var(--tx-scroll, 0px);
-  bottom: auto;
-  height: 100dvh;
+  position: fixed;
+  z-index: 30;
   perspective: none;
   opacity: 0;
   transition: opacity var(--dim-out) var(--close-ease);

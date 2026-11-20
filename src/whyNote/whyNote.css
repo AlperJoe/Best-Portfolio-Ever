@@ -97,25 +97,6 @@ button.why-button.why-button:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* The interlude marker also fades in and out with its line. */
-button.why-button.why-button.txd-why {
-  transition:
-    rotate var(--why-marker-ms, 150ms) ease,
-    translate var(--why-marker-ms, 150ms) ease,
-    filter var(--why-marker-ms, 150ms) ease,
-    opacity 160ms ease,
-    visibility 0s linear 160ms;
-}
-
-button.why-button.why-button.txd-why.is-on {
-  transition:
-    rotate var(--why-marker-ms, 150ms) ease,
-    translate var(--why-marker-ms, 150ms) ease,
-    filter var(--why-marker-ms, 150ms) ease,
-    opacity 160ms ease,
-    visibility 0s linear 0s;
-}
-
 .why-layer {
   position: absolute;
   inset: 0;
@@ -217,8 +198,6 @@ button.why-button.why-button.txd-why.is-on {
 
 @media (prefers-reduced-motion: reduce) {
   button.why-button.why-button,
-  button.why-button.why-button.txd-why,
-  button.why-button.why-button.txd-why.is-on,
   .why-layer .why-panel,
   .frame .why-layer .why-panel,
   .why-layer.is-on .why-panel {
