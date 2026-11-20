@@ -35,3 +35,9 @@ export function openingProgress(page: HTMLElement) {
   if (scrolled <= 0.5) return 0;
   return scrolled / span;
 }
+
+/** Scrolls smoothly to `top`, or jumps there when the visitor prefers reduced motion. */
+export function travelTo(top: number) {
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+}

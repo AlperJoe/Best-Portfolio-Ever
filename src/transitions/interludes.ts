@@ -1,12 +1,12 @@
 import type { FrameId } from "../frameOrder";
 
 /**
- * Quote pages between frames.
+ * Quotes in the passages between frames.
  *
  * Each entry is keyed by the frame pair it sits between, in frameOrder order:
- * "frame1>frame2" is its own page after Frame 1 and before Frame 2. When
+ * "frame1>frame2" is the passage after Frame 1 and before Frame 2. When
  * Frame 4 exists and is added to frameOrder.ts, add "frame3>frame4" and
- * "frame4>frame5" here. A pair without an entry has no page between.
+ * "frame4>frame5" here. A pair without an entry has no passage between.
  */
 
 export type InterludeLine = {
@@ -67,11 +67,11 @@ export const interludeStyle = {
   markScale: 2,
   /** Instrument Serif for the large text, the same family as fonts.name. */
   font: "Instrument Serif",
-  /** Largest text size, in pixels, and as a share of the screen height. */
+  /** Largest text size, in pixels, and as a share of the screen height. The passage itself is shorter than the screen. */
   maxSize: 96,
   maxHeightShare: 0.09,
   lineHeight: 1.2,
-  /** Least space kept to the screen edges, as a share of the width and of the height. */
+  /** Least space kept to the passage edges, as a share of its width and of its height. */
   marginX: 0.1,
   marginY: 0.12,
   /** Screens narrower than phoneWidth in pages.ts. The lines wrap, centered, at a readable size. */

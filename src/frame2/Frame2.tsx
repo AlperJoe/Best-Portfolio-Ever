@@ -1220,7 +1220,9 @@ export function Frame2() {
   return (
     <section ref={frameRef} className={sectionClass} style={style}>
       <div className="frame2-scene">
-        <img className="frame2-fill depth-back" src={frame2Config.assets.hero} alt="" aria-hidden="true" />
+        <div className="frame2-fill-move depth-back">
+          <img className="frame2-fill" src={frame2Config.assets.hero} alt="" aria-hidden="true" />
+        </div>
         <div className="frame2-fill-shade" />
         <img
           id="frame2-main-image"

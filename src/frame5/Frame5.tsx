@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { CSSProperties, ReactNode } from "react";
 import { FrameEffects } from "../frame1/effectsCanvas";
 import { useScrollLock } from "../transitions/scrollLock";
-import { travelTo } from "../transitions/snapStop";
+import { travelTo } from "../transitions/pages";
 import { usePageOnScreen } from "../transitions/usePageOnScreen";
 import { frame5, type Film, type HobbyIcon } from "./config";
 import "./Frame5.css";

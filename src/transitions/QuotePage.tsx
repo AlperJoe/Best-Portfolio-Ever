@@ -16,8 +16,8 @@ function LineText({ line }: { line: InterludeLine }) {
 }
 
 /**
- * A quote on its own page: the lines centered inside large gold quotation
- * marks, and the "Read more" marker under them.
+ * A quote in the passage between two frames: the lines centered inside large
+ * gold quotation marks, and the "Read more" marker under them.
  */
 export function QuotePage({ interlude }: { interlude: Interlude }) {
   const pageRef = useRef<HTMLElement>(null);
@@ -54,7 +54,7 @@ export function QuotePage({ interlude }: { interlude: Interlude }) {
         8,
         Math.min(
           style.maxSize,
-          height * style.maxHeightShare,
+          window.innerHeight * style.maxHeightShare,
           (roomW * probe) / widest,
           (roomH - below) / (lines.length * style.lineHeight),
         ),
@@ -99,7 +99,7 @@ export function QuotePage({ interlude }: { interlude: Interlude }) {
           {interlude.lines.map((line, index) => (
             <p key={line.text} className="quote-line">
               {index === 0 ? (
-                <span className="quote-mark quote-open depth-mark" aria-hidden="true">
+                <span className="quote-mark quote-open" aria-hidden="true">
                   “
                 </span>
               ) : null}

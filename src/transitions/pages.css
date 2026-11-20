@@ -1,9 +1,11 @@
 /*
-  One normal document, one page under another. From 700px wide every page
-  is one screen tall and the document snaps to each page's top. Frame 1 is
-  two screens tall: its content stays at the top while the scroll inside it
-  plays the opening, and it snaps at its start state and at its full frame.
-  Below 700px nothing snaps and every page is as tall as its content.
+  One normal document, one page under another. From 700px wide every frame
+  is one screen tall and the document snaps to a frame's top once the scroll
+  comes to rest near it. Frame 1 is two screens tall: its content stays at
+  the top while the scroll inside it plays the opening, and it snaps at its
+  start state and at its full frame. A quote is no stop of its own: it is the
+  passage between two frames, scrolled through freely. Below 700px nothing
+  snaps and every page is as tall as its content.
 */
 .page {
   position: relative;
@@ -32,12 +34,46 @@
   top: 100svh;
 }
 
+.page-seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  height: 40svh;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.page-seam-top {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--seam) 0%,
+    var(--seam) 10%,
+    color-mix(in srgb, var(--seam) 70%, transparent) 35%,
+    color-mix(in srgb, var(--seam) 25%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+.page-seam-bottom {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--seam) 0%,
+    var(--seam) 10%,
+    color-mix(in srgb, var(--seam) 70%, transparent) 35%,
+    color-mix(in srgb, var(--seam) 25%, transparent) 70%,
+    transparent 100%
+  );
+}
+
 @media (min-width: 700px) {
   html {
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: y proximity;
   }
 
-  .page:not(.page-opening) {
+  .page-frame {
     height: 100svh;
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -47,15 +83,20 @@
     scroll-snap-align: start;
     scroll-snap-stop: always;
   }
+
+  .page-quote {
+    min-height: 0;
+    height: 80svh;
+  }
 }
 
-/* A quote page: the dark background, and the lines centered inside large gold quotation marks. */
+/* A quote: the dark passage between two frames, its lines centered inside large gold quotation marks. */
 .quote {
   position: relative;
   display: grid;
   place-items: center;
   height: 100%;
-  min-height: 100svh;
+  min-height: inherit;
   overflow: hidden;
   background: var(--quote-bg);
 }
@@ -119,21 +160,49 @@
 }
 
 /*
-  Light depth while a page moves. Every page is a view timeline, so a layer
-  reads how far its page has come in: 0% as the page's top meets the bottom
-  of the screen, 50% when it rests at its snap point, 100% as its bottom
-  leaves the top. At 50% every layer is exactly where it rests. Only
-  decorative layers that nothing can click take part.
+  Movement between pages. Every page is a view timeline: 0% as its top meets
+  the bottom of the screen, 100% as its bottom leaves the top. A frame rests
+  where its top meets the top of the screen, and there every layer below is
+  exactly where it rests and the seams are gone.
 */
 @supports (animation-timeline: view()) {
-  @media (min-width: 700px) and (prefers-reduced-motion: no-preference) {
+  @media (prefers-reduced-motion: no-preference) {
     .page {
       view-timeline: --page block;
     }
 
+    /*
+      The quote sits deeper than the frames: it moves slower than the page,
+      so it is passed rather than shown. It comes up out of the dark, holds
+      while it crosses the middle of the screen, and falls back behind.
+    */
+    .quote-stack {
+      animation: quote-pass linear both;
+      animation-timeline: --page;
+    }
+
+    /*
+      A moving frame's edge next to a quote melts into the quote's dark, so no
+      hard slide edge crosses the screen. On a phone the top clears while it is
+      still low on the screen, before its first lines are read.
+    */
+    .page-seam-top {
+      animation: seam-clear linear both;
+      animation-timeline: --page;
+      animation-range: entry 20% entry 70%;
+    }
+
+    .page-seam-bottom {
+      animation: seam-clear linear both reverse;
+      animation-timeline: --page;
+      animation-range: exit 2% exit 50%;
+    }
+  }
+
+  @media (min-width: 700px) and (prefers-reduced-motion: no-preference) {
+    /* Decorative layers inside a frame trail it a little, ahead on the way in and behind on the way out. */
     .depth-back,
-    .depth-title,
-    .depth-mark {
+    .depth-title {
       animation: page-depth linear both;
       animation-timeline: --page;
     }
@@ -142,18 +211,12 @@
       --depth: 8svh;
     }
 
-    .depth-mark {
-      --depth: 6svh;
-    }
-
-    .quote-text {
-      animation: quote-in linear both;
-      animation-timeline: --page;
+    .page-seam-top {
+      animation-range: entry 50% entry 98%;
     }
   }
 }
 
-/* The layer trails its page: ahead of it on the way in, behind it on the way out. */
 @keyframes page-depth {
   0% {
     transform: translate3d(0, calc(-1 * var(--depth)), 0);
@@ -166,17 +229,31 @@
   }
 }
 
-@keyframes quote-in {
+@keyframes quote-pass {
   0% {
-    opacity: 0.3;
-    transform: translate3d(0, 16px, 0);
+    opacity: 0;
+    transform: translate3d(0, -30svh, 0) scale(0.96);
+  }
+  36% {
+    opacity: 1;
   }
   50% {
-    opacity: 1;
     transform: none;
   }
+  64% {
+    opacity: 1;
+  }
   100% {
-    opacity: 0.3;
-    transform: translate3d(0, -16px, 0);
+    opacity: 0;
+    transform: translate3d(0, 30svh, 0) scale(0.96);
+  }
+}
+
+@keyframes seam-clear {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
