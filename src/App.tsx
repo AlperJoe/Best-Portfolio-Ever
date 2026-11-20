@@ -1,13 +1,13 @@
-import { createRef, useEffect, useState, type ComponentType, type RefObject } from "react";
+import { createRef, useState, type ComponentType, type CSSProperties, type RefObject } from "react";
 import { Frame1 } from "./frame1/Frame1";
 import { Frame2 } from "./frame2/Frame2";
 import { Frame3 } from "./frame3/Frame3";
 import { Frame5 } from "./frame5/Frame5";
 import { frameOrder, type FrameId } from "./frameOrder";
 import { SiteMenu } from "./menu/SiteMenu";
+import { interludeStyle } from "./transitions/interludes";
 import { pages } from "./transitions/pages";
 import { QuotePage } from "./transitions/QuotePage";
-import { holdSnapStops } from "./transitions/snapStop";
 import "./transitions/pages.css";
 
 const FRAMES: Record<FrameId, ComponentType> = {
@@ -22,16 +22,16 @@ const OPENING: FrameId = "frame1";
 
 type PageRefs = Record<FrameId, RefObject<HTMLDivElement | null>>;
 
+const seamStyle = { "--seam": interludeStyle.background } as CSSProperties;
+
 export default function App() {
   const [refs] = useState(
     () => Object.fromEntries(frameOrder.map((id) => [id, createRef<HTMLDivElement>()])) as PageRefs,
   );
 
-  useEffect(() => holdSnapStops(), []);
-
   return (
     <>
-      {pages.map((page) => {
+      {pages.map((page, index) => {
         if (page.kind === "quote") {
           return (
             <div key={page.pair} className="page page-quote">
@@ -44,7 +44,7 @@ export default function App() {
           <div
             key={page.id}
             ref={refs[page.id]}
-            className={page.id === OPENING ? "page page-opening" : "page"}
+            className={page.id === OPENING ? "page page-opening" : "page page-frame"}
             data-page={page.id}
           >
             {page.id === OPENING ? (
@@ -54,6 +54,12 @@ export default function App() {
               </>
             ) : null}
             <Frame />
+            {pages[index - 1]?.kind === "quote" ? (
+              <div className="page-seam page-seam-top" style={seamStyle} aria-hidden="true" />
+            ) : null}
+            {pages[index + 1]?.kind === "quote" ? (
+              <div className="page-seam page-seam-bottom" style={seamStyle} aria-hidden="true" />
+            ) : null}
           </div>
         );
       })}

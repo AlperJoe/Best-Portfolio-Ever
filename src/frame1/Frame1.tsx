@@ -838,8 +838,11 @@ export function Frame1() {
     const element = frameRef.current;
     const page = element?.parentElement;
     if (!scrollOpening || !element || !page) return;
-    const read = () => {
+    let applied = -1;
+    const read = (event?: Event) => {
       const value = openingProgress(page);
+      if (event?.type === "scroll" && value === applied) return;
+      applied = value;
       progressRef.current = value;
       applyProgress(element, value, metricsRef.current, reducedRef.current);
       setCueOn(value <= 0);

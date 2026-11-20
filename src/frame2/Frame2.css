@@ -47,6 +47,12 @@
   transition-timing-function: var(--open-ease);
 }
 
+/* The blurred fill moves inside this layer, so the blur is drawn once instead of on every frame of a scroll. */
+.frame2-fill-move {
+  position: absolute;
+  inset: 0;
+}
+
 .frame2-fill {
   position: absolute;
   left: -18%;

@@ -1,7 +1,7 @@
 /**
  * Shared look of the info marker on every button attachWhyNote is attached
  * to, and of the paper note it opens. The copy lives with its owner:
- * frame1/config.ts for Frame 1, transitions/interludes.ts for the quote pages.
+ * frame1/config.ts for Frame 1, transitions/interludes.ts for the quotes between frames.
  */
 export const whyNoteStyle = {
   font: "Instrument Serif",
